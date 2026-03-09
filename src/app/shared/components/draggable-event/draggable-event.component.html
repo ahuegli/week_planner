@@ -1,0 +1,7 @@
+<article class="event-card" [ngClass]="event.type" cdkDrag [cdkDragData]="event">
+  <header>
+    <h4>{{ event.title }}</h4>
+    <button type="button" (click)="onRemove()">x</button>
+  </header>
+  <p>{{ event.startTime }} - {{ event.endTime }}</p>
+</article>

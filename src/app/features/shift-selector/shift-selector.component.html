@@ -1,0 +1,21 @@
+<section class="panel">
+  <h2>Shifts</h2>
+  <p>Drag a shift onto any day.</p>
+  <div
+    id="shift-palette"
+    class="palette"
+    cdkDropList
+    [cdkDropListConnectedTo]="dayDropListIds"
+    [cdkDropListSortingDisabled]="true"
+  >
+    @for (shift of shiftOptions; track shift.type) {
+      <div class="chip" cdkDrag [cdkDragData]="createDragData(shift.type)">
+        <div>
+          <strong>{{ shift.label }}</strong>
+          <span>{{ shift.time }}</span>
+        </div>
+        <button type="button" (click)="quickAddShift.emit(shift.type)">Add</button>
+      </div>
+    }
+  </div>
+</section>

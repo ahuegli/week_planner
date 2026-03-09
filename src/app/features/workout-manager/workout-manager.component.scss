@@ -1,0 +1,55 @@
+.panel {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e1e5ef;
+  padding: 0.9rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+input {
+  border: 1px solid #d9dfec;
+  border-radius: 8px;
+  padding: 0.42rem 0.5rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem;
+  background: #145c2f;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.palette {
+  margin-top: 0.7rem;
+}
+
+.palette article {
+  border: 1px solid #cde2d1;
+  background: #eff8ef;
+  border-radius: 10px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.palette span {
+  font-size: 0.74rem;
+  margin-top: 0.2rem;
+}

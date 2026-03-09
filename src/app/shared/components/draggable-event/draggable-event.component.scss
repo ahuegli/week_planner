@@ -1,0 +1,50 @@
+.event-card {
+  border-radius: 10px;
+  padding: 0.65rem;
+  border: 1px solid transparent;
+  cursor: move;
+}
+
+.event-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.event-card h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.1;
+}
+
+.event-card p {
+  margin: 0.4rem 0 0;
+  font-size: 0.76rem;
+}
+
+.event-card button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.event-card.shift {
+  background: #fef7e5;
+  color: #6c4a00;
+  border-color: #efd88f;
+}
+
+.event-card.workout {
+  background: #e8f5e8;
+  color: #145c2f;
+  border-color: #9ed0ab;
+}
+
+.event-card.mealprep {
+  background: #e7f2ff;
+  color: #174a85;
+  border-color: #96b8e1;
+}

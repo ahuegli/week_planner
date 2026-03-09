@@ -1,0 +1,23 @@
+.day-column {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #d9dbe4;
+  border-radius: 14px;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-column h3 {
+  margin: 0;
+  padding: 0.8rem;
+  border-bottom: 1px solid #eceff6;
+  font-size: 0.96rem;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  min-height: 360px;
+}

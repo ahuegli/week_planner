@@ -1,0 +1,15 @@
+<section class="day-column">
+  <h3>{{ dayLabel }}</h3>
+  <div
+    class="drop-zone"
+    cdkDropList
+    [id]="listId"
+    [cdkDropListConnectedTo]="connectedDropLists"
+    [cdkDropListData]="events"
+    (cdkDropListDropped)="onDrop($event)"
+  >
+    @for (event of events; track event.id) {
+      <app-draggable-event [event]="event" (remove)="onRemove($event)"></app-draggable-event>
+    }
+  </div>
+</section>

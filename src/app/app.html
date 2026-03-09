@@ -1,0 +1,42 @@
+<main class="layout">
+  <aside class="sidebar">
+    <header>
+      <h1>Week Planner</h1>
+      <p>Balance shifts, workouts, and meal prep in one weekly view.</p>
+    </header>
+
+    <div class="actions">
+      <button type="button" (click)="planner.generateSuggestedPlan()">Generate Smart Plan</button>
+      <button type="button" class="secondary" (click)="planner.clearGeneratedEvents()">
+        Clear Generated
+      </button>
+    </div>
+
+    <app-shift-selector
+      [dayDropListIds]="dayDropListIds"
+      (quickAddShift)="onQuickAddShift($event)"
+    ></app-shift-selector>
+
+    <app-workout-manager
+      [workouts]="planner.workouts()"
+      [dayDropListIds]="dayDropListIds"
+      (addWorkout)="onAddWorkout($event)"
+    ></app-workout-manager>
+
+    <app-mealprep-manager
+      [mealPrep]="planner.mealPrep()"
+      [dayDropListIds]="dayDropListIds"
+      (mealPrepChanged)="onMealPrepChanged($event)"
+    ></app-mealprep-manager>
+  </aside>
+
+  <section class="calendar-wrap">
+    <app-calendar
+      [dayLabels]="dayLabels"
+      [eventsByDay]="planner.eventsByDay()"
+      [connectedDropListIds]="connectedDropListIds"
+      (dayDrop)="onDayDrop($event)"
+      (eventRemoved)="planner.removeEvent($event)"
+    ></app-calendar>
+  </section>
+</main>

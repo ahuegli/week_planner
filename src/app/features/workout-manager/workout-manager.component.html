@@ -1,0 +1,26 @@
+<section class="panel">
+  <h2>Workouts</h2>
+  <form (ngSubmit)="onAddWorkout()">
+    <input name="name" [(ngModel)]="name" placeholder="Workout name" />
+    <div class="row">
+      <input type="number" name="duration" [(ngModel)]="duration" min="15" step="15" />
+      <input type="number" name="frequency" [(ngModel)]="frequencyPerWeek" min="1" max="14" />
+    </div>
+    <button type="submit">Add workout</button>
+  </form>
+
+  <div
+    id="workout-palette"
+    class="palette"
+    cdkDropList
+    [cdkDropListConnectedTo]="dayDropListIds"
+    [cdkDropListSortingDisabled]="true"
+  >
+    @for (workout of workouts; track workout.id) {
+      <article cdkDrag [cdkDragData]="createDragData(workout)">
+        <strong>{{ workout.name }}</strong>
+        <span>{{ workout.duration }} min x {{ workout.frequencyPerWeek }}/week</span>
+      </article>
+    }
+  </div>
+</section>

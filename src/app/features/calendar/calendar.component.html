@@ -1,0 +1,12 @@
+<section class="calendar-grid">
+  @for (dayLabel of dayLabels; track dayLabel; let dayIndex = $index) {
+    <app-day-column
+      [dayIndex]="dayIndex"
+      [dayLabel]="dayLabel"
+      [events]="eventsByDay[dayIndex]"
+      [connectedDropLists]="connectedDropListIds"
+      (eventDropped)="onDayDrop(dayIndex, $event)"
+      (eventRemoved)="eventRemoved.emit($event)"
+    ></app-day-column>
+  }
+</section>
