@@ -1,7 +1,7 @@
 <main class="layout">
   <aside class="sidebar">
     <header>
-      <h1>Week Planner</h1>
+      <h1>🗓️ Week Planner</h1>
       <p>Balance shifts, workouts, and meal prep in one weekly view.</p>
     </header>
 
@@ -10,30 +10,28 @@
       <button type="button" class="secondary" (click)="planner.clearGeneratedEvents()">
         Clear Generated
       </button>
+      <button type="button" class="settings-btn" (click)="openSettingsDialog()">⚙️ Settings</button>
     </div>
 
-    <app-shift-selector
-      [dayDropListIds]="dayDropListIds"
-      (quickAddShift)="onQuickAddShift($event)"
-    ></app-shift-selector>
+    <div class="managers-grid">
+      <app-shift-selector
+        [dayDropListIds]="dayDropListIds"
+        (quickAddShift)="onQuickAddShift($event)"
+      ></app-shift-selector>
 
-    <app-workout-manager
-      [workouts]="planner.workouts()"
-      [dayDropListIds]="dayDropListIds"
-      (addWorkout)="onAddWorkout($event)"
-      (deleteWorkout)="onDeleteWorkout($event)"
-    ></app-workout-manager>
+      <app-workout-manager
+        [workouts]="planner.workouts()"
+        [dayDropListIds]="dayDropListIds"
+        (addWorkout)="onAddWorkout($event)"
+        (deleteWorkout)="onDeleteWorkout($event)"
+      ></app-workout-manager>
 
-    <app-mealprep-manager
-      [mealPrep]="planner.mealPrep()"
-      [dayDropListIds]="dayDropListIds"
-      (mealPrepChanged)="onMealPrepChanged($event)"
-    ></app-mealprep-manager>
-
-    <app-scheduler-settings
-      [settings]="planner.settings()"
-      (settingsChanged)="onSettingsChanged($event)"
-    ></app-scheduler-settings>
+      <app-mealprep-manager
+        [mealPrep]="planner.mealPrep()"
+        [dayDropListIds]="dayDropListIds"
+        (mealPrepChanged)="onMealPrepChanged($event)"
+      ></app-mealprep-manager>
+    </div>
   </aside>
 
   <section class="calendar-wrap">
@@ -45,4 +43,19 @@
       (eventRemoved)="planner.removeEvent($event)"
     ></app-calendar>
   </section>
+
+  @if (showSettingsDialog) {
+  <div class="dialog-overlay" (click)="closeSettingsDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <h2>⚙️ Scheduler Settings</h2>
+        <button class="close-btn" (click)="closeSettingsDialog()">✕</button>
+      </div>
+      <app-scheduler-settings
+        [settings]="planner.settings()"
+        (settingsChanged)="onSettingsChanged($event)"
+      ></app-scheduler-settings>
+    </div>
+  </div>
+  }
 </main>

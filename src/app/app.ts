@@ -1,5 +1,6 @@
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, effect } from '@angular/core';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { DragData, isCalendarEvent } from './core/models/drag-data.model';
 import { MealPrep } from './core/models/mealprep.model';
@@ -16,6 +17,7 @@ import { WorkoutManagerComponent } from './features/workout-manager/workout-mana
 @Component({
   selector: 'app-root',
   imports: [
+    CommonModule,
     CalendarComponent,
     ShiftSelectorComponent,
     WorkoutManagerComponent,
@@ -35,7 +37,17 @@ export class App {
     'mealprep-palette',
   ];
 
-  constructor(readonly planner: PlannerService) {}
+  showSettingsDialog = false;
+
+  constructor(readonly planner: PlannerService) {
+    effect(() => {
+      if (this.showSettingsDialog) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    });
+  }
 
   onQuickAddShift(shiftType: ShiftType): void {
     this.planner.addShift(0, shiftType);
@@ -67,6 +79,14 @@ export class App {
 
   onSettingsChanged(patch: Partial<SchedulerSettings>): void {
     this.planner.updateSettings(patch);
+  }
+
+  openSettingsDialog(): void {
+    this.showSettingsDialog = true;
+  }
+
+  closeSettingsDialog(): void {
+    this.showSettingsDialog = false;
   }
 
   onDayDrop(payload: { day: number; drop: CdkDragDrop<CalendarEvent[]> }): void {
