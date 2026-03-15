@@ -1,7 +1,7 @@
 import { ShiftType } from './shift.model';
-
+ 
 export type CalendarEventType = 'shift' | 'workout' | 'mealprep';
-
+ 
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -11,4 +11,6 @@ export interface CalendarEvent {
   endTime: string;
   durationMinutes?: number;
   shiftType?: ShiftType;
+  isLocked?: boolean;
+  isPersonal?: boolean;
 }

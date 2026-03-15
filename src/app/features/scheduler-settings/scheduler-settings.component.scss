@@ -1,0 +1,85 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  h3 {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 8px 0 0;
+  }
+
+  .hint {
+    font-size: 12px;
+    opacity: 0.6;
+    margin: 0;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  label {
+    font-size: 13px;
+    flex: 1;
+  }
+
+  input {
+    width: 80px;
+    text-align: right;
+  }
+}
+
+.priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.priority-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-tertiary);
+  background: var(--color-background-secondary);
+  font-size: 13px;
+  cursor: default;
+
+  &.cdk-drag-preview {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &.cdk-drag-placeholder {
+    opacity: 0.3;
+  }
+}
+
+.drag-handle {
+  cursor: grab;
+  opacity: 0.4;
+  font-size: 16px;
+  line-height: 1;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.threshold-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-tertiary);
+
+  .sport-label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+}

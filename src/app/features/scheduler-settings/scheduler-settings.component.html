@@ -1,0 +1,119 @@
+<section class="panel">
+  <h2>Scheduler Settings</h2>
+
+  <div class="row">
+    <label>Sleep required (hrs)</label>
+    <input
+      type="number"
+      [(ngModel)]="settings.sleepHoursRequired"
+      min="4"
+      max="12"
+      step="0.5"
+      (change)="onChanged()"
+    />
+  </div>
+
+  <div class="row">
+    <label>Commute (min)</label>
+    <input
+      type="number"
+      [(ngModel)]="settings.commuteMinutes"
+      min="0"
+      max="180"
+      step="5"
+      (change)="onChanged()"
+    />
+  </div>
+
+  <h3>Scheduling priority</h3>
+  <p class="hint">Drag to reorder. Top item gets first pick of available slots.</p>
+
+  <div
+    class="priority-list"
+    cdkDropList
+    (cdkDropListDropped)="onPriorityDrop($event)"
+  >
+    @for (item of settings.priorityHierarchy; track item) {
+      <div class="priority-item" cdkDrag>
+        <span class="drag-handle" cdkDragHandle>⠿</span>
+        <span>{{ priorityLabels[item] }}</span>
+      </div>
+    }
+  </div>
+
+  <h3>Rest day thresholds</h3>
+  <p class="hint">A rest day is required after a session that exceeds either threshold.</p>
+
+  <div class="threshold-group">
+    <span class="sport-label">Running</span>
+    <div class="row">
+      <label>Duration (min)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.running.durationMin"
+        min="15"
+        step="5"
+        (change)="onChanged()"
+      />
+    </div>
+    <div class="row">
+      <label>Distance (km)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.running.distanceKm"
+        min="1"
+        step="1"
+        (change)="onChanged()"
+      />
+    </div>
+  </div>
+
+  <div class="threshold-group">
+    <span class="sport-label">Biking</span>
+    <div class="row">
+      <label>Duration (min)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.biking.durationMin"
+        min="15"
+        step="5"
+        (change)="onChanged()"
+      />
+    </div>
+    <div class="row">
+      <label>Distance (km)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.biking.distanceKm"
+        min="1"
+        step="1"
+        (change)="onChanged()"
+      />
+    </div>
+  </div>
+
+  <div class="threshold-group">
+    <span class="sport-label">Swimming</span>
+    <div class="row">
+      <label>Duration (min)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.swimming.durationMin"
+        min="15"
+        step="5"
+        (change)="onChanged()"
+      />
+    </div>
+    <div class="row">
+      <label>Distance (km)</label>
+      <input
+        type="number"
+        [(ngModel)]="settings.enduranceThresholds.swimming.distanceKm"
+        min="0.5"
+        step="0.5"
+        (change)="onChanged()"
+      />
+    </div>
+  </div>
+
+</section>

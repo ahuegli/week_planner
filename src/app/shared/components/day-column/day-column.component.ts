@@ -16,7 +16,9 @@ export class DayColumnComponent {
   @Input({ required: true }) dayLabel!: string;
   @Input({ required: true }) events: CalendarEvent[] = [];
   @Input({ required: true }) connectedDropLists: string[] = [];
+  @Input() exhaustion = 0;
 
+  @Output() exhaustionChanged = new EventEmitter<number>();
   @Output() eventDropped = new EventEmitter<CdkDragDrop<CalendarEvent[]>>();
   @Output() eventRemoved = new EventEmitter<string>();
 
@@ -30,5 +32,8 @@ export class DayColumnComponent {
 
   onRemove(eventId: string): void {
     this.eventRemoved.emit(eventId);
+  }
+  onExhaustionChange(value: string): void {
+  this.exhaustionChanged.emit(Math.min(10, Math.max(0, Number(value))));
   }
 }

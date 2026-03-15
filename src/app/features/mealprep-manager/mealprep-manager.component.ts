@@ -13,7 +13,7 @@ import { MealPrep } from '../../core/models/mealprep.model';
   styleUrl: './mealprep-manager.component.scss',
 })
 export class MealPrepManagerComponent {
-  @Input() mealPrep: MealPrep = { duration: 90, sessionsPerWeek: 2 };
+  @Input() mealPrep: MealPrep = { duration: 90, sessionsPerWeek: 2, minDaysBetweenSessions: 1 };
   @Input() dayDropListIds: string[] = [];
   @Output() mealPrepChanged = new EventEmitter<MealPrep>();
 

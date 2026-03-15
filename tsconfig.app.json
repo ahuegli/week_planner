@@ -8,7 +8,7 @@
   },
   "include": [
     "src/**/*.ts"
-  ],
+, "src/app/core/models/week context.model", "src/app/core/models/scheduler settings.model"  ],
   "exclude": [
     "src/**/*.spec.ts"
   ]

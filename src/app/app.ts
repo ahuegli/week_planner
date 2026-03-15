@@ -3,10 +3,13 @@ import { Component } from '@angular/core';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { DragData, isCalendarEvent } from './core/models/drag-data.model';
 import { MealPrep } from './core/models/mealprep.model';
+import { SchedulerSettings } from './core/models/scheduler-settings.model';
 import { ShiftType } from './core/models/shift.model';
+import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
 import { MealPrepManagerComponent } from './features/mealprep-manager/mealprep-manager.component';
+import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
 import { ShiftSelectorComponent } from './features/shift-selector/shift-selector.component';
 import { WorkoutManagerComponent } from './features/workout-manager/workout-manager.component';
 
@@ -17,6 +20,7 @@ import { WorkoutManagerComponent } from './features/workout-manager/workout-mana
     ShiftSelectorComponent,
     WorkoutManagerComponent,
     MealPrepManagerComponent,
+    SchedulerSettingsComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -37,12 +41,32 @@ export class App {
     this.planner.addShift(0, shiftType);
   }
 
-  onAddWorkout(payload: { name: string; duration: number; frequencyPerWeek: number }): void {
-    this.planner.addWorkout(payload.name, payload.duration, payload.frequencyPerWeek);
+  onAddWorkout(payload: {
+    workoutType: WorkoutType;
+    name: string;
+    duration: number;
+    frequencyPerWeek: number;
+    distanceKm: number | undefined;
+  }): void {
+    this.planner.addWorkout(
+      payload.workoutType,
+      payload.name,
+      payload.duration,
+      payload.frequencyPerWeek,
+      payload.distanceKm,
+    );
+  }
+
+  onDeleteWorkout(id: string): void {
+    this.planner.removeWorkout(id);
   }
 
   onMealPrepChanged(config: MealPrep): void {
     this.planner.setMealPrep({ ...config });
+  }
+
+  onSettingsChanged(patch: Partial<SchedulerSettings>): void {
+    this.planner.updateSettings(patch);
   }
 
   onDayDrop(payload: { day: number; drop: CdkDragDrop<CalendarEvent[]> }): void {

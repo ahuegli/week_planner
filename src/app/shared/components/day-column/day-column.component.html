@@ -1,5 +1,16 @@
 <section class="day-column">
   <h3>{{ dayLabel }}</h3>
+  <div class="exhaustion-row">
+    <label>Fatigue</label>
+    <input
+      type="number"
+      [value]="exhaustion"
+      min="0"
+      max="10"
+      step="1"
+      (change)="onExhaustionChange($event.target.value)"
+    />
+  </div>
   <div
     class="drop-zone"
     cdkDropList

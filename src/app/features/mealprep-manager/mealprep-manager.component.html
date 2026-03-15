@@ -20,6 +20,17 @@
       (change)="onConfigChanged()"
     />
   </div>
+  <div class="row">
+    <label>Min days between sessions</label>
+    <input
+      type="number"
+      [(ngModel)]="mealPrep.minDaysBetweenSessions"
+      min="1"
+      max="3"
+      step="1"
+      (change)="onConfigChanged()"
+    />
+  </div>
 
   <div
     id="mealprep-palette"

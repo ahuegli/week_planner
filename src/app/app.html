@@ -21,6 +21,7 @@
       [workouts]="planner.workouts()"
       [dayDropListIds]="dayDropListIds"
       (addWorkout)="onAddWorkout($event)"
+      (deleteWorkout)="onDeleteWorkout($event)"
     ></app-workout-manager>
 
     <app-mealprep-manager
@@ -28,6 +29,11 @@
       [dayDropListIds]="dayDropListIds"
       (mealPrepChanged)="onMealPrepChanged($event)"
     ></app-mealprep-manager>
+
+    <app-scheduler-settings
+      [settings]="planner.settings()"
+      (settingsChanged)="onSettingsChanged($event)"
+    ></app-scheduler-settings>
   </aside>
 
   <section class="calendar-wrap">
