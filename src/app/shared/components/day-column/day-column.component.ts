@@ -21,6 +21,7 @@ export class DayColumnComponent {
   @Output() exhaustionChanged = new EventEmitter<number>();
   @Output() eventDropped = new EventEmitter<CdkDragDrop<CalendarEvent[]>>();
   @Output() eventRemoved = new EventEmitter<string>();
+  @Output() eventSelected = new EventEmitter<CalendarEvent>();
 
   get listId(): string {
     return `day-${this.dayIndex}`;
@@ -33,7 +34,12 @@ export class DayColumnComponent {
   onRemove(eventId: string): void {
     this.eventRemoved.emit(eventId);
   }
+
+  onSelect(event: CalendarEvent): void {
+    this.eventSelected.emit(event);
+  }
+
   onExhaustionChange(value: string): void {
-  this.exhaustionChanged.emit(Math.min(10, Math.max(0, Number(value))));
+    this.exhaustionChanged.emit(Math.min(10, Math.max(0, Number(value))));
   }
 }

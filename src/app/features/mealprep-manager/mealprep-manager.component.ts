@@ -1,9 +1,9 @@
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MealPrepTemplateDragData } from '../../core/models/drag-data.model';
-import { MealPrep } from '../../core/models/mealprep.model';
+import { MealPrepSession } from '../../core/models/mealprep.model';
 
 @Component({
   selector: 'app-mealprep-manager',
@@ -13,15 +13,66 @@ import { MealPrep } from '../../core/models/mealprep.model';
   styleUrl: './mealprep-manager.component.scss',
 })
 export class MealPrepManagerComponent {
-  @Input() mealPrep: MealPrep = { duration: 90, sessionsPerWeek: 2, minDaysBetweenSessions: 1 };
+  @Input() mealPrepSessions: MealPrepSession[] = [];
   @Input() dayDropListIds: string[] = [];
-  @Output() mealPrepChanged = new EventEmitter<MealPrep>();
+  @Output() addMealPrepSession = new EventEmitter<{
+    name: string;
+    duration: number;
+    frequencyPerWeek: number;
+    daysPreppedFor: number;
+  }>();
+  @Output() deleteMealPrepSession = new EventEmitter<string>();
 
-  onConfigChanged(): void {
-    this.mealPrepChanged.emit(this.mealPrep);
+  showForm = signal(false);
+  formData = signal({
+    name: '',
+    duration: 90,
+    frequencyPerWeek: 2,
+    daysPreppedFor: 3,
+  });
+
+  onToggleForm(): void {
+    this.showForm.update((v) => !v);
+    if (!this.showForm()) {
+      this.resetForm();
+    }
   }
 
-  createDragData(duration: number): MealPrepTemplateDragData {
-    return { kind: 'mealprep-template', duration };
+  onAddMealPrepSession(): void {
+    const data = this.formData();
+    console.log('Form data before validation:', data);
+    if (!data.name.trim() || data.duration <= 0 || data.frequencyPerWeek <= 0 || data.daysPreppedFor <= 0) {
+      alert('Please fill in all required fields');
+      console.log('Validation failed');
+      return;
+    }
+
+    console.log('Adding meal prep:', data);
+    this.addMealPrepSession.emit({
+      name: data.name.trim(),
+      duration: data.duration,
+      frequencyPerWeek: data.frequencyPerWeek,
+      daysPreppedFor: data.daysPreppedFor,
+    });
+
+    this.resetForm();
+    this.showForm.set(false);
+  }
+
+  onDeleteMealPrepSession(id: string): void {
+    this.deleteMealPrepSession.emit(id);
+  }
+
+  createDragData(session: MealPrepSession): MealPrepTemplateDragData {
+    return { kind: 'mealprep-template', duration: session.duration };
+  }
+
+  private resetForm(): void {
+    this.formData.set({
+      name: '',
+      duration: 90,
+      frequencyPerWeek: 2,
+      daysPreppedFor: 3,
+    });
   }
 }

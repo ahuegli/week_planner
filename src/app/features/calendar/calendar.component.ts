@@ -18,8 +18,13 @@ export class CalendarComponent {
 
   @Output() dayDrop = new EventEmitter<{ day: number; drop: CdkDragDrop<CalendarEvent[]> }>();
   @Output() eventRemoved = new EventEmitter<string>();
+  @Output() eventSelected = new EventEmitter<CalendarEvent>();
 
   onDayDrop(day: number, drop: CdkDragDrop<CalendarEvent[]>): void {
     this.dayDrop.emit({ day, drop });
+  }
+
+  onEventSelected(event: CalendarEvent): void {
+    this.eventSelected.emit(event);
   }
 }

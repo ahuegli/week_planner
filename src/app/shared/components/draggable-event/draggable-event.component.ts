@@ -13,8 +13,16 @@ import { CalendarEvent } from '../../../core/models/calendar-event.model';
 export class DraggableEventComponent {
   @Input({ required: true }) event!: CalendarEvent;
   @Output() remove = new EventEmitter<string>();
+  @Output() select = new EventEmitter<CalendarEvent>();
 
-  onRemove(): void {
+  readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  onRemove(e: Event): void {
+    e.stopPropagation();
     this.remove.emit(this.event.id);
+  }
+
+  onSelect(): void {
+    this.select.emit(this.event);
   }
 }

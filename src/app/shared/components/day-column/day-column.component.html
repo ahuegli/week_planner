@@ -20,7 +20,11 @@
     (cdkDropListDropped)="onDrop($event)"
   >
     @for (event of events; track event.id) {
-      <app-draggable-event [event]="event" (remove)="onRemove($event)"></app-draggable-event>
+      <app-draggable-event
+        [event]="event"
+        (remove)="onRemove($event)"
+        (select)="onSelect($event)"
+      ></app-draggable-event>
     }
   </div>
 </section>

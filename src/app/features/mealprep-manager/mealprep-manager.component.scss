@@ -2,45 +2,250 @@
   background: #fff;
   border-radius: 14px;
   border: 1px solid #e1e5ef;
-  padding: 0.9rem;
+  border-left: 4px solid #456db3;
+  padding: 0.7rem;
+
+  h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #174a85;
+    font-weight: 600;
+  }
 }
 
-.panel h2 {
-  margin: 0 0 0.6rem;
-  font-size: 1rem;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.add-btn {
+  background: #456db3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #3a5a99;
+    transform: translateY(-1px);
+  }
+}
+
+.form {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 0.4rem;
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #555;
+  }
+
+  input {
+    width: 100%;
+    border: 1px solid #d9dfec;
+    border-radius: 8px;
+    padding: 0.35rem 0.4rem;
+    font-size: 0.8rem;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+
+  button {
+    flex: 1;
+    padding: 0.4rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .save-btn {
+    background: #456db3;
+    color: white;
+
+    &:hover {
+      background: #3a5a99;
+    }
+  }
+
+  .cancel-btn {
+    background: #e8ecf5;
+    color: #456db3;
+    border: 1px solid #d9dfec;
+
+    &:hover {
+      background: #d9dfec;
+    }
+  }
+}
+
+.sessions-summary {
+  background: #f9fbff;
+  border: 1px solid #d9dfec;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  h3 {
+    margin: 0 0 0.4rem 0;
+    font-size: 0.8rem;
+    color: #174a85;
+    font-weight: 600;
+  }
+
+  .session-summary-item {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #174a85;
+    margin-bottom: 0.3rem;
+    padding: 0.3rem 0.4rem;
+    background: white;
+    border-radius: 4px;
+    border-left: 3px solid #456db3;
+
+    strong {
+      font-weight: 600;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+
+  .form-group {
+    margin-bottom: 0;
+  }
+}
+
+.chip {
+  background: #f0e6f5;
+  border: 1px solid #d481cc;
+  border-radius: 12px;
+  padding: 0.4rem 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  transition: all 0.2s;
+  cursor: grab;
+
+  &:hover {
+    background: #e8dde8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.mealprep-chip {
+  background: #f0e6f5;
+  border-color: #d481cc;
+
+  .mealprep-session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+
+    strong {
+      font-size: 0.8rem;
+      color: #6b3d7a;
+    }
+
+    span {
+      font-size: 0.7rem;
+      color: #8b5a9f;
+    }
+  }
+
+  .delete-btn {
+    background: transparent;
+    border: none;
+    padding: 0.2rem 0.3rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    color: #8b5a9f;
+
+    &:hover {
+      transform: scale(1.2);
+      color: #6b3d7a;
+    }
+  }
+}
+
+.palette {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.toggle-btn {
+  width: 100%;
+  padding: 0.4rem;
+  margin-bottom: 0.5rem;
+  background: #f5f8fd;
+  border: 1px solid #d9dfec;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #174a85;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e8ecf5;
+    border-color: #456db3;
+  }
 }
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 70px;
+  grid-template-columns: 1fr 60px;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-}
+  gap: 0.35rem;
+  margin-bottom: 0.3rem;
 
-label {
-  font-size: 0.82rem;
+  label {
+    font-size: 0.75rem;
+  }
 }
 
 input {
   border: 1px solid #d9dfec;
   border-radius: 8px;
   padding: 0.35rem 0.4rem;
-}
-
-.palette {
-  margin-top: 0.65rem;
-}
-
-.palette article {
-  border: 1px solid #c4d8f2;
-  background: #edf5ff;
-  border-radius: 10px;
-  padding: 0.5rem;
-  display: flex;
-  justify-content: space-between;
-}
-
-span {
-  font-size: 0.74rem;
+  font-size: 0.8rem;
 }

@@ -55,8 +55,8 @@
 
 .managers-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.8rem;
 }
 
 .actions button {
@@ -96,51 +96,297 @@
   backdrop-filter: blur(10px);
 }
 
-.dialog-overlay {
+.settings-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  animation: fadeIn 0.3s ease-out;
+
+  &::backdrop {
+    backdrop-filter: blur(4px);
+  }
+}
+
+.settings-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.dialog {
-  background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+.optimization-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  max-width: 460px;
+  background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.dialog-header {
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 2rem;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.proposal-summary {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-.dialog-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #1f2a43;
+.proposal-actions button,
+.proposal-footer button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.close-btn {
-  background: none;
+.proposal-actions button.secondary,
+.proposal-footer button.secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.conflict-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 10px;
+  padding: 0.7rem;
+  background: #fff;
+}
+
+.conflict-item p {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.conflict-item .conflict-gain {
+  color: #2563eb;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.proposal-footer {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.settings-panel .close-btn {
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #666;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+  }
 }
 
-.close-btn:hover {
-  color: #333;
+// Blur effect on main content when settings open
+.layout {
+  transition: filter 0.3s ease-out;
+}
+
+.unplaced-workouts {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #fff5f7 0%, #f5f0ff 100%);
+  border: 2px solid #ffb3c1;
+  border-left: 6px solid #f44336;
+  border-radius: 12px;
+  animation: slideUp 0.4s ease-out;
+
+  .unplaced-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: #d32f2f;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .info-text {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .unplaced-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .unplaced-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #f44336;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .item-header {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+
+      strong {
+        color: #1f2a43;
+        font-weight: 600;
+      }
+
+      .frequency {
+        background: #f5f5f5;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #666;
+        font-weight: 500;
+      }
+    }
+
+    .item-reason {
+      color: #f44336;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+  }
+}
+
+.optimize-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #da190b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-panel {
+    max-width: 100%;
+  }
 }

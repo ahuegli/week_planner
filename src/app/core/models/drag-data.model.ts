@@ -1,10 +1,11 @@
 import { CalendarEvent } from './calendar-event.model';
-import { ShiftType } from './shift.model';
+import { CustomEvent } from './custom-event.model';
+import { CustomShift } from './custom-shift.model';
 import { Workout } from './workout.model';
 
-export interface ShiftTemplateDragData {
-  kind: 'shift-template';
-  shiftType: ShiftType;
+export interface CustomShiftTemplateDragData {
+  kind: 'custom-shift-template';
+  customShift: CustomShift;
 }
 
 export interface WorkoutTemplateDragData {
@@ -17,11 +18,17 @@ export interface MealPrepTemplateDragData {
   duration: number;
 }
 
+export interface CustomEventTemplateDragData {
+  kind: 'custom-event-template';
+  customEvent: CustomEvent;
+}
+
 export type DragData =
   | CalendarEvent
-  | ShiftTemplateDragData
+  | CustomShiftTemplateDragData
   | WorkoutTemplateDragData
-  | MealPrepTemplateDragData;
+  | MealPrepTemplateDragData
+  | CustomEventTemplateDragData;
 
 export function isCalendarEvent(data: DragData): data is CalendarEvent {
   return 'id' in data && 'type' in data;

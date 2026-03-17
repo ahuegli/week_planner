@@ -1,0 +1,92 @@
+<div class="modal-overlay" (click)="onClose()">
+  <div class="modal-content" [ngClass]="event.type" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <button class="edit-btn" type="button" (click)="onEdit()" *ngIf="!isEditing()">
+        ✏️
+      </button>
+      <button class="close-btn" type="button" (click)="onClose()">✕</button>
+    </div>
+
+    @if (!isEditing()) {
+    <div class="modal-body">
+      <h3>{{ event.title }}</h3>
+      <div class="time-display">
+        <p><strong>Time:</strong> {{ event.startTime }} - {{ event.endTime }}</p>
+        @if (event.type === 'shift' && event.commuteMinutes) {
+        <p><strong>Commute:</strong> starts at {{ getCommuteStartTime(event.startTime, event.commuteMinutes) }} ({{ event.commuteMinutes }} min before shift)</p>
+        }
+      </div>
+      @if (event.notes) {
+      <div class="notes-display">
+        <p><strong>Notes:</strong></p>
+        <p class="notes-text">{{ event.notes }}</p>
+      </div>
+      }
+    </div>
+    } @else {
+    <form class="modal-form" (ngSubmit)="onSave()">
+      <div class="form-group">
+        <label for="title">Title</label>
+        <input
+          id="title"
+          type="text"
+          [(ngModel)]="editData().title"
+          name="title"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="startTime">Start Time</label>
+          <input
+            id="startTime"
+            type="time"
+            [(ngModel)]="editData().startTime"
+            name="startTime"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="endTime">End Time</label>
+          <input
+            id="endTime"
+            type="time"
+            [(ngModel)]="editData().endTime"
+            name="endTime"
+            required
+          />
+        </div>
+      </div>
+
+      @if (event.type === 'shift') {
+      <div class="form-group">
+        <label for="commuteMinutes">Commute (minutes)</label>
+        <input
+          id="commuteMinutes"
+          type="number"
+          [(ngModel)]="editData().commuteMinutes"
+          name="commuteMinutes"
+          min="0"
+        />
+      </div>
+      }
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea
+          id="notes"
+          [(ngModel)]="editData().notes"
+          name="notes"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="save-btn">Save</button>
+        <button type="button" class="cancel-btn" (click)="onCancel()">Cancel</button>
+      </div>
+    </form>
+    }
+  </div>
+</div>

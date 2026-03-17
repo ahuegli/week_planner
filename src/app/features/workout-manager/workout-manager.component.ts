@@ -1,8 +1,9 @@
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { WorkoutTemplateDragData } from '../../core/models/drag-data.model';
+import { DEFAULT_SETTINGS, SchedulerSettings } from '../../core/models/scheduler-settings.model';
 import {
   WORKOUT_TYPE_LABELS,
   Workout,
@@ -20,12 +21,14 @@ import {
 export class WorkoutManagerComponent {
   @Input() workouts: Workout[] = [];
   @Input() dayDropListIds: string[] = [];
+  @Input() settings: SchedulerSettings = { ...DEFAULT_SETTINGS };
   @Output() addWorkout = new EventEmitter<{
     workoutType: WorkoutType;
     name: string;
     duration: number;
     frequencyPerWeek: number;
     distanceKm: number | undefined;
+    distanceCountsAsLong: boolean | undefined;
   }>();
   @Output() deleteWorkout = new EventEmitter<string>();
 
@@ -37,37 +40,64 @@ export class WorkoutManagerComponent {
     { value: 'yoga', label: WORKOUT_TYPE_LABELS.yoga },
   ];
 
-  workoutType: WorkoutType = 'running';
-  name = '';
-  duration = 45;
-  frequencyPerWeek = 3;
-  distanceKm: number | undefined;
+  showForm = signal(false);
+  formData = signal({
+    workoutType: 'running' as WorkoutType,
+    name: '',
+    duration: 45,
+    frequencyPerWeek: 3,
+    distanceKm: undefined as number | undefined,
+  });
 
   get isEndurance(): boolean {
-    return isEnduranceType(this.workoutType);
+    return isEnduranceType(this.formData().workoutType);
+  }
+
+  onToggleForm(): void {
+    this.showForm.update((v) => !v);
+    if (!this.showForm()) {
+      this.resetForm();
+    }
   }
 
   onTypeChange(): void {
     if (!this.isEndurance) {
-      this.distanceKm = undefined;
+      this.formData.update((current) => ({ ...current, distanceKm: undefined }));
     }
   }
 
   onAddWorkout(): void {
-    if (!this.name.trim() || this.duration <= 0 || this.frequencyPerWeek <= 0) return;
+    const data = this.formData();
+    if (!data.name.trim() || data.duration <= 0 || data.frequencyPerWeek <= 0) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    let distanceCountsAsLong: boolean | undefined = undefined;
+    if (this.isEndurance && data.distanceKm !== undefined) {
+      const threshold = this.settings.enduranceThresholds[data.workoutType as 'running' | 'biking' | 'swimming'];
+      const distanceExceeds = data.distanceKm >= threshold.distanceKm;
+      const durationExceeds = data.duration >= threshold.durationMin;
+
+      if (distanceExceeds && !durationExceeds) {
+        const useDistanceForRest = confirm(
+          'Distance exceeds the long-session threshold while duration does not. Treat this as a long session and apply rest-day logic?',
+        );
+        distanceCountsAsLong = useDistanceForRest;
+      }
+    }
 
     this.addWorkout.emit({
-      workoutType: this.workoutType,
-      name: this.name.trim(),
-      duration: this.duration,
-      frequencyPerWeek: this.frequencyPerWeek,
-      distanceKm: this.isEndurance ? this.distanceKm : undefined,
+      workoutType: data.workoutType,
+      name: data.name.trim(),
+      duration: data.duration,
+      frequencyPerWeek: data.frequencyPerWeek,
+      distanceKm: this.isEndurance ? data.distanceKm : undefined,
+      distanceCountsAsLong,
     });
 
-    this.name = '';
-    this.duration = 45;
-    this.frequencyPerWeek = 3;
-    this.distanceKm = undefined;
+    this.resetForm();
+    this.showForm.set(false);
   }
 
   onDeleteWorkout(id: string): void {
@@ -76,5 +106,15 @@ export class WorkoutManagerComponent {
 
   createDragData(workout: Workout): WorkoutTemplateDragData {
     return { kind: 'workout-template', workout };
+  }
+
+  private resetForm(): void {
+    this.formData.set({
+      workoutType: 'running',
+      name: '',
+      duration: 45,
+      frequencyPerWeek: 3,
+      distanceKm: undefined,
+    });
   }
 }

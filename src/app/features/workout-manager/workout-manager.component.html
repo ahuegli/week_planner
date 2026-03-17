@@ -1,51 +1,81 @@
 <section class="panel">
-  <h2>Workouts</h2>
-  <form (ngSubmit)="onAddWorkout()">
+  <div class="header">
+    <h2>💪 Workouts</h2>
+    <button type="button" (click)="onToggleForm()" class="add-btn">
+      {{ showForm() ? '✕' : '+ Add' }}
+    </button>
+  </div>
 
-    <select name="workoutType" [(ngModel)]="workoutType" (ngModelChange)="onTypeChange()">
-      @for (option of workoutTypeOptions; track option.value) {
-        <option [value]="option.value">{{ option.label }}</option>
-      }
-    </select>
+  @if (showForm()) {
+  <form class="form" (ngSubmit)="onAddWorkout()">
+    <div class="form-group">
+      <label for="workoutType">Type</label>
+      <select id="workoutType" name="workoutType" [(ngModel)]="formData().workoutType" (ngModelChange)="onTypeChange()">
+        @for (option of workoutTypeOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
 
-    <input
-      name="name"
-      [(ngModel)]="name"
-      placeholder="Session name (e.g. Morning run)"
-    />
-
-    <div class="row">
+    <div class="form-group">
+      <label for="name">Session Name</label>
       <input
-        type="number"
-        name="duration"
-        [(ngModel)]="duration"
-        min="15"
-        step="15"
-        placeholder="Duration (min)"
-      />
-      <input
-        type="number"
-        name="frequency"
-        [(ngModel)]="frequencyPerWeek"
-        min="1"
-        max="14"
-        placeholder="Times / week"
+        id="name"
+        name="name"
+        [(ngModel)]="formData().name"
+        placeholder="e.g. Morning run"
+        required
       />
     </div>
 
+    <div class="form-row">
+      <div class="form-group">
+        <label for="duration">Duration (min)</label>
+        <input
+          id="duration"
+          type="number"
+          name="duration"
+          [(ngModel)]="formData().duration"
+          min="15"
+          step="15"
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="frequency">Times/week</label>
+        <input
+          id="frequency"
+          type="number"
+          name="frequency"
+          [(ngModel)]="formData().frequencyPerWeek"
+          min="1"
+          max="14"
+          required
+        />
+      </div>
+    </div>
+
     @if (isEndurance) {
+    <div class="form-group">
+      <label for="distanceKm">Distance (km)</label>
       <input
+        id="distanceKm"
         type="number"
         name="distanceKm"
-        [(ngModel)]="distanceKm"
+        [(ngModel)]="formData().distanceKm"
         min="0"
         step="0.5"
-        placeholder="Distance (km) — optional"
+        placeholder="Optional"
       />
+    </div>
     }
 
-    <button type="submit">Add workout</button>
+    <div class="form-actions">
+      <button type="submit" class="save-btn">Add</button>
+      <button type="button" class="cancel-btn" (click)="showForm.set(false)">Cancel</button>
+    </div>
   </form>
+  }
 
   <div
     id="workout-palette"
@@ -55,20 +85,21 @@
     [cdkDropListSortingDisabled]="true"
   >
     @for (workout of workouts; track workout.id) {
-      <article cdkDrag [cdkDragData]="createDragData(workout)">
+      <div class="chip workout-chip" cdkDrag [cdkDragData]="createDragData(workout)">
         <div class="workout-info">
           <strong>{{ workout.name }}</strong>
-          <span>{{ workout.duration }} min x {{ workout.frequencyPerWeek }}/week</span>
+          <span>{{ workout.duration }}m × {{ workout.frequencyPerWeek }}/w</span>
           @if (workout.distanceKm) {
-            <span>{{ workout.distanceKm }} km</span>
+          <span>{{ workout.distanceKm }}km</span>
           }
         </div>
-        <button
-          type="button"
-          class="delete-btn"
+        <button 
+          type="button" 
+          class="delete-btn" 
           (click)="$event.stopPropagation(); onDeleteWorkout(workout.id)"
+          title="Delete"
         >✕</button>
-      </article>
+      </div>
     }
   </div>
 </section>

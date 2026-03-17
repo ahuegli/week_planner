@@ -1,0 +1,99 @@
+<section class="manager">
+  <div class="header">
+    <h3>📅 Custom Events</h3>
+    <button type="button" (click)="onToggleForm()" class="add-btn">
+      {{ showForm() ? '✕' : '+ Add' }}
+    </button>
+  </div>
+
+  @if (showForm()) {
+  <form class="form" (ngSubmit)="onAddCustomEvent()">
+    <div class="form-group">
+      <label for="title">Event Title</label>
+      <input
+        id="title"
+        type="text"
+        [(ngModel)]="formData().title"
+        name="title"
+        placeholder="e.g., Doctor's Appointment"
+        required
+      />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="startTime">Start Time</label>
+        <input
+          id="startTime"
+          type="time"
+          [(ngModel)]="formData().startTime"
+          name="startTime"
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="endTime">End Time</label>
+        <input
+          id="endTime"
+          type="time"
+          [(ngModel)]="formData().endTime"
+          name="endTime"
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="commute">Commute (min)</label>
+        <input
+          id="commute"
+          type="number"
+          [(ngModel)]="formData().commuteMinutes"
+          name="commute"
+          min="0"
+          max="180"
+          placeholder="0"
+        />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">Notes (optional)</label>
+      <textarea
+        id="notes"
+        [(ngModel)]="formData().notes"
+        name="notes"
+        placeholder="Add any notes..."
+        rows="2"
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Days</label>
+      <div class="days-grid">
+        @for (day of dayLabels; track day; let dayIndex = $index) {
+        <label class="day-checkbox">
+          <input
+            type="checkbox"
+            [checked]="isDaySelected(dayIndex)"
+            (change)="onDayToggle(dayIndex)"
+            [disabled]="formData().isRepeatingWeekly"
+          />
+          <span>{{ day }}</span>
+        </label>
+        }
+      </div>
+    </div>
+
+    <div class="form-group checkbox">
+      <input
+        id="repeat"
+        type="checkbox"
+        [(ngModel)]="formData().isRepeatingWeekly"
+        name="repeat"
+      />
+      <label for="repeat">Repeat weekly (all days)</label>
+    </div>
+
+    <button type="submit" class="submit-btn">Add Event</button>
+  </form>
+  }
+</section>
