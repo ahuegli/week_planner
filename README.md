@@ -176,7 +176,7 @@ If a workout cannot fit, it's marked **unplaced** with a reason:
 
 ## Example: Why 2 Runs Don't Go On Wednesday
 
-**Scenario**: Wed has Doctor (16:00-19:00), 2× weekly runs needed
+**Scenario**: Wed has Doctor (16:00-19:00), 2× weekly runs needed (problem was that it placed 2 runs back to back and a single strength session on sunday - instead of enforcing diversity)
 
 **Before Fix**: Algorithm would place both on Wed → Hard constraint now blocks this
 **With Fix**: 
