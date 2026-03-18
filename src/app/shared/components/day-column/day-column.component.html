@@ -1,5 +1,10 @@
-<section class="day-column">
-  <h3>{{ dayLabel }}</h3>
+<section class="day-column" [class.is-today]="isToday">
+  <h3 class="day-header">
+    {{ dayLabel }}
+    @if (isToday) {
+      <span class="today-badge">Today</span>
+    }
+  </h3>
   <div class="exhaustion-row">
     <label>Fatigue</label>
     <input
@@ -19,9 +24,20 @@
     [cdkDropListData]="events"
     (cdkDropListDropped)="onDrop($event)"
   >
+    <!-- Time slot grid lines -->
+    <div class="time-grid">
+      @for (hour of timeSlots; track hour) {
+        <div class="time-slot-line"></div>
+      }
+    </div>
+
+    <!-- Events positioned on the grid -->
     @for (event of events; track event.id) {
       <app-draggable-event
+        class="positioned-event"
         [event]="event"
+        [style.top.px]="getEventTop(event)"
+        [style.height.px]="getEventHeight(event)"
         (remove)="onRemove($event)"
         (select)="onSelect($event)"
       ></app-draggable-event>

@@ -8,14 +8,22 @@ import { SHIFT_DEFINITIONS, ShiftType } from '../models/shift.model';
 import { DEFAULT_WEEK_CONTEXT, WeekContext } from '../models/week context.model';
 import { Workout, WorkoutType } from '../models/workout.model';
 import { addMinutes, toMinutes } from '../utils/time-utils';
-import { GenerationResult, ScheduleGeneratorService, UnplacedWorkout } from './schedule-generator.service';
+import {
+  GenerateScheduleResponse,
+  SchedulerApiService,
+  UnplacedWorkout,
+} from './scheduler-api.service';
+import { firstValueFrom } from 'rxjs';
 
 export interface OptimizationProposal {
   conflictEvents: CalendarEvent[];
   baseEvents: CalendarEvent[];
   baselineUnplacedCount: number;
   improvedUnplacedCount: number;
-  conflictGains: Record<string, { placedWorkoutDelta: number; weightedDelta: number; scoreDelta: number }>;
+  conflictGains: Record<
+    string,
+    { placedWorkoutDelta: number; weightedDelta: number; scoreDelta: number }
+  >;
   conflictMoves: Record<string, { current: string; change: string }>;
 }
 
@@ -54,7 +62,7 @@ export class PlannerService {
     ),
   );
 
-  constructor(private readonly scheduleGenerator: ScheduleGeneratorService) {}
+  constructor(private readonly schedulerApi: SchedulerApiService) {}
 
   addShift(day: number, shiftType: ShiftType): void {
     const shift = SHIFT_DEFINITIONS[shiftType];
@@ -94,7 +102,12 @@ export class PlannerService {
     this.workoutsSignal.update((workouts) => workouts.filter((w) => w.id !== id));
   }
 
-  addMealPrepSession(name: string, duration: number, frequencyPerWeek: number, daysPreppedFor: number): void {
+  addMealPrepSession(
+    name: string,
+    duration: number,
+    frequencyPerWeek: number,
+    daysPreppedFor: number,
+  ): void {
     const session: MealPrepSession = {
       id: crypto.randomUUID(),
       name,
@@ -139,16 +152,16 @@ export class PlannerService {
   moveEvent(eventId: string, targetDay: number): void {
     this.eventsSignal.update((events) =>
       events.map((event) =>
-        event.id === eventId ? { ...event, day: targetDay, isLocked: true, isManuallyPlaced: true } : event,
+        event.id === eventId
+          ? { ...event, day: targetDay, isLocked: true, isManuallyPlaced: true }
+          : event,
       ),
     );
   }
 
   updateEvent(updatedEvent: CalendarEvent): void {
     this.eventsSignal.update((events) =>
-      events.map((event) =>
-        event.id === updatedEvent.id ? updatedEvent : event,
-      ),
+      events.map((event) => (event.id === updatedEvent.id ? updatedEvent : event)),
     );
   }
 
@@ -158,8 +171,8 @@ export class PlannerService {
 
   clearGeneratedEvents(): void {
     this.clearOptimizationProposal();
-    this.eventsSignal.update((events) => 
-      events.filter((event) => event.type === 'shift' || event.type === 'custom-event')
+    this.eventsSignal.update((events) =>
+      events.filter((event) => event.type === 'shift' || event.type === 'custom-event'),
     );
   }
 
@@ -192,31 +205,45 @@ export class PlannerService {
     }));
   }
 
-  generateSuggestedPlan(): void {
+  async generateSuggestedPlan(): Promise<void> {
     this.clearOptimizationProposal();
 
     // Aggregate meal prep sessions into a single config for schedule generator
     const mealPrepSessions = this.mealPrepSessionsSignal();
     const totalSessionsPerWeek = mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0);
-    const avgDuration = mealPrepSessions.length > 0 
-      ? Math.round(mealPrepSessions.reduce((sum, s) => sum + s.duration, 0) / mealPrepSessions.length)
-      : 90;
+    const avgDuration =
+      mealPrepSessions.length > 0
+        ? Math.round(
+            mealPrepSessions.reduce((sum, s) => sum + s.duration, 0) / mealPrepSessions.length,
+          )
+        : 90;
 
-    const result = this.scheduleGenerator.generate({
-      existingEvents: this.eventsSignal(),
-      workouts: this.workoutsSignal(),
-      mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
-      settings: this.settingsSignal(),
-      weekContext: this.weekContextSignal(),
-    });
+    try {
+      const result = await firstValueFrom(
+        this.schedulerApi.generate({
+          existingEvents: this.eventsSignal(),
+          workouts: this.workoutsSignal(),
+          mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
+          settings: this.settingsSignal(),
+          weekContext: this.weekContextSignal(),
+        }),
+      );
 
-    // Store unplaced workouts for display
-    this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
+      // Store unplaced workouts for display
+      this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
 
-    this.eventsSignal.update((events) => {
-      const preserved = events.filter((e) => e.type === 'shift' || e.type === 'custom-event' || e.isLocked || e.isPersonal);
-      return [...preserved, ...result.placedEvents];
-    });
+      // Mark placed events as locked so they are preserved on subsequent regenerations
+      const lockedPlacedEvents = result.placedEvents.map((e) => ({ ...e, isLocked: true }));
+
+      this.eventsSignal.update((events) => {
+        const preserved = events.filter(
+          (e) => e.type === 'shift' || e.type === 'custom-event' || e.isLocked || e.isPersonal,
+        );
+        return [...preserved, ...lockedPlacedEvents];
+      });
+    } catch (error) {
+      console.error('Failed to generate schedule:', error);
+    }
   }
 
   addCustomEvent(customEvent: CustomEvent, days?: number[]): void {
@@ -224,7 +251,7 @@ export class PlannerService {
 
     // Add calendar events for this custom event
     const daysToAdd = days ?? [0, 1, 2, 3, 4, 5, 6]; // All days if not specified
-    
+
     for (const day of daysToAdd) {
       const calendarEvent: CalendarEvent = {
         id: crypto.randomUUID(),
@@ -243,13 +270,13 @@ export class PlannerService {
   }
 
   deleteCustomEvent(id: string): void {
-    const customEvent = this.customEventsSignal().find(ce => ce.id === id);
+    const customEvent = this.customEventsSignal().find((ce) => ce.id === id);
     if (!customEvent) return;
 
     this.customEventsSignal.update((events) => events.filter((e) => e.id !== id));
     // Remove all calendar events associated with this custom event
-    this.eventsSignal.update((events) => 
-      events.filter((e) => !(e.type === 'custom-event' && e.title === customEvent.title))
+    this.eventsSignal.update((events) =>
+      events.filter((e) => !(e.type === 'custom-event' && e.title === customEvent.title)),
     );
   }
 
@@ -258,35 +285,45 @@ export class PlannerService {
   }
 
   updateCustomShift(id: string, updated: CustomShift): void {
-    const oldShift = this.customShiftsSignal().find(s => s.id === id);
+    const oldShift = this.customShiftsSignal().find((s) => s.id === id);
     if (!oldShift) return;
 
-    this.customShiftsSignal.update((shifts) =>
-      shifts.map((s) => (s.id === id ? updated : s))
-    );
+    this.customShiftsSignal.update((shifts) => shifts.map((s) => (s.id === id ? updated : s)));
 
     // Update all calendar events with this shift
     this.eventsSignal.update((events) =>
       events.map((e) =>
         e.type === 'shift' && e.title === oldShift.label
-          ? { ...e, title: updated.label, startTime: updated.startTime, endTime: updated.endTime, commuteMinutes: updated.commuteMinutes }
-          : e
-      )
+          ? {
+              ...e,
+              title: updated.label,
+              startTime: updated.startTime,
+              endTime: updated.endTime,
+              commuteMinutes: updated.commuteMinutes,
+            }
+          : e,
+      ),
     );
   }
 
   deleteCustomShift(id: string): void {
-    const customShift = this.customShiftsSignal().find(cs => cs.id === id);
+    const customShift = this.customShiftsSignal().find((cs) => cs.id === id);
     if (!customShift) return;
 
     this.customShiftsSignal.update((shifts) => shifts.filter((s) => s.id !== id));
     // Remove all calendar events associated with this custom shift
     this.eventsSignal.update((events) =>
-      events.filter((e) => !(e.type === 'shift' && e.title === customShift.label))
+      events.filter((e) => !(e.type === 'shift' && e.title === customShift.label)),
     );
   }
 
-  createShiftEvent(shiftLabel: string, startTime: string, endTime: string, day: number, commuteMinutes: number = 0): void {
+  createShiftEvent(
+    shiftLabel: string,
+    startTime: string,
+    endTime: string,
+    day: number,
+    commuteMinutes: number = 0,
+  ): void {
     const calendarEvent: CalendarEvent = {
       id: crypto.randomUUID(),
       title: shiftLabel,
@@ -302,21 +339,21 @@ export class PlannerService {
 
   updateEventCommute(eventId: string, commuteMinutes: number): void {
     this.eventsSignal.update((events) =>
-      events.map((e) =>
-        e.id === eventId
-          ? { ...e, commuteMinutes }
-          : e
-      )
+      events.map((e) => (e.id === eventId ? { ...e, commuteMinutes } : e)),
     );
   }
 
-  updateEventCommuteByShift(shiftLabel: string, shiftStartTime: string, commuteMinutes: number): void {
+  updateEventCommuteByShift(
+    shiftLabel: string,
+    shiftStartTime: string,
+    commuteMinutes: number,
+  ): void {
     this.eventsSignal.update((events) =>
       events.map((e) =>
         e.type === 'shift' && e.title === shiftLabel && e.startTime === shiftStartTime
           ? { ...e, commuteMinutes }
-          : e
-      )
+          : e,
+      ),
     );
   }
 
@@ -330,7 +367,7 @@ export class PlannerService {
     });
   }
 
-  optimizeSchedule(): void {
+  async optimizeSchedule(): Promise<void> {
     this.clearOptimizationProposal();
 
     const unplaced = this.unplacedWorkoutsSignal();
@@ -339,102 +376,119 @@ export class PlannerService {
     }
 
     const currentEvents = this.eventsSignal();
-    
+
     // Only get manually-placed events - these should block rest days and be preserved
-    const eventsForGeneration = currentEvents.filter((e) => 
-      e.type === 'shift' || 
-      e.type === 'custom-event' || 
-      e.isPersonal ||
-      (e.type === 'workout' && e.isManuallyPlaced) ||
-      (e.type === 'mealprep' && e.isManuallyPlaced)
+    const eventsForGeneration = currentEvents.filter(
+      (e) =>
+        e.type === 'shift' ||
+        e.type === 'custom-event' ||
+        e.isPersonal ||
+        (e.type === 'workout' && e.isManuallyPlaced) ||
+        (e.type === 'mealprep' && e.isManuallyPlaced),
     );
 
     const manuallyPlacedWorkouts = eventsForGeneration.filter(
-      (e) => e.type === 'workout' && e.isManuallyPlaced
+      (e) => e.type === 'workout' && e.isManuallyPlaced,
     );
 
     const { totalSessionsPerWeek, avgDuration } = this.getMealPrepGenerationConfig();
 
-    // Re-run generation with only preserved events (no auto-generated ones from previous run)
-    const baseline = this.scheduleGenerator.generate({
-      existingEvents: eventsForGeneration,
-      workouts: this.workoutsSignal(),
-      mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
-      settings: this.settingsSignal(),
-      weekContext: this.weekContextSignal(),
-    });
-
-    if (baseline.unplacedWorkouts.length === 0) {
-      this.unplacedWorkoutsSignal.set([]);
-      this.eventsSignal.set([...eventsForGeneration, ...baseline.placedEvents]);
-      return;
-    }
-
-    const manualCandidates = manuallyPlacedWorkouts.slice(0, 8);
-    const subsets = this.buildRemovableSubsets(manualCandidates, 3);
-
-    const generationOptions: Array<{ result: GenerationResult; removedIds: Set<string> }> = [
-      { result: baseline, removedIds: new Set<string>() },
-    ];
-
-    for (const subset of subsets) {
-      const removedIds = new Set(subset.map((e) => e.id));
-      const eventsWithoutSubset = eventsForGeneration.filter((e) => !removedIds.has(e.id));
-      const candidate = this.scheduleGenerator.generate({
-        existingEvents: eventsWithoutSubset,
-        workouts: this.workoutsSignal(),
-        mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
-        settings: this.settingsSignal(),
-        weekContext: this.weekContextSignal(),
-      });
-
-      generationOptions.push({ result: candidate, removedIds });
-    }
-
-    const bestOption = this.selectBestGenerationOption(generationOptions);
-    const bestResult = bestOption?.result ?? baseline;
-    const bestRemovedIds = bestOption?.removedIds ?? new Set<string>();
-
-    if (bestRemovedIds.size > 0) {
-      const conflicts = manualCandidates.filter((e) => bestRemovedIds.has(e.id));
-      const conflictGains: Record<string, { placedWorkoutDelta: number; weightedDelta: number; scoreDelta: number }> = {};
-      const conflictMoves = this.buildConflictMoves(conflicts, bestResult);
-
-      for (const conflict of conflicts) {
-        const eventsWithoutConflict = eventsForGeneration.filter((event) => event.id !== conflict.id);
-        const soloResult = this.scheduleGenerator.generate({
-          existingEvents: eventsWithoutConflict,
+    try {
+      // Re-run generation with only preserved events (no auto-generated ones from previous run)
+      const baseline = await firstValueFrom(
+        this.schedulerApi.generate({
+          existingEvents: eventsForGeneration,
           workouts: this.workoutsSignal(),
           mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
           settings: this.settingsSignal(),
           weekContext: this.weekContextSignal(),
-        });
+        }),
+      );
 
-        conflictGains[conflict.id] = {
-          placedWorkoutDelta: soloResult.placedWorkoutCount - baseline.placedWorkoutCount,
-          weightedDelta: soloResult.weightedWorkoutScore - baseline.weightedWorkoutScore,
-          scoreDelta: soloResult.totalScore - baseline.totalScore,
-        };
+      if (baseline.unplacedWorkouts.length === 0) {
+        this.unplacedWorkoutsSignal.set([]);
+        this.eventsSignal.set([...eventsForGeneration, ...baseline.placedEvents]);
+        return;
       }
 
-      this.markConflictEvents(bestRemovedIds);
-      this.optimizationProposalSignal.set({
-        conflictEvents: conflicts,
-        baseEvents: eventsForGeneration,
-        baselineUnplacedCount: baseline.unplacedWorkouts.length,
-        improvedUnplacedCount: bestResult.unplacedWorkouts.length,
-        conflictGains,
-        conflictMoves,
-      });
-      this.unplacedWorkoutsSignal.set(baseline.unplacedWorkouts);
-      return;
-    }
+      const manualCandidates = manuallyPlacedWorkouts.slice(0, 8);
+      const subsets = this.buildRemovableSubsets(manualCandidates, 3);
 
-    this.unplacedWorkoutsSignal.set(baseline.unplacedWorkouts);
-    this.eventsSignal.set([...eventsForGeneration, ...baseline.placedEvents]);
+      const generationOptions: Array<{
+        result: GenerateScheduleResponse;
+        removedIds: Set<string>;
+      }> = [{ result: baseline, removedIds: new Set<string>() }];
+
+      for (const subset of subsets) {
+        const removedIds = new Set(subset.map((e) => e.id));
+        const eventsWithoutSubset = eventsForGeneration.filter((e) => !removedIds.has(e.id));
+        const candidate = await firstValueFrom(
+          this.schedulerApi.generate({
+            existingEvents: eventsWithoutSubset,
+            workouts: this.workoutsSignal(),
+            mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
+            settings: this.settingsSignal(),
+            weekContext: this.weekContextSignal(),
+          }),
+        );
+
+        generationOptions.push({ result: candidate, removedIds });
+      }
+
+      const bestOption = this.selectBestGenerationOption(generationOptions);
+      const bestResult = bestOption?.result ?? baseline;
+      const bestRemovedIds = bestOption?.removedIds ?? new Set<string>();
+
+      if (bestRemovedIds.size > 0) {
+        const conflicts = manualCandidates.filter((e) => bestRemovedIds.has(e.id));
+        const conflictGains: Record<
+          string,
+          { placedWorkoutDelta: number; weightedDelta: number; scoreDelta: number }
+        > = {};
+        const conflictMoves = this.buildConflictMoves(conflicts, bestResult);
+
+        for (const conflict of conflicts) {
+          const eventsWithoutConflict = eventsForGeneration.filter(
+            (event) => event.id !== conflict.id,
+          );
+          const soloResult = await firstValueFrom(
+            this.schedulerApi.generate({
+              existingEvents: eventsWithoutConflict,
+              workouts: this.workoutsSignal(),
+              mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
+              settings: this.settingsSignal(),
+              weekContext: this.weekContextSignal(),
+            }),
+          );
+
+          conflictGains[conflict.id] = {
+            placedWorkoutDelta: soloResult.placedWorkoutCount - baseline.placedWorkoutCount,
+            weightedDelta: soloResult.weightedWorkoutScore - baseline.weightedWorkoutScore,
+            scoreDelta: soloResult.totalScore - baseline.totalScore,
+          };
+        }
+
+        this.markConflictEvents(bestRemovedIds);
+        this.optimizationProposalSignal.set({
+          conflictEvents: conflicts,
+          baseEvents: eventsForGeneration,
+          baselineUnplacedCount: baseline.unplacedWorkouts.length,
+          improvedUnplacedCount: bestResult.unplacedWorkouts.length,
+          conflictGains,
+          conflictMoves,
+        });
+        this.unplacedWorkoutsSignal.set(baseline.unplacedWorkouts);
+        return;
+      }
+
+      this.unplacedWorkoutsSignal.set(baseline.unplacedWorkouts);
+      this.eventsSignal.set([...eventsForGeneration, ...baseline.placedEvents]);
+    } catch (error) {
+      console.error('Failed to optimize schedule:', error);
+    }
   }
 
-  applyOptimizationSelection(selectedRescheduleIds: string[]): void {
+  async applyOptimizationSelection(selectedRescheduleIds: string[]): Promise<void> {
     const proposal = this.optimizationProposalSignal();
     if (!proposal) {
       return;
@@ -444,26 +498,30 @@ export class PlannerService {
     const { totalSessionsPerWeek, avgDuration } = this.getMealPrepGenerationConfig();
     const selectedBaseEvents = proposal.baseEvents.filter((e) => !removedIds.has(e.id));
 
-    const result = this.scheduleGenerator.generate({
-      existingEvents: selectedBaseEvents,
-      workouts: this.workoutsSignal(),
-      mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
-      settings: this.settingsSignal(),
-      weekContext: this.weekContextSignal(),
-    });
+    try {
+      const result = await firstValueFrom(
+        this.schedulerApi.generate({
+          existingEvents: selectedBaseEvents,
+          workouts: this.workoutsSignal(),
+          mealPrep: { duration: avgDuration, sessionsPerWeek: totalSessionsPerWeek },
+          settings: this.settingsSignal(),
+          weekContext: this.weekContextSignal(),
+        }),
+      );
 
-    this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
-    this.eventsSignal.set([...selectedBaseEvents, ...result.placedEvents]);
-    this.clearOptimizationProposal();
+      this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
+      this.eventsSignal.set([...selectedBaseEvents, ...result.placedEvents]);
+      this.clearOptimizationProposal();
+    } catch (error) {
+      console.error('Failed to apply optimization:', error);
+    }
   }
 
   clearOptimizationProposal(): void {
     this.optimizationProposalSignal.set(null);
     this.eventsSignal.update((events) =>
       events.map((event) =>
-        event.hasOptimizationConflict
-          ? { ...event, hasOptimizationConflict: false }
-          : event,
+        event.hasOptimizationConflict ? { ...event, hasOptimizationConflict: false } : event,
       ),
     );
   }
@@ -474,12 +532,17 @@ export class PlannerService {
       totalSessionsPerWeek: mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0),
       avgDuration:
         mealPrepSessions.length > 0
-          ? Math.round(mealPrepSessions.reduce((sum, s) => sum + s.duration, 0) / mealPrepSessions.length)
+          ? Math.round(
+              mealPrepSessions.reduce((sum, s) => sum + s.duration, 0) / mealPrepSessions.length,
+            )
           : 90,
     };
   }
 
-  private isBetterGenerationResult(candidate: GenerationResult, current: GenerationResult): boolean {
+  private isBetterGenerationResult(
+    candidate: GenerateScheduleResponse,
+    current: GenerateScheduleResponse,
+  ): boolean {
     if (candidate.placedWorkoutCount !== current.placedWorkoutCount) {
       return candidate.placedWorkoutCount > current.placedWorkoutCount;
     }
@@ -500,8 +563,8 @@ export class PlannerService {
   }
 
   private selectBestGenerationOption(
-    options: Array<{ result: GenerationResult; removedIds: Set<string> }>,
-  ): { result: GenerationResult; removedIds: Set<string> } | null {
+    options: Array<{ result: GenerateScheduleResponse; removedIds: Set<string> }>,
+  ): { result: GenerateScheduleResponse; removedIds: Set<string> } | null {
     if (options.length === 0) {
       return null;
     }
@@ -511,14 +574,19 @@ export class PlannerService {
       0,
     );
     const minAcceptedLong = Math.max(0, maxLongPlaced - this.LONG_FEASIBLE_TOLERANCE);
-    const feasibleOptions = options.filter((option) => option.result.placedLongWorkoutCount >= minAcceptedLong);
+    const feasibleOptions = options.filter(
+      (option) => option.result.placedLongWorkoutCount >= minAcceptedLong,
+    );
 
-    return feasibleOptions.reduce((best, option) => {
-      if (!best) {
-        return option;
-      }
-      return this.isBetterGenerationResult(option.result, best.result) ? option : best;
-    }, null as { result: GenerationResult; removedIds: Set<string> } | null);
+    return feasibleOptions.reduce(
+      (best, option) => {
+        if (!best) {
+          return option;
+        }
+        return this.isBetterGenerationResult(option.result, best.result) ? option : best;
+      },
+      null as { result: GenerateScheduleResponse; removedIds: Set<string> } | null,
+    );
   }
 
   private buildRemovableSubsets(events: CalendarEvent[], maxSize: number): CalendarEvent[][] {
@@ -554,7 +622,7 @@ export class PlannerService {
 
   private buildConflictMoves(
     conflicts: CalendarEvent[],
-    candidateResult: GenerationResult,
+    candidateResult: GenerateScheduleResponse,
   ): Record<string, { current: string; change: string }> {
     const moves: Record<string, { current: string; change: string }> = {};
     const usedSuggestionIds = new Set<string>();

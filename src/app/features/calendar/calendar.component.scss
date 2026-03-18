@@ -1,7 +1,93 @@
+// Legend
+.calendar-legend {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legend-item.shift .legend-dot {
+  background: #efd88f;
+  border: 1px solid #d4b85a;
+}
+
+.legend-item.workout .legend-dot {
+  background: #9ed0ab;
+  border: 1px solid #6fb97f;
+}
+
+.legend-item.mealprep .legend-dot {
+  background: #96b8e1;
+  border: 1px solid #6a9ed4;
+}
+
+.legend-item.custom-event .legend-dot {
+  background: #e5a8d8;
+  border: 1px solid #d080c0;
+}
+
+// Calendar container with time gutter
+.calendar-container {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+
+// Time gutter
+.time-gutter {
+  flex-shrink: 0;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-gutter-header {
+  height: 72px; // Match day column header height
+  flex-shrink: 0;
+}
+
+.time-slots {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-slot {
+  height: 40px; // Each hour slot
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  position: relative;
+}
+
+.time-label {
+  font-size: 0.7rem;
+  color: #888;
+  transform: translateY(-0.5em);
+}
+
+// Grid
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(100px, 1fr));
   gap: 0.7rem;
+  flex: 1;
   overflow-x: auto;
   padding-bottom: 0.35rem;
 }

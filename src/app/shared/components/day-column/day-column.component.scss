@@ -1,3 +1,6 @@
+$slot-height: 40px;
+$time-slots: 17; // 6am to 10pm
+
 .day-column {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid #d9dbe4;
@@ -5,19 +8,93 @@
   min-height: 420px;
   display: flex;
   flex-direction: column;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+
+  &.is-today {
+    background: rgba(99, 102, 241, 0.06);
+    border-color: #6366f1;
+    border-width: 2px;
+  }
 }
 
-.day-column h3 {
+.day-header {
   margin: 0;
   padding: 0.8rem;
   border-bottom: 1px solid #eceff6;
   font-size: 0.96rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.today-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 0.15rem 0.45rem;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.exhaustion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid #eceff6;
+  font-size: 0.8rem;
+
+  label {
+    color: #64748b;
+  }
+
+  input {
+    width: 48px;
+    padding: 0.25rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    text-align: center;
+
+    &:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+  }
 }
 
 .drop-zone {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem;
-  min-height: 360px;
+  position: relative;
+  flex: 1;
+  height: calc(#{$slot-height} * #{$time-slots});
+  min-height: calc(#{$slot-height} * #{$time-slots});
+  padding: 0 0.4rem;
+}
+
+.time-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.time-slot-line {
+  height: $slot-height;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.04);
+  }
+}
+
+.positioned-event {
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  z-index: 1;
+  overflow: hidden;
 }
