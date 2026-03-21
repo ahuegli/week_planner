@@ -1,116 +1,383 @@
-<section class="panel">
-  <h2>Scheduler Settings</h2>
-
-  <h3>Auto-placement time range</h3>
-  <p class="hint">Automatic events (workouts, meal prep) will only be placed within this time window.</p>
-
-  <div class="row">
-    <label>Earliest time</label>
-    <input
-      type="time"
-      [(ngModel)]="settings.autoPlaceEarliestTime"
-      (ngModelChange)="onChanged()"
-    />
+<div class="settings-wrapper">
+  <div class="settings-header">
+    <h2>Scheduler Settings</h2>
+    <p class="settings-subtitle">Configure how events are automatically scheduled</p>
   </div>
 
-  <div class="row">
-    <label>Latest time</label>
-    <input
-      type="time"
-      [(ngModel)]="settings.autoPlaceLatestTime"
-      (ngModelChange)="onChanged()"
-    />
-  </div>
+  <!-- Auto-placement Time Range Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>⏰ Auto-placement Time Range</h3>
+      <p class="section-hint">Automatic events (workouts, meal prep) will only be placed within this time window.</p>
+    </div>
 
-  <h3>Scheduling priority</h3>
-  <p class="hint">Drag to reorder. Top item gets first pick of available slots.</p>
-
-  <div
-    class="priority-list"
-    cdkDropList
-    (cdkDropListDropped)="onPriorityDrop($event)"
-  >
-    @for (item of settings.priorityHierarchy; track item) {
-      <div class="priority-item" cdkDrag>
-        <span class="drag-handle" cdkDragHandle>⠿</span>
-        <span>{{ priorityLabels[item] }}</span>
+    <div class="settings-form">
+      <div class="form-group">
+        <label for="earliestTime">Earliest Time</label>
+        <input
+          id="earliestTime"
+          type="time"
+          [(ngModel)]="settings.autoPlaceEarliestTime"
+          (ngModelChange)="onChanged()"
+          class="time-input"
+        />
       </div>
-    }
-  </div>
 
-  <h3>Rest day thresholds</h3>
-  <p class="hint">A rest day is required after a session that exceeds either threshold.</p>
-
-  <div class="threshold-group">
-    <span class="sport-label">Running</span>
-    <div class="row">
-      <label>Duration (min)</label>
-      <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.running.durationMin"
-        min="15"
-        step="5"
-        (change)="onChanged()"
-      />
-    </div>
-    <div class="row">
-      <label>Distance (km)</label>
-      <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.running.distanceKm"
-        min="1"
-        step="1"
-        (change)="onChanged()"
-      />
+      <div class="form-group">
+        <label for="latestTime">Latest Time</label>
+        <input
+          id="latestTime"
+          type="time"
+          [(ngModel)]="settings.autoPlaceLatestTime"
+          (ngModelChange)="onChanged()"
+          class="time-input"
+        />
+      </div>
     </div>
   </div>
 
-  <div class="threshold-group">
-    <span class="sport-label">Biking</span>
-    <div class="row">
-      <label>Duration (min)</label>
-      <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.biking.durationMin"
-        min="15"
-        step="5"
-        (change)="onChanged()"
-      />
+  <!-- Scheduling Priority Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>🎯 Scheduling Priority</h3>
+      <p class="section-hint">Drag to reorder. Top item gets first pick of available slots.</p>
     </div>
-    <div class="row">
-      <label>Distance (km)</label>
-      <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.biking.distanceKm"
-        min="1"
-        step="1"
-        (change)="onChanged()"
-      />
+
+    <div
+      class="priority-list"
+      cdkDropList
+      (cdkDropListDropped)="onPriorityDrop($event)"
+    >
+      @for (item of settings.priorityHierarchy; track item) {
+        <div class="priority-item" cdkDrag>
+          <span class="drag-handle" cdkDragHandle>⋮⋮</span>
+          <span class="priority-name">{{ priorityLabels[item] }}</span>
+          <span class="priority-rank">{{ $index + 1 }}</span>
+        </div>
+      }
     </div>
   </div>
 
-  <div class="threshold-group">
-    <span class="sport-label">Swimming</span>
-    <div class="row">
-      <label>Duration (min)</label>
+  <!-- Rest Day Thresholds Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>🏃 Rest Day Thresholds</h3>
+      <p class="section-hint">A rest day is required after a session that exceeds either threshold.</p>
+    </div>
+
+    <div class="thresholds-grid">
+      <!-- Running -->
+      <div class="threshold-group">
+        <div class="sport-label">🏃 Running</div>
+        <div class="threshold-inputs">
+          <div class="input-group">
+            <label for="runDuration">Duration (min)</label>
+            <input
+              id="runDuration"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.running.durationMin"
+              min="15"
+              step="5"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+          <div class="input-group">
+            <label for="runDistance">Distance (km)</label>
+            <input
+              id="runDistance"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.running.distanceKm"
+              min="1"
+              step="1"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Biking -->
+      <div class="threshold-group">
+        <div class="sport-label">🚴 Biking</div>
+        <div class="threshold-inputs">
+          <div class="input-group">
+            <label for="bikeDuration">Duration (min)</label>
+            <input
+              id="bikeDuration"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.biking.durationMin"
+              min="15"
+              step="5"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+          <div class="input-group">
+            <label for="bikeDistance">Distance (km)</label>
+            <input
+              id="bikeDistance"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.biking.distanceKm"
+              min="1"
+              step="1"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Swimming -->
+      <div class="threshold-group">
+        <div class="sport-label">🏊 Swimming</div>
+        <div class="threshold-inputs">
+          <div class="input-group">
+            <label for="swimDuration">Duration (min)</label>
+            <input
+              id="swimDuration"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.swimming.durationMin"
+              min="15"
+              step="5"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+          <div class="input-group">
+            <label for="swimDistance">Distance (km)</label>
+            <input
+              id="swimDistance"
+              type="number"
+              [(ngModel)]="settings.enduranceThresholds.swimming.distanceKm"
+              min="0.5"
+              step="0.5"
+              (change)="onChanged()"
+              class="threshold-input"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workout Preferences Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>💪 Workout Preferences</h3>
+      <p class="section-hint">Choose your workout types and preferred scheduling times.</p>
+    </div>
+
+    <!-- Your workout types -->
+    <div class="workout-types-group">
+      <label class="section-label">Your workout types</label>
+      <div class="checkbox-grid">
+        <label class="checkbox-item">
+          <input
+            type="checkbox"
+            [checked]="settings.workoutTypes.includes('strength')"
+            (change)="toggleWorkoutType('strength', $event)"
+          />
+          <span>💪 Strength</span>
+        </label>
+        <label class="checkbox-item">
+          <input
+            type="checkbox"
+            [checked]="settings.workoutTypes.includes('flexibility')"
+            (change)="toggleWorkoutType('flexibility', $event)"
+          />
+          <span>🤸 Flexibility</span>
+        </label>
+        <label class="checkbox-item">
+          <input
+            type="checkbox"
+            [checked]="settings.workoutTypes.includes('cardio')"
+            (change)="toggleWorkoutType('cardio', $event)"
+          />
+          <span>🏃 Cardio</span>
+        </label>
+        <label class="checkbox-item">
+          <input
+            type="checkbox"
+            [checked]="settings.workoutTypes.includes('recovery')"
+            (change)="toggleWorkoutType('recovery', $event)"
+          />
+          <span>🧘 Recovery</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Weekly workouts target with slider -->
+    <div class="slider-group">
+      <label class="section-label">Weekly workouts target</label>
+      <div class="slider-container">
+        <input
+          type="range"
+          min="1"
+          max="10"
+          [(ngModel)]="settings.weeklyWorkoutsTarget"
+          (change)="onChanged()"
+          class="slider"
+        />
+        <span class="slider-value">{{ settings.weeklyWorkoutsTarget }}</span>
+      </div>
+      <p class="info-text">You have 6 planned for this week</p>
+    </div>
+
+    <!-- Preferred workout times -->
+    <div class="workout-times-group">
+      <label class="section-label">Preferred workout times</label>
+      <div class="button-group">
+        <button
+          type="button"
+          [class.active]="settings.preferredWorkoutTimes.includes('early')"
+          (click)="toggleWorkoutTime('early')"
+          class="time-button"
+        >
+          Early morning (5-7 AM)
+        </button>
+        <button
+          type="button"
+          [class.active]="settings.preferredWorkoutTimes.includes('evening')"
+          (click)="toggleWorkoutTime('evening')"
+          class="time-button"
+        >
+          Evening (6-8 PM)
+        </button>
+        <button
+          type="button"
+          [class.active]="settings.preferredWorkoutTimes.includes('flexible')"
+          (click)="toggleWorkoutTime('flexible')"
+          class="time-button"
+        >
+          Flexible
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recovery Rules Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>😴 Recovery Rules</h3>
+      <p class="section-hint">Set minimum recovery periods between intense workouts.</p>
+    </div>
+
+    <!-- Min hours between same muscle group -->
+    <div class="slider-group">
+      <div class="slider-label-row">
+        <label class="section-label">Min hours between same muscle group</label>
+        <span class="slider-unit">{{ settings.minHoursBetweenSameMuscle }}h</span>
+      </div>
       <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.swimming.durationMin"
-        min="15"
-        step="5"
+        type="range"
+        min="24"
+        max="96"
+        step="6"
+        [(ngModel)]="settings.minHoursBetweenSameMuscle"
         (change)="onChanged()"
+        class="slider"
       />
     </div>
-    <div class="row">
-      <label>Distance (km)</label>
+
+    <!-- Min sleep before intense workout -->
+    <div class="slider-group">
+      <div class="slider-label-row">
+        <label class="section-label">Min sleep before intense workout</label>
+        <span class="slider-unit">{{ settings.minSleepBeforeIntense }}h</span>
+      </div>
       <input
-        type="number"
-        [(ngModel)]="settings.enduranceThresholds.swimming.distanceKm"
-        min="0.5"
+        type="range"
+        min="4"
+        max="10"
         step="0.5"
+        [(ngModel)]="settings.minSleepBeforeIntense"
         (change)="onChanged()"
+        class="slider"
       />
     </div>
+
+    <!-- Avoid back-to-back intense workouts -->
+    <label class="checkbox-item checkbox-large">
+      <input
+        type="checkbox"
+        [(ngModel)]="settings.avoidBackToBackIntense"
+        (change)="onChanged()"
+      />
+      <span>Avoid back-to-back intense workouts</span>
+    </label>
   </div>
 
-</section>
+  <!-- Meal Prep Section -->
+  <div class="settings-section">
+    <div class="section-header">
+      <h3>🍱 Meal Prep</h3>
+      <p class="section-hint">Configure meal prep session frequency and duration.</p>
+    </div>
+
+    <!-- Sessions per week -->
+    <div class="sessions-group">
+      <label class="section-label">Sessions per week</label>
+      <div class="button-group">
+        <button
+          type="button"
+          [class.active]="settings.mealPrepSessionsPerWeek === 0"
+          (click)="setMealPrepSessions(0)"
+          class="session-button"
+        >
+          None
+        </button>
+        <button
+          type="button"
+          [class.active]="settings.mealPrepSessionsPerWeek === 1"
+          (click)="setMealPrepSessions(1)"
+          class="session-button"
+        >
+          1
+        </button>
+        <button
+          type="button"
+          [class.active]="settings.mealPrepSessionsPerWeek === 2"
+          (click)="setMealPrepSessions(2)"
+          class="session-button"
+        >
+          2
+        </button>
+        <button
+          type="button"
+          [class.active]="settings.mealPrepSessionsPerWeek === 3"
+          (click)="setMealPrepSessions(3)"
+          class="session-button"
+        >
+          3+
+        </button>
+      </div>
+    </div>
+
+    <!-- Session duration -->
+    <div class="duration-group">
+      <label for="mealPrepDuration" class="section-label">Session duration</label>
+      <select
+        id="mealPrepDuration"
+        [(ngModel)]="settings.mealPrepSessionDuration"
+        (change)="onChanged()"
+        class="duration-select"
+      >
+        <option value="30min">30 minutes</option>
+        <option value="1 hour">1 hour</option>
+        <option value="1.5 hours">1.5 hours</option>
+        <option value="2 hours">2 hours</option>
+      </select>
+    </div>
+
+    <!-- Prefer weekend meal prep -->
+    <label class="checkbox-item checkbox-large">
+      <input
+        type="checkbox"
+        [(ngModel)]="settings.preferWeekendMealPrep"
+        (change)="onChanged()"
+      />
+      <span>Prefer weekend meal prep</span>
+    </label>
+  </div>
+</div>

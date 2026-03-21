@@ -1,70 +1,83 @@
 // Legend
 .calendar-legend {
   display: flex;
-  gap: 1rem;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 10px;
-  font-size: 0.8rem;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-small);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--spacing-sm);
 }
 
 .legend-dot {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .legend-item.shift .legend-dot {
-  background: #efd88f;
-  border: 1px solid #d4b85a;
+  background: var(--color-event-shift-bg);
+  border: 1px solid var(--color-event-shift-border);
 }
 
 .legend-item.workout .legend-dot {
-  background: #9ed0ab;
-  border: 1px solid #6fb97f;
+  background: var(--color-event-strength-bg);
+  border: 1px solid var(--color-event-strength-border);
 }
 
 .legend-item.mealprep .legend-dot {
-  background: #96b8e1;
-  border: 1px solid #6a9ed4;
+  background: var(--color-event-shift-bg);
+  border: 1px solid var(--color-event-shift-border);
 }
 
 .legend-item.custom-event .legend-dot {
-  background: #e5a8d8;
-  border: 1px solid #d080c0;
+  background: var(--color-event-flexibility-bg);
+  border: 1px solid var(--color-event-flexibility-border);
 }
 
-// Calendar container with time gutter
+// Calendar container with time gutter - 24 hour view
 .calendar-container {
   display: flex;
   gap: 0;
-  overflow-x: auto;
+  height: 600px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-primary);
 }
 
 // Time gutter
 .time-gutter {
   flex-shrink: 0;
-  width: 48px;
+  width: 60px;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border-light);
 }
 
 .time-gutter-header {
   height: 72px; // Match day column header height
   flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .time-slots {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: hidden; // Hide overflow, synchronized via wrapper
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  
+  // Scroll to focus on 7am-10pm on load
+  // This is handled by the component with scrollIntoView
 }
 
 .time-slot {
@@ -72,22 +85,31 @@
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding-right: 0.5rem;
+  padding-right: var(--spacing-sm);
   position: relative;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .time-label {
-  font-size: 0.7rem;
-  color: #888;
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
   transform: translateY(-0.5em);
+}
+
+// Scroll wrapper for synchronized scrolling
+.scroll-wrapper {
+  flex: 1;
+  overflow-y: scroll;
+  overflow-x: auto;
+  scroll-behavior: smooth;
 }
 
 // Grid
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(100px, 1fr));
-  gap: 0.7rem;
-  flex: 1;
-  overflow-x: auto;
-  padding-bottom: 0.35rem;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 0;
+  padding-bottom: var(--spacing-xs);
 }

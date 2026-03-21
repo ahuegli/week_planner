@@ -1,0 +1,87 @@
+<div class="card-container work-event-card">
+  <div class="card-header">
+    <h3>📅 Add Work Event</h3>
+    <button type="button" class="close-btn" (click)="onCancel()">✕</button>
+  </div>
+
+  <form (ngSubmit)="onAdd()" class="card-form">
+    <!-- Event Title -->
+    <div class="form-group">
+      <label for="eventTitle">Event Title</label>
+      <input
+        id="eventTitle"
+        type="text"
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+        name="title"
+        placeholder="e.g. Doctor's appointment"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Start Time -->
+    <div class="form-group">
+      <label for="startTime">Start Time</label>
+      <input
+        id="startTime"
+        type="time"
+        [value]="startTime()"
+        (input)="startTime.set($any($event.target).value)"
+        name="startTime"
+        class="form-input"
+      />
+    </div>
+
+    <!-- End Time -->
+    <div class="form-group">
+      <label for="endTime">End Time</label>
+      <input
+        id="endTime"
+        type="time"
+        [value]="endTime()"
+        (input)="endTime.set($any($event.target).value)"
+        name="endTime"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Commute -->
+    <div class="form-group">
+      <label for="commute">Commute (minutes)</label>
+      <input
+        id="commute"
+        type="number"
+        [value]="commute()"
+        (input)="commute.set(+$any($event.target).value)"
+        name="commute"
+        min="0"
+        max="180"
+        step="5"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Repeat Days -->
+    <div class="form-group">
+      <label>Repeat</label>
+      <div class="days-grid">
+        @for (day of daysOfWeek; let index = $index; track index) {
+          <label class="day-checkbox">
+            <input
+              type="checkbox"
+              [checked]="isDaySelected(index)"
+              (change)="onDayToggle(index)"
+            />
+            <span>{{ day }}</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="onCancel()">Cancel</button>
+      <button type="submit" class="btn-primary work-btn">Add</button>
+    </div>
+  </form>
+</div>

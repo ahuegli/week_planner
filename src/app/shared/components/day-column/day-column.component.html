@@ -18,11 +18,13 @@
   </div>
   <div
     class="drop-zone"
+    #dropZone
     cdkDropList
     [id]="listId"
     [cdkDropListConnectedTo]="connectedDropLists"
     [cdkDropListData]="events"
     (cdkDropListDropped)="onDrop($event)"
+    (dragenter)="onDropZoneEnter()"
   >
     <!-- Time slot grid lines -->
     <div class="time-grid">
@@ -30,6 +32,14 @@
         <div class="time-slot-line"></div>
       }
     </div>
+
+    <!-- Hover time preview -->
+    @if (showTimePreview && hoverTime) {
+      <div class="drop-time-preview" [style.top.px]="previewTop">
+        <div class="drop-here-text">Drop here</div>
+        <div class="drop-time-text">{{ hoverTime }}</div>
+      </div>
+    }
 
     <!-- Events positioned on the grid -->
     @for (event of events; track event.id) {
