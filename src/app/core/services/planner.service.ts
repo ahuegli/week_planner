@@ -259,6 +259,7 @@ export class PlannerService {
     duration: number,
     frequencyPerWeek: number,
     distanceKm?: number,
+    notes?: string,
     distanceCountsAsLong?: boolean,
   ): Promise<void> {
     try {
@@ -269,6 +270,7 @@ export class PlannerService {
           duration,
           frequencyPerWeek,
           distanceKm,
+          notes,
         }),
       );
       // Add distanceCountsAsLong locally (not persisted in backend)
@@ -284,6 +286,7 @@ export class PlannerService {
         duration,
         frequencyPerWeek,
         distanceKm,
+        notes,
         distanceCountsAsLong,
       };
       this.workoutsSignal.update((current) => [...current, workout]);
@@ -297,6 +300,51 @@ export class PlannerService {
       console.error('Failed to delete workout from API:', error);
     }
     this.workoutsSignal.update((workouts) => workouts.filter((w) => w.id !== id));
+  }
+
+  async updateWorkout(
+    id: string,
+    patch: {
+      name: string;
+      workoutType: WorkoutType;
+      duration: number;
+      frequencyPerWeek: number;
+      distanceKm?: number;
+      notes?: string;
+      distanceCountsAsLong?: boolean;
+    },
+  ): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.workoutApi.update(id, {
+          name: patch.name,
+          workoutType: patch.workoutType,
+          duration: patch.duration,
+          frequencyPerWeek: patch.frequencyPerWeek,
+          distanceKm: patch.distanceKm,
+          notes: patch.notes,
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to update workout in API:', error);
+    }
+
+    this.workoutsSignal.update((workouts) =>
+      workouts.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              name: patch.name,
+              workoutType: patch.workoutType,
+              duration: patch.duration,
+              frequencyPerWeek: patch.frequencyPerWeek,
+              distanceKm: patch.distanceKm,
+              notes: patch.notes,
+              distanceCountsAsLong: patch.distanceCountsAsLong ?? w.distanceCountsAsLong,
+            }
+          : w,
+      ),
+    );
   }
 
   async decreaseWorkoutFrequency(id: string): Promise<void> {
@@ -352,6 +400,7 @@ export class PlannerService {
     startTimeMinutes?: number,
     weekOffset?: number,
     date?: string,
+    notes?: string,
   ): Promise<void> {
     let startTime = '18:00'; // Default to 6pm
 
@@ -386,6 +435,7 @@ export class PlannerService {
       workoutType,
       distanceKm,
       distanceCountsAsLong,
+      notes,
       isLocked: true, // Mark as fixed so smart plan does not reallocate
       isManuallyPlaced: true, // Mark as manually placed by user
     };

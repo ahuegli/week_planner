@@ -3,3 +3,262 @@
    =================================================================== */
 
 @use 'styles-design-system' as *;
+
+app-root {
+   .quick-add-section {
+      background: var(--color-bg-primary);
+      border: 2px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+      width: 100%;
+      box-sizing: border-box;
+   }
+
+   .quick-add-title {
+      font-size: var(--font-size-h3);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--spacing-lg);
+      text-align: left;
+   }
+
+   .quick-add-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: var(--spacing-lg) !important;
+      width: 100% !important;
+      box-sizing: border-box;
+   }
+
+   .quick-add-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      min-width: 0;
+   }
+
+   .saved-workout-card {
+      position: relative;
+   }
+
+   .saved-workout-delete-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(180, 36, 36, 0.12);
+      color: #8f1d1d;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 2;
+
+      &:hover {
+         background: rgba(180, 36, 36, 0.2);
+      }
+   }
+
+   .workout-template-dialog {
+      width: min(640px, calc(100vw - 32px));
+   }
+
+   .workout-template-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+
+      .form-group {
+         display: flex;
+         flex-direction: column;
+         gap: 6px;
+      }
+
+      label {
+         font-size: var(--font-size-label);
+         font-weight: var(--font-weight-semibold);
+         color: var(--color-text-primary);
+      }
+
+      .form-input,
+      .form-select {
+         width: 100%;
+         padding: 10px 12px;
+         border: 1px solid var(--color-border-light);
+         border-radius: var(--radius-md);
+         font-size: var(--font-size-body);
+         font-family: var(--font-family);
+         background: var(--color-bg-primary);
+         color: var(--color-text-primary);
+      }
+
+      .workout-preset-checkbox {
+         display: flex;
+         align-items: center;
+         gap: var(--spacing-sm);
+         color: var(--color-text-primary);
+         font-weight: var(--font-weight-medium);
+
+         input {
+            margin: 0;
+         }
+      }
+   }
+
+   .form-grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+   }
+
+   .workout-template-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--spacing-md);
+   }
+
+   .dialog-footer-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+   }
+
+   .button-danger {
+      border: 1px solid #d26a6a;
+      background: #fff1f1;
+      color: #9f2c2c;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      cursor: pointer;
+
+      &:hover {
+         background: #ffe3e3;
+      }
+   }
+
+   .event-card .event-card-time {
+      display: inline-block;
+      margin-right: 6px;
+      opacity: 0.7;
+   }
+
+   .dialog-subtitle {
+      margin: 4px 0 0;
+      color: var(--color-text-secondary);
+   }
+
+   .month-day-dialog {
+      max-width: 720px;
+      width: min(720px, calc(100vw - 32px));
+   }
+
+   .month-day-header {
+      align-items: flex-start;
+   }
+
+   .month-day-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+   }
+
+   .month-day-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--spacing-sm);
+   }
+
+   .month-day-event-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+   }
+
+   .month-day-event-item {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      text-align: left;
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-light);
+      background: var(--color-bg-primary);
+      cursor: pointer;
+      transition: var(--transition-default);
+
+      &:hover {
+         transform: translateY(-1px);
+         box-shadow: var(--shadow-sm);
+      }
+
+      &.shift-type {
+         border-color: #2b72b2;
+         background: rgba(43, 114, 178, 0.08);
+      }
+
+      &.workout-type {
+         border-color: var(--color-primary-green);
+         background: rgba(95, 178, 149, 0.08);
+      }
+
+      &.mealprep-type {
+         border-color: var(--color-event-mealprep-border);
+         background: var(--color-event-mealprep-bg);
+      }
+
+      &.custom-type {
+         border-color: var(--color-primary-purple);
+         background: rgba(212, 181, 232, 0.12);
+      }
+   }
+
+   .month-day-event-time,
+   .month-day-event-type {
+      font-size: var(--font-size-small);
+      color: var(--color-text-secondary);
+   }
+
+   .month-day-empty-state {
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-secondary);
+      border: 1px dashed var(--color-border-medium);
+
+      p {
+         margin: 8px 0 0;
+         color: var(--color-text-secondary);
+      }
+   }
+}
+
+@media (max-width: 900px) {
+   app-root .month-day-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+   }
+}
+
+@media (max-width: 720px) {
+   app-root {
+      .calendar-grid-header,
+      .calendar-grid {
+         min-width: 720px;
+      }
+
+      .month-wrapper {
+         overflow-x: auto;
+      }
+   }
+}
+
+@media (max-width: 640px) {
+   app-root {
+      .quick-add-grid,
+      .month-day-actions {
+         grid-template-columns: 1fr !important;
+      }
+   }
+}

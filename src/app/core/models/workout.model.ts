@@ -35,5 +35,6 @@ export interface Workout {
   duration: number;
   frequencyPerWeek: number;
   distanceKm?: number;
+  notes?: string;
   distanceCountsAsLong?: boolean;
 }
