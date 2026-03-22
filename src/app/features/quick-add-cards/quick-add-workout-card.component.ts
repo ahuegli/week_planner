@@ -22,7 +22,7 @@ export class QuickAddWorkoutCardComponent {
   @Output() closed = new EventEmitter<void>();
 
   // Use individual signals for better reactivity with ngModel
-  type = signal<WorkoutType>('strength');
+  type = signal<WorkoutType>('running');
   sessionName = signal('');
   duration = signal(45);
   timeframe = signal(1);
@@ -68,7 +68,7 @@ export class QuickAddWorkoutCardComponent {
   }
 
   private resetForm(): void {
-    this.type.set('strength');
+    this.type.set('running');
     this.sessionName.set('');
     this.duration.set(45);
     this.timeframe.set(1);

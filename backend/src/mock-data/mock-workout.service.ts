@@ -56,10 +56,13 @@ export class MockWorkoutService {
   }
 
   create(userId: string, dto: Partial<Workout>): Workout {
+    if (!dto.workoutType) {
+      throw new Error('workoutType is required');
+    }
     const workout: Workout = {
       id: uuidv4(),
       name: dto.name || 'New Workout',
-      workoutType: dto.workoutType || 'strength',
+      workoutType: dto.workoutType,
       duration: dto.duration || 60,
       frequencyPerWeek: dto.frequencyPerWeek || 1,
       distanceKm: dto.distanceKm,
