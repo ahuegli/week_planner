@@ -1,6 +1,7 @@
 import { CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
 import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
@@ -45,8 +46,10 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   readonly isAuthenticated = this.authService.isAuthenticated;
   readonly currentUser = this.authService.user;
   readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -61,8 +64,10 @@ export class App {
     'saved-workouts-palette',
   ];
 
-  // View state for tab navigation
+  // View state for tab navigation (initialized from query params in ngOnInit)
   currentView = signal<'daily' | 'week' | 'month' | 'onboarding'>('daily');
+  
+  private readonly validViews = ['daily', 'week', 'month', 'onboarding'] as const;
 
   // Quick add card visibility
   showWorkoutCard = signal(false);
@@ -208,6 +213,48 @@ export class App {
         ...event,
         weekOffset: 0,
       });
+    });
+  }
+
+  ngOnInit(): void {
+    // Initialize state from query parameters
+    this.route.queryParams.subscribe((params) => {
+      // Read view parameter
+      const viewParam = params['view'];
+      if (viewParam && this.validViews.includes(viewParam)) {
+        this.currentView.set(viewParam as typeof this.validViews[number]);
+      }
+      
+      // Read week offset parameter
+      const weekParam = params['week'];
+      if (weekParam !== undefined) {
+        const weekOffset = parseInt(weekParam, 10);
+        if (!isNaN(weekOffset)) {
+          this.currentWeekOffset.set(weekOffset);
+          this.syncMonthToCurrentWeek();
+        }
+      }
+    });
+  }
+
+  private updateQueryParams(): void {
+    const queryParams: Record<string, string | number | null> = {
+      view: this.currentView(),
+    };
+    
+    // Only include week param if not 0 (current week)
+    const weekOffset = this.currentWeekOffset();
+    if (weekOffset !== 0) {
+      queryParams['week'] = weekOffset;
+    } else {
+      queryParams['week'] = null; // Remove from URL
+    }
+    
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 
@@ -474,35 +521,42 @@ export class App {
   // View switching methods
   showDailyView(): void {
     this.currentView.set('daily');
+    this.updateQueryParams();
   }
 
   showWeekView(): void {
     this.currentView.set('week');
+    this.updateQueryParams();
   }
 
   showMonthView(): void {
     this.currentView.set('month');
+    this.updateQueryParams();
   }
 
   showOnboardingView(): void {
     this.currentView.set('onboarding');
+    this.updateQueryParams();
   }
 
   previousWeek(): void {
     this.currentWeekOffset.update((offset) => offset - 1);
     this.syncMonthToCurrentWeek();
+    this.updateQueryParams();
     // Events will be loaded by the effect watching currentWeekOffset
   }
 
   nextWeek(): void {
     this.currentWeekOffset.update((offset) => offset + 1);
     this.syncMonthToCurrentWeek();
+    this.updateQueryParams();
     // Events will be loaded by the effect watching currentWeekOffset
   }
 
   goToToday(): void {
     this.currentWeekOffset.set(0);
     this.syncMonthToCurrentWeek();
+    this.updateQueryParams();
     // Events will be loaded by the effect watching currentWeekOffset
   }
 
