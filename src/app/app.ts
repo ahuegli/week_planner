@@ -8,6 +8,7 @@ import { SchedulerSettings } from './core/models/scheduler-settings.model';
 import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
+import { OnboardingComponent } from './features/onboarding/onboarding.component';
 import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
 import { EventDetailsModalComponent } from './shared/components/event-details-modal/event-details-modal.component';
 import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-add-workout-card.component';
@@ -21,6 +22,7 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
     CdkDrag,
     CdkDropList,
     CalendarComponent,
+    OnboardingComponent,
     SchedulerSettingsComponent,
     EventDetailsModalComponent,
     QuickAddWorkoutCardComponent,
@@ -44,7 +46,7 @@ export class App {
   ];
 
   // View state for tab navigation
-  currentView = signal<'daily' | 'week' | 'month'>('daily');
+  currentView = signal<'daily' | 'week' | 'month' | 'onboarding'>('daily');
 
   // Quick add card visibility
   showWorkoutCard = signal(false);
@@ -307,6 +309,10 @@ export class App {
 
   showMonthView(): void {
     this.currentView.set('month');
+  }
+
+  showOnboardingView(): void {
+    this.currentView.set('onboarding');
   }
 
   getCurrentWeekLabel(): string {

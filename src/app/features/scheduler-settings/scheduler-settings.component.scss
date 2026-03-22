@@ -421,6 +421,36 @@
   }
 }
 
+/* Edit Button */
+.btn-secondary {
+  padding: 12px 24px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-default);
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-medium);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.btn-full {
+    width: 100%;
+  }
+
+  &.edit-btn {
+    margin-top: var(--spacing-md);
+  }
+}
+
 /* Dropdown/Select Styles */
 .duration-group {
   padding-bottom: var(--spacing-lg);
@@ -462,5 +492,154 @@
   option {
     background: white;
     color: var(--color-text-primary);
+  }
+}
+
+/* Sleep Reference Box */
+.work-schedule-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.sleep-reference-box {
+  background: rgba(95, 178, 149, 0.08);
+  border: 1px solid rgba(95, 178, 149, 0.35);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+
+  &.sleep-reference-single {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+}
+
+.sleep-reference-label {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-green);
+}
+
+.sleep-reference-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.sleep-pattern-name {
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  min-width: 70px;
+}
+
+.sleep-pattern-times {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* Compact Threshold Cards */
+.thresholds-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.threshold-compact-card {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.threshold-compact-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  cursor: pointer;
+  transition: background var(--transition-default);
+
+  &:hover {
+    background: var(--color-primary-blue-light-bg);
+  }
+}
+
+.threshold-sport {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.threshold-summary {
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  margin-right: var(--spacing-sm);
+}
+
+.threshold-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-default);
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: white;
+    color: var(--color-primary-blue);
+  }
+}
+
+.threshold-inputs-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: white;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.input-group-inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+
+  label {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+
+  .threshold-input {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    background: white;
+    color: var(--color-text-primary);
+    transition: all var(--transition-default);
+    width: 100%;
+    box-sizing: border-box;
+
+    &:hover { border-color: var(--color-primary-blue); }
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary-blue);
+      box-shadow: 0 0 0 2px var(--color-primary-blue-light-bg);
+    }
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    &[type='number'] { -moz-appearance: textfield; }
   }
 }

@@ -45,6 +45,14 @@
       >
         Month
       </button>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="currentView() === 'onboarding'"
+        (click)="showOnboardingView()"
+      >
+        Setup
+      </button>
     </nav>
   </header>
 
@@ -445,6 +453,11 @@
           </div>
         </div>
       </div>
+    }
+
+    <!-- ONBOARDING VIEW -->
+    @if (currentView() === 'onboarding') {
+      <app-onboarding (navigateToWeek)="showWeekView()"></app-onboarding>
     }
   </section>
 

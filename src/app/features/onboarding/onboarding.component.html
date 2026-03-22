@@ -1,0 +1,401 @@
+<div class="onboarding-page">
+  <div class="onboarding-card">
+
+    <!-- ── Progress Dots ─────────────────────────────────────── -->
+    <div class="progress-dots">
+      @for (dot of progressDots; track dot) {
+        <span class="dot" [class.active]="dot <= currentStep()"></span>
+      }
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         STEP 1 – Work Schedule
+         ════════════════════════════════════════════════════════ -->
+    @if (currentStep() === 1) {
+      <div class="step-content">
+        <h2 class="step-title">What's your work schedule?</h2>
+        <p class="step-subtitle">We'll use this to find time for your workouts and meals around your shifts.</p>
+
+        <!-- Work Pattern -->
+        <div class="field-group">
+          <label class="field-label">Work Pattern</label>
+          <div class="select-wrapper">
+            <select class="select-input" [(ngModel)]="data.workPattern">
+              <option value="fixed">Fixed days (same days every week)</option>
+              <option value="rotating">Rotating shifts (pattern repeats)</option>
+              <option value="irregular">Irregular (different each week)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- IRREGULAR PATTERN MESSAGE -->
+        @if (data.workPattern === 'irregular') {
+          <div class="tip-box">
+            <span class="tip-icon">ℹ️</span>
+            <span>You will be able to input your work schedule directly in the calendar.</span>
+          </div>
+        }
+
+        <!-- FIXED & ROTATING PATTERNS -->
+        @if (data.workPattern === 'fixed' || data.workPattern === 'rotating') {
+          <!-- Shift Name Input -->
+          <div class="field-group">
+            <label class="field-label">Shift Name (optional)</label>
+            <input type="text" class="dark-input" placeholder="e.g., Morning Shift, Evening Shift" [(ngModel)]="currentShift.name" />
+          </div>
+
+          <!-- Shift Time Input -->
+          <div class="field-group">
+            <label class="field-label">Shift Times</label>
+            <div class="time-range">
+              <div class="time-input-wrapper">
+                <input class="dark-input time-input" type="time" [(ngModel)]="currentShift.startTime" />
+                <span class="clock-icon">🕐</span>
+              </div>
+              <span class="time-range-dash">—</span>
+              <div class="time-input-wrapper">
+                <input class="dark-input time-input" type="time" [(ngModel)]="currentShift.endTime" />
+                <span class="clock-icon">🕐</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Days of Week Selection -->
+          <div class="field-group">
+            <label class="field-label">Days</label>
+            <div class="day-toggles">
+              @for (day of dayLabels; track $index) {
+                <button
+                  type="button"
+                  class="day-toggle"
+                  [class.selected]="isShiftDaySelected($index)"
+                  (click)="toggleShiftDay($index)"
+                >
+                  {{ day }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Sleep Schedule for Rotating Shifts -->
+          @if (data.workPattern === 'rotating') {
+            <div class="field-group">
+              <label class="field-label">Sleep Schedule for This Pattern</label>
+              <div class="sleep-row">
+                <div class="sleep-col">
+                  <span class="sub-label">Bedtime</span>
+                  <div class="time-input-wrapper">
+                    <input class="dark-input time-input" type="time" [(ngModel)]="currentShift.bedtime" />
+                    <span class="clock-icon">🕐</span>
+                  </div>
+                </div>
+                <div class="sleep-col">
+                  <span class="sub-label">Wake time</span>
+                  <div class="time-input-wrapper">
+                    <input class="dark-input time-input" type="time" [(ngModel)]="currentShift.wakeTime" />
+                    <span class="clock-icon">🕐</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Added Shift Patterns (for rotating) -->
+          @if (data.workPattern === 'rotating' && data.shiftPatterns.length > 0) {
+            <div class="patterns-list">
+              <label class="field-label">Added Shifts</label>
+              @for (pattern of data.shiftPatterns; track $index) {
+                <div class="pattern-item">
+                  <div class="pattern-content">
+                    <div class="pattern-name">
+                      {{ pattern.name || 'Shift ' + ($index + 1) }}
+                    </div>
+                    <div class="pattern-times">
+                      {{ pattern.startTime }}–{{ pattern.endTime }}
+                    </div>
+                    <div class="pattern-days">
+                      {{ pattern.daysOfWeek.map(d => dayLabels[d]).join(', ') }}
+                    </div>
+                    @if (pattern.bedtime && pattern.wakeTime) {
+                      <div class="pattern-sleep">
+                        Sleep: {{ formatTime12(pattern.bedtime) }}–{{ formatTime12(pattern.wakeTime) }}
+                      </div>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-icon"
+                    (click)="removeShiftPattern($index)"
+                    title="Remove this shift"
+                  >
+                    ✕
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Add Shift Pattern Button (for rotating) -->
+          @if (data.workPattern === 'rotating' && currentShift.daysOfWeek.length > 0) {
+            <button type="button" class="btn-secondary btn-full" (click)="addShiftPattern()">
+              + Add More Shifts
+            </button>
+          }
+        }
+
+        <!-- Sleep Schedule (only for fixed/irregular) -->
+        @if (data.workPattern !== 'rotating') {
+          <div class="field-group">
+            <label class="field-label">Sleep Schedule</label>
+            <div class="sleep-row">
+              <div class="sleep-col">
+                <span class="sub-label">Bedtime</span>
+                <div class="time-input-wrapper">
+                  <input class="dark-input time-input" type="time" [(ngModel)]="data.bedtime" />
+                  <span class="clock-icon">🕐</span>
+                </div>
+              </div>
+              <div class="sleep-col">
+                <span class="sub-label">Wake time</span>
+                <div class="time-input-wrapper">
+                  <input class="dark-input time-input" type="time" [(ngModel)]="data.wakeTime" />
+                  <span class="clock-icon">🕐</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="divider"></div>
+      <div class="step-actions">
+        <button type="button" class="btn-secondary" (click)="skipStep()">Skip</button>
+        <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
+      </div>
+    }
+
+    <!-- ════════════════════════════════════════════════════════
+         STEP 2 – Workouts
+         ════════════════════════════════════════════════════════ -->
+    @if (currentStep() === 2) {
+      <div class="step-content">
+        <h2 class="step-title">What workouts do you like?</h2>
+        <p class="step-subtitle">We'll schedule your preferred workouts and balance intensity throughout the week.</p>
+
+        <!-- Favourite Workouts -->
+        <div class="field-group">
+          <label class="field-label">Favourite Workouts</label>
+          <div class="checkbox-list">
+            @for (option of [
+              { value: 'strength', label: 'Strength Training' },
+              { value: 'cardio',   label: 'Cardio (running, cycling, etc)' },
+              { value: 'flexibility', label: 'Flexibility (yoga, stretching)' },
+              { value: 'recovery', label: 'Recovery (walking, light activity)' }
+            ]; track option.value) {
+              <label class="checkbox-row" (click)="toggleWorkout(option.value)">
+                <span class="checkbox-box" [class.checked]="isWorkoutSelected(option.value)">
+                  @if (isWorkoutSelected(option.value)) {
+                    <svg viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 5L4.5 8.5L11 1.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                </span>
+                <span class="checkbox-label">{{ option.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Target Workouts Per Week -->
+        <div class="field-group">
+          <label class="field-label">Target Workouts Per Week</label>
+          <input
+            class="dark-input"
+            type="number"
+            min="1"
+            max="14"
+            [(ngModel)]="data.targetWorkoutsPerWeek"
+          />
+          <p class="field-hint">Realistic for your schedule</p>
+        </div>
+
+        <!-- Preferred Workout Times -->
+        <div class="field-group">
+          <label class="field-label">Preferred Workout Times</label>
+          <div class="checkbox-list">
+            @for (option of [
+              { value: 'early',     label: 'Early morning (5-7 AM)' },
+              { value: 'afternoon', label: 'Afternoon (12-3 PM)' },
+              { value: 'evening',   label: 'Evening (5-9 PM)' }
+            ]; track option.value) {
+              <label class="checkbox-row" (click)="toggleWorkoutTime(option.value)">
+                <span class="checkbox-box" [class.checked]="isWorkoutTimeSelected(option.value)">
+                  @if (isWorkoutTimeSelected(option.value)) {
+                    <svg viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 5L4.5 8.5L11 1.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  }
+                </span>
+                <span class="checkbox-label">{{ option.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="step-actions">
+        <button type="button" class="btn-secondary" (click)="prevStep()">Back</button>
+        <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
+      </div>
+    }
+
+    <!-- ════════════════════════════════════════════════════════
+         STEP 3 – Recovery & Rest
+         ════════════════════════════════════════════════════════ -->
+    @if (currentStep() === 3) {
+      <div class="step-content">
+        <h2 class="step-title">Recovery &amp; rest rules</h2>
+        <p class="step-subtitle">We'll respect these to keep you healthy and prevent burnout.</p>
+
+        <!-- Recovery Between Strength -->
+        <div class="field-group">
+          <label class="field-label">Recovery Between Strength Workouts</label>
+          <div class="pill-group">
+            @for (option of [
+              { value: 24, label: '24 hours' },
+              { value: 48, label: '48 hours' },
+              { value: 72, label: '72 hours' }
+            ]; track option.value) {
+              <button
+                type="button"
+                class="pill-btn"
+                [class.selected]="data.recoveryBetweenStrength === option.value"
+                (click)="setRecoveryGap(option.value)"
+              >{{ option.label }}</button>
+            }
+          </div>
+          <p class="field-hint">Minimum rest between same muscle group workouts</p>
+        </div>
+
+        <!-- Rest Days Per Week -->
+        <div class="field-group">
+          <label class="field-label">Rest Days Per Week</label>
+          <div class="pill-group">
+            @for (option of [
+              { value: '0-1', label: '0-1' },
+              { value: '1-2', label: '1-2' },
+              { value: '2+',  label: '2+' }
+            ]; track option.value) {
+              <button
+                type="button"
+                class="pill-btn"
+                [class.selected]="data.restDaysPerWeek === option.value"
+                (click)="setRestDays(option.value)"
+              >{{ option.label }}</button>
+            }
+          </div>
+        </div>
+
+        <!-- Min Sleep Before Intense Workout -->
+        <div class="field-group">
+          <label class="field-label">Min Sleep Before Intense Workout</label>
+          <div class="select-wrapper">
+            <select class="select-input" [(ngModel)]="data.minSleepBeforeIntense">
+              <option [value]="5">5 hours</option>
+              <option [value]="6">6 hours</option>
+              <option [value]="7">7 hours</option>
+              <option [value]="8">8 hours</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tip Box -->
+        <div class="tip-box">
+          <span class="tip-icon">💡</span>
+          <span><strong>Tip:</strong> You can change these anytime in settings. We start conservative to keep you healthy.</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="step-actions">
+        <button type="button" class="btn-secondary" (click)="prevStep()">Back</button>
+        <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
+      </div>
+    }
+
+    <!-- ════════════════════════════════════════════════════════
+         STEP 4 – Confirmation / You're all set!
+         ════════════════════════════════════════════════════════ -->
+    @if (currentStep() === 4) {
+      <div class="step-content">
+        <h2 class="step-title">You're all set!</h2>
+        <p class="step-subtitle">Let's generate your first week's schedule based on your preferences.</p>
+
+        <!-- Summary Cards -->
+        <div class="summary-list">
+          <div class="summary-card">
+            <span class="summary-label">Work Schedule</span>
+            @if (data.workPattern === 'irregular') {
+              <p class="summary-value">Irregular</p>
+              <p class="summary-sub">To be input in calendar</p>
+            } @else if (data.workPattern === 'fixed') {
+              <p class="summary-value">
+                @if (data.shiftPatterns.length > 0) {
+                  {{dayLabels[data.shiftPatterns[0].daysOfWeek[0]]}}-{{dayLabels[data.shiftPatterns[0].daysOfWeek[data.shiftPatterns[0].daysOfWeek.length - 1]]}}
+                  {{data.shiftPatterns[0].startTime}}-{{data.shiftPatterns[0].endTime}}
+                }
+              </p>
+              <p class="summary-sub">Sleep: {{formatTime12(data.bedtime)}}-{{formatTime12(data.wakeTime)}}</p>
+            } @else if (data.workPattern === 'rotating') {
+              <div class="rotating-patterns-summary">
+                @for (pattern of data.shiftPatterns; track $index) {
+                  <div class="pattern-summary-item">
+                    <div class="pattern-summary-name">
+                      {{ pattern.name || 'Shift ' + ($index + 1) }}
+                    </div>
+                    <div class="pattern-summary-times">
+                      {{pattern.startTime}}-{{pattern.endTime}}
+                    </div>
+                    <div class="pattern-summary-days">
+                      {{pattern.daysOfWeek.map(d => dayLabels[d]).join(', ')}}
+                    </div>
+                    @if (pattern.bedtime && pattern.wakeTime) {
+                      <div class="pattern-summary-sleep">
+                        Sleep: {{formatTime12(pattern.bedtime)}}-{{formatTime12(pattern.wakeTime)}}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="summary-card">
+            <span class="summary-label">Workouts</span>
+            <p class="summary-value">{{ workoutsSummary }}</p>
+            <p class="summary-sub">{{ workoutsTypesSummary }}</p>
+          </div>
+
+          <div class="summary-card">
+            <span class="summary-label">Recovery Rules</span>
+            <p class="summary-value">{{ recoverySummary }}</p>
+            <p class="summary-sub">{{ sleepIntenseSummary }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="confirmation-actions">
+        <button type="button" class="btn-primary btn-full" (click)="generateFirstWeek()">
+          Generate My First Week
+        </button>
+        <div class="secondary-links">
+          <button type="button" class="link-btn" (click)="editSettings()">Edit settings</button>
+          <span class="link-separator">·</span>
+          <button type="button" class="link-btn" (click)="skipForNow()">Skip for now</button>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

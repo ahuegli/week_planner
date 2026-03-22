@@ -15,6 +15,8 @@ export class QuickAddPersonalEventCardComponent {
     startTime: string;
     endTime: string;
     commute: number;
+    bedtime?: string;
+    wakeTime?: string;
     repeat: number[];
   }>();
 
@@ -25,6 +27,8 @@ export class QuickAddPersonalEventCardComponent {
   startTime = signal('14:00');
   endTime = signal('15:00');
   commute = signal(0);
+  bedtime = signal('');
+  wakeTime = signal('');
   repeat = signal<number[]>([]);
 
   daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -36,6 +40,8 @@ export class QuickAddPersonalEventCardComponent {
         startTime: this.startTime(),
         endTime: this.endTime(),
         commute: this.commute(),
+        bedtime: this.bedtime() || undefined,
+        wakeTime: this.wakeTime() || undefined,
         repeat: this.repeat(),
       });
       this.resetForm();
@@ -65,6 +71,8 @@ export class QuickAddPersonalEventCardComponent {
     this.startTime.set('14:00');
     this.endTime.set('15:00');
     this.commute.set(0);
+    this.bedtime.set('');
+    this.wakeTime.set('');
     this.repeat.set([]);
   }
 }
