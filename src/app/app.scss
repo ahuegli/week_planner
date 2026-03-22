@@ -201,8 +201,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 1400px;
+  max-width: 1200px;
   width: 100%;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
 }
 
 .daily-wrapper {
@@ -773,7 +775,7 @@
 /* Weekly Snapshot */
 .snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-lg);
 }
 
@@ -820,6 +822,7 @@
   gap: var(--spacing-lg);
   width: 100% !important;
   max-width: 1200px !important;
+  margin: 0 auto !important;
   padding: var(--spacing-lg);
   animation: fadeIn 0.3s ease-out;
   min-width: 0; /* Allow children to shrink below max-width */
@@ -874,7 +877,7 @@
 
 .calendar-grid-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 
@@ -889,10 +892,11 @@
 
 .calendar-grid {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   gap: var(--spacing-sm) !important;
   margin-bottom: var(--spacing-lg);
   width: 100% !important;
+  box-sizing: border-box;
 
   .calendar-day {
     background: var(--color-bg-primary);
@@ -905,6 +909,8 @@
     transition: all var(--transition-default);
     position: relative;
     cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
 
     &:hover {
       box-shadow: var(--shadow-sm);
@@ -1091,36 +1097,15 @@
    =================================================================== */
 
 .quick-add-section {
-  background: var(--color-bg-primary);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .quick-add-title {
-  font-size: var(--font-size-h3);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
-  text-align: left;
 }
 
 .quick-add-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: var(--spacing-lg) !important;
-  width: 100% !important;
-  box-sizing: border-box;
 }
 
 .quick-add-column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  min-width: 0;
 }
 
 .quick-add-header-btn {

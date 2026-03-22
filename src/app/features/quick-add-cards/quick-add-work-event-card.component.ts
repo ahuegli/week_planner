@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -10,6 +10,11 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './quick-add-work-event-card.component.scss',
 })
 export class QuickAddWorkShiftCardComponent {
+  @Input() presetDay: number | null = null;
+  @Input() presetDayLabel = '';
+  @Input() allowRepeat = true;
+  @Input() presetWeekOffset = 0;
+
   @Output() eventAdded = new EventEmitter<{
     title: string;
     startTime: string;
@@ -18,6 +23,7 @@ export class QuickAddWorkShiftCardComponent {
     bedtime?: string;
     wakeTime?: string;
     repeat: number[];
+    weekOffset: number;
   }>();
 
   @Output() closed = new EventEmitter<void>();
@@ -42,7 +48,8 @@ export class QuickAddWorkShiftCardComponent {
         commute: this.commute(),
         bedtime: this.bedtime() || undefined,
         wakeTime: this.wakeTime() || undefined,
-        repeat: this.repeat(),
+        repeat: this.getSelectedDays(),
+        weekOffset: this.presetWeekOffset,
       });
       this.resetForm();
     }
@@ -64,6 +71,14 @@ export class QuickAddWorkShiftCardComponent {
 
   isDaySelected(dayIndex: number): boolean {
     return this.repeat().includes(dayIndex);
+  }
+
+  private getSelectedDays(): number[] {
+    if (!this.allowRepeat && this.presetDay !== null) {
+      return [this.presetDay];
+    }
+
+    return this.repeat();
   }
 
   private resetForm(): void {
