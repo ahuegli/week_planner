@@ -18,12 +18,32 @@ describe('PlannerService', () => {
 
   beforeEach(() => {
     generateRequests = [];
-    service = new PlannerService({
-      generate: (request: GenerateScheduleRequest) => {
-        generateRequests.push(request);
-        return of(emptyResponse);
-      },
-    } as never);
+    service = new PlannerService(
+      {
+        generate: (request: GenerateScheduleRequest) => {
+          generateRequests.push(request);
+          return of(emptyResponse);
+        },
+      } as never,
+      {
+        getAll: () => of([]),
+        create: () => of({
+          id: 'workout-1',
+          name: 'Mock Workout',
+          workoutType: 'running',
+          duration: 45,
+          frequencyPerWeek: 1,
+        }),
+        update: () => of({
+          id: 'workout-1',
+          name: 'Mock Workout',
+          workoutType: 'running',
+          duration: 45,
+          frequencyPerWeek: 1,
+        }),
+        delete: () => of(void 0),
+      } as never,
+    );
   });
 
   it('should omit meal prep generation when settings disable it even if sessions exist', async () => {

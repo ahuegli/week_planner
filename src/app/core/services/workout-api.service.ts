@@ -9,6 +9,7 @@ export interface CreateWorkoutDto {
   duration: number;
   frequencyPerWeek: number;
   distanceKm?: number;
+  notes?: string;
 }
 
 export interface UpdateWorkoutDto {
@@ -17,6 +18,7 @@ export interface UpdateWorkoutDto {
   duration?: number;
   frequencyPerWeek?: number;
   distanceKm?: number;
+  notes?: string;
 }
 
 @Injectable({
