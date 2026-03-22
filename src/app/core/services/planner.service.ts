@@ -125,17 +125,6 @@ export class PlannerService {
     return date;
   }
 
-  /**
-   * Calculate week offset from current week
-   */
-  getWeekOffsetFromDate(date: Date): number {
-    const now = new Date();
-    const currentWeekStart = this.getWeekStartDate(now);
-    const targetWeekStart = this.getWeekStartDate(date);
-    const diffTime = targetWeekStart.getTime() - currentWeekStart.getTime();
-    return Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
-  }
-
   // ========== Data Loading Methods ==========
 
   async loadWorkouts(): Promise<void> {
@@ -531,22 +520,6 @@ export class PlannerService {
 
   updateSettings(patch: Partial<SchedulerSettings>): void {
     this.settingsSignal.update((current) => ({ ...current, ...patch }));
-  }
-
-  updateExhaustion(day: number, value: number): void {
-    this.weekContextSignal.update((current) => {
-      const updated = [...current.exhaustionByDay];
-      updated[day] = Math.min(10, Math.max(0, value));
-      return { ...current, exhaustionByDay: updated };
-    });
-  }
-
-  updateCommute(day: number, hasCommute: boolean): void {
-    this.weekContextSignal.update((current) => {
-      const updated = [...current.commuteByDay];
-      updated[day] = hasCommute;
-      return { ...current, commuteByDay: updated };
-    });
   }
 
   async addPersonalEvent(event: CalendarEvent): Promise<void> {
