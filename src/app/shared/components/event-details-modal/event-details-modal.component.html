@@ -1,9 +1,11 @@
 <div class="modal-overlay" (click)="onClose()">
   <div class="modal-content" [ngClass]="event.type" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <button class="edit-btn" type="button" (click)="onEdit()" *ngIf="!isEditing()">
-        ✏️
-      </button>
+      @if (!isEditing()) {
+        <button class="edit-btn" type="button" (click)="onEdit()">
+          ✏️
+        </button>
+      }
       <button class="close-btn" type="button" (click)="onClose()">✕</button>
     </div>
 

@@ -81,26 +81,96 @@ export class App {
   // Fill dialog state
   showFillDialog = signal(false);
 
-  // Week-aware event view: events for the currently navigated week (week-specific + repeating)
-  currentWeekEventsByDay = computed(() => {
+  // Calculate the date range for the current week view
+  currentWeekStart = computed(() => {
     const offset = this.currentWeekOffset();
-    return Array.from({ length: 7 }, (_, day) =>
-      this.planner
+    const weekStart = this.planner.getWeekStartDate();
+    weekStart.setDate(weekStart.getDate() + offset * 7);
+    return weekStart;
+  });
+  
+  currentWeekEnd = computed(() => {
+    const start = this.currentWeekStart();
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return end;
+  });
+
+  // Format the week date range for display
+  currentWeekLabel = computed(() => {
+    const start = this.currentWeekStart();
+    const end = this.currentWeekEnd();
+    const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStr} - ${endStr}`;
+  });
+
+  // Get the date string for a specific day in the current week
+  getDayDate(dayIndex: number): string {
+    const weekStart = this.currentWeekStart();
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + dayIndex);
+    return this.planner.formatDate(date);
+  }
+  
+  // Get formatted date for display in day headers
+  getDayDateDisplay(dayIndex: number): string {
+    const weekStart = this.currentWeekStart();
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + dayIndex);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // Week-aware event view: events for the currently navigated week (by date or repeating)
+  currentWeekEventsByDay = computed(() => {
+    const weekStart = this.currentWeekStart();
+    const startDateStr = this.planner.formatDate(weekStart);
+    const endDate = new Date(weekStart);
+    endDate.setDate(weekStart.getDate() + 6);
+    const endDateStr = this.planner.formatDate(endDate);
+    
+    return Array.from({ length: 7 }, (_, day) => {
+      const dayDateStr = this.getDayDate(day);
+      return this.planner
         .events()
-        .filter((e) => e.day === day && (e.weekOffset === undefined || e.weekOffset === offset))
-        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
-    );
+        .filter((e) => {
+          // Event matches this day
+          if (e.day !== day) return false;
+          
+          // Repeating events show on all weeks
+          if (e.isRepeatingWeekly) return true;
+          
+          // Events with specific dates must match
+          if (e.date) {
+            return e.date === dayDateStr;
+          }
+          
+          // Legacy: events without date - show if they have matching weekOffset or no weekOffset
+          const offset = this.currentWeekOffset();
+          return e.weekOffset === undefined || e.weekOffset === offset;
+        })
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    });
   });
 
   constructor(readonly planner: PlannerService) {
     this.migrateLegacyWeekOffsets();
 
-    // Load workouts when user is authenticated
+    // Load workouts and calendar events when user is authenticated
     effect(() => {
       if (this.isAuthenticated()) {
         this.planner.loadWorkouts();
+        this.planner.loadEventsForWeek(this.currentWeekOffset());
       } else {
         this.planner.clearAllData();
+      }
+    });
+    
+    // Reload events when week changes
+    effect(() => {
+      const offset = this.currentWeekOffset();
+      if (this.isAuthenticated()) {
+        this.planner.loadEventsForWeek(offset);
       }
     });
 
@@ -421,16 +491,19 @@ export class App {
   previousWeek(): void {
     this.currentWeekOffset.update((offset) => offset - 1);
     this.syncMonthToCurrentWeek();
+    // Events will be loaded by the effect watching currentWeekOffset
   }
 
   nextWeek(): void {
     this.currentWeekOffset.update((offset) => offset + 1);
     this.syncMonthToCurrentWeek();
+    // Events will be loaded by the effect watching currentWeekOffset
   }
 
   goToToday(): void {
     this.currentWeekOffset.set(0);
     this.syncMonthToCurrentWeek();
+    // Events will be loaded by the effect watching currentWeekOffset
   }
 
   suggestWorkouts(): void {
@@ -565,13 +638,26 @@ export class App {
   }
 
   getTodaysEvents(): CalendarEvent[] {
+    const today = new Date();
     const todayIndex = this.getTodayIndex();
+    const todayDateStr = this.planner.formatDate(today);
+    
     return this.planner
       .events()
-      .filter(
-        (event) =>
-          event.day === todayIndex && (event.weekOffset === undefined || event.weekOffset === 0),
-      )
+      .filter((event) => {
+        if (event.day !== todayIndex) return false;
+        
+        // Repeating events show every day
+        if (event.isRepeatingWeekly) return true;
+        
+        // Events with dates must match today's date
+        if (event.date) {
+          return event.date === todayDateStr;
+        }
+        
+        // Legacy events without date - only show if weekOffset is 0 or undefined
+        return event.weekOffset === undefined || event.weekOffset === 0;
+      })
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
@@ -613,7 +699,6 @@ export class App {
     const upcoming: Array<{ event: CalendarEvent; start: number }> = [];
 
     // Look ahead two weeks and place events on real calendar dates.
-    // This prevents weekday wraparound from pulling past days back into "Next Events".
     for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
       const date = new Date(now);
       date.setDate(now.getDate() + dayOffset);
@@ -621,15 +706,25 @@ export class App {
 
       const jsDay = date.getDay();
       const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
-      const weekOffset = this.getWeekOffsetForDate(date);
+      const dateStr = this.planner.formatDate(date);
 
       const dayEvents = this.planner
         .events()
-        .filter(
-          (event) =>
-            event.day === weekdayIndex &&
-            (event.weekOffset === undefined || event.weekOffset === weekOffset),
-        );
+        .filter((event) => {
+          if (event.day !== weekdayIndex) return false;
+          
+          // Repeating events show every week
+          if (event.isRepeatingWeekly) return true;
+          
+          // Events with dates must match
+          if (event.date) {
+            return event.date === dateStr;
+          }
+          
+          // Legacy events without date - calculate based on weekOffset
+          const weekOffset = this.getWeekOffsetForDate(date);
+          return event.weekOffset === undefined || event.weekOffset === weekOffset;
+        });
 
       dayEvents.forEach((event) => {
         const [hours, minutes] = event.startTime.split(':').map(Number);

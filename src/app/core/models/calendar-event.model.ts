@@ -8,6 +8,8 @@ export interface CalendarEvent {
   title: string;
   type: CalendarEventType;
   day: number;
+  /** Actual date of the event in YYYY-MM-DD format */
+  date?: string;
   startTime: string;
   endTime: string;
   durationMinutes?: number;
@@ -24,8 +26,7 @@ export interface CalendarEvent {
   previousDay?: number; // tracks which day this was previously on (for displaced sessions)
   hasOptimizationConflict?: boolean;
   /**
-   * Week offset relative to the current real week (0 = this week, 1 = next, -1 = last).
-   * undefined means the event repeats on every week (e.g. recurring shifts, custom events).
+   * @deprecated Use `date` field instead. Week offset is calculated from the date.
    */
   weekOffset?: number;
 }

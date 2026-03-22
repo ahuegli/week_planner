@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between, IsNull, Or } from 'typeorm';
 import { CalendarEvent } from './calendar-event.entity';
 import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event.dto';
 
@@ -14,7 +14,18 @@ export class CalendarEventService {
   async findAllByUser(userId: string): Promise<CalendarEvent[]> {
     return this.eventRepository.find({
       where: { userId },
-      order: { day: 'ASC', startTime: 'ASC' },
+      order: { date: 'ASC', startTime: 'ASC' },
+    });
+  }
+
+  async findByDateRange(userId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
+    // Return events within date range OR recurring events (isRepeatingWeekly = true)
+    return this.eventRepository.find({
+      where: [
+        { userId, date: Between(startDate, endDate) },
+        { userId, isRepeatingWeekly: true },
+      ],
+      order: { date: 'ASC', startTime: 'ASC' },
     });
   }
 
@@ -59,6 +70,16 @@ export class CalendarEventService {
 
   async removeAllByUser(userId: string): Promise<void> {
     await this.eventRepository.delete({ userId });
+  }
+
+  async removeByDateRange(userId: string, startDate: string, endDate: string): Promise<void> {
+    await this.eventRepository
+      .createQueryBuilder()
+      .delete()
+      .where('userId = :userId', { userId })
+      .andWhere('date BETWEEN :startDate AND :endDate', { startDate, endDate })
+      .andWhere('isRepeatingWeekly = false')
+      .execute();
   }
 
   async replaceAll(userId: string, dtos: CreateCalendarEventDto[]): Promise<CalendarEvent[]> {

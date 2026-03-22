@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -19,7 +20,14 @@ export class CalendarEventController {
   constructor(private readonly calendarEventService: CalendarEventService) {}
 
   @Get()
-  async findAll(@Request() req) {
+  async findAll(
+    @Request() req,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    if (startDate && endDate) {
+      return this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate);
+    }
     return this.calendarEventService.findAllByUser(req.user.userId);
   }
 
@@ -52,5 +60,18 @@ export class CalendarEventController {
   async remove(@Request() req, @Param('id') id: string) {
     await this.calendarEventService.remove(id, req.user.userId);
     return { message: 'Calendar event deleted' };
+  }
+
+  @Delete()
+  async removeByDateRange(
+    @Request() req,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    if (!startDate || !endDate) {
+      throw new Error('startDate and endDate are required');
+    }
+    await this.calendarEventService.removeByDateRange(req.user.userId, startDate, endDate);
+    return { message: 'Calendar events deleted' };
   }
 }

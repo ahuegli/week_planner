@@ -13,7 +13,8 @@
       <input
         id="title"
         type="text"
-        [(ngModel)]="formData().title"
+        [ngModel]="formData().title"
+        (ngModelChange)="formData.update(c => ({ ...c, title: $event }))"
         name="title"
         placeholder="e.g., Doctor's Appointment"
         required
@@ -26,7 +27,8 @@
         <input
           id="startTime"
           type="time"
-          [(ngModel)]="formData().startTime"
+          [ngModel]="formData().startTime"
+          (ngModelChange)="formData.update(c => ({ ...c, startTime: $event }))"
           name="startTime"
           required
         />
@@ -36,7 +38,8 @@
         <input
           id="endTime"
           type="time"
-          [(ngModel)]="formData().endTime"
+          [ngModel]="formData().endTime"
+          (ngModelChange)="formData.update(c => ({ ...c, endTime: $event }))"
           name="endTime"
           required
         />
@@ -46,7 +49,8 @@
         <input
           id="commute"
           type="number"
-          [(ngModel)]="formData().commuteMinutes"
+          [ngModel]="formData().commuteMinutes"
+          (ngModelChange)="formData.update(c => ({ ...c, commuteMinutes: $event ? +$event : 0 }))"
           name="commute"
           min="0"
           max="180"
@@ -59,7 +63,8 @@
       <label for="notes">Notes (optional)</label>
       <textarea
         id="notes"
-        [(ngModel)]="formData().notes"
+        [ngModel]="formData().notes"
+        (ngModelChange)="formData.update(c => ({ ...c, notes: $event }))"
         name="notes"
         placeholder="Add any notes..."
         rows="2"
@@ -87,7 +92,8 @@
       <input
         id="repeat"
         type="checkbox"
-        [(ngModel)]="formData().isRepeatingWeekly"
+        [ngModel]="formData().isRepeatingWeekly"
+        (ngModelChange)="formData.update(c => ({ ...c, isRepeatingWeekly: $event }))"
         name="repeat"
       />
       <label for="repeat">Repeat weekly (all days)</label>

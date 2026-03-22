@@ -14,6 +14,7 @@ import {
   UnplacedWorkout,
 } from './scheduler-api.service';
 import { WorkoutApiService } from './workout-api.service';
+import { CalendarEventApiService, CreateCalendarEventDto } from './calendar-event-api.service';
 import { firstValueFrom } from 'rxjs';
 
 export interface OptimizationProposal {
@@ -66,7 +67,76 @@ export class PlannerService {
   constructor(
     private readonly schedulerApi: SchedulerApiService,
     private readonly workoutApi: WorkoutApiService,
+    private readonly calendarEventApi: CalendarEventApiService,
   ) {}
+
+  // ========== Date Utility Methods ==========
+
+  /**
+   * Get the Monday of the week for a given date
+   */
+  getWeekStartDate(date: Date = new Date()): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  /**
+   * Get the Sunday of the week for a given date
+   */
+  getWeekEndDate(date: Date = new Date()): Date {
+    const start = this.getWeekStartDate(date);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return end;
+  }
+
+  /**
+   * Format a date as YYYY-MM-DD
+   */
+  formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  /**
+   * Parse a YYYY-MM-DD string to Date
+   */
+  parseDate(dateStr: string): Date {
+    return new Date(dateStr + 'T00:00:00');
+  }
+
+  /**
+   * Get the day of week index (0=Mon, 6=Sun) from a date
+   */
+  getDayOfWeek(date: Date): number {
+    const jsDay = date.getDay();
+    return jsDay === 0 ? 6 : jsDay - 1;
+  }
+
+  /**
+   * Get date for a specific day index within a week that starts on the given Monday
+   */
+  getDateForDayInWeek(weekStart: Date, dayIndex: number): Date {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + dayIndex);
+    return date;
+  }
+
+  /**
+   * Calculate week offset from current week
+   */
+  getWeekOffsetFromDate(date: Date): number {
+    const now = new Date();
+    const currentWeekStart = this.getWeekStartDate(now);
+    const targetWeekStart = this.getWeekStartDate(date);
+    const diffTime = targetWeekStart.getTime() - currentWeekStart.getTime();
+    return Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
+  }
+
+  // ========== Data Loading Methods ==========
 
   async loadWorkouts(): Promise<void> {
     try {
@@ -75,6 +145,44 @@ export class PlannerService {
     } catch (error) {
       console.error('Failed to load workouts:', error);
     }
+  }
+
+  async loadCalendarEvents(startDate?: Date, endDate?: Date): Promise<void> {
+    try {
+      let events: CalendarEvent[];
+      if (startDate && endDate) {
+        events = await firstValueFrom(
+          this.calendarEventApi.getByDateRange(
+            this.formatDate(startDate),
+            this.formatDate(endDate)
+          )
+        );
+      } else {
+        events = await firstValueFrom(this.calendarEventApi.getAll());
+      }
+      
+      // Ensure day field is computed from date if not present
+      const processedEvents = events.map(event => {
+        if (event.date && event.day === undefined) {
+          return { ...event, day: this.getDayOfWeek(this.parseDate(event.date)) };
+        }
+        return event;
+      });
+      
+      this.eventsSignal.set(processedEvents);
+    } catch (error) {
+      console.error('Failed to load calendar events:', error);
+    }
+  }
+
+  async loadEventsForWeek(weekOffset: number = 0): Promise<void> {
+    const now = new Date();
+    const weekStart = this.getWeekStartDate(now);
+    weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    await this.loadCalendarEvents(weekStart, weekEnd);
   }
 
   clearAllData(): void {
@@ -87,18 +195,62 @@ export class PlannerService {
     this.optimizationProposalSignal.set(null);
   }
 
-  addShift(day: number, shiftType: ShiftType): void {
+  // ========== Event Management Methods ==========
+
+  private toCreateDto(event: CalendarEvent): CreateCalendarEventDto {
+    return {
+      title: event.title,
+      type: event.type,
+      day: event.day,
+      date: event.date,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      durationMinutes: event.durationMinutes,
+      shiftType: event.shiftType,
+      workoutType: event.workoutType,
+      distanceKm: event.distanceKm,
+      isLocked: event.isLocked,
+      isPersonal: event.isPersonal,
+      isManuallyPlaced: event.isManuallyPlaced,
+      isRepeatingWeekly: event.isRepeatingWeekly,
+      commuteMinutes: event.commuteMinutes,
+      notes: event.notes,
+    };
+  }
+
+  async addShift(day: number, shiftType: ShiftType, weekOffset?: number): Promise<void> {
     const shift = SHIFT_DEFINITIONS[shiftType];
+    
+    // Calculate actual date
+    const weekStart = this.getWeekStartDate();
+    if (weekOffset) {
+      weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+    }
+    const eventDate = this.getDateForDayInWeek(weekStart, day);
+    
     const event: CalendarEvent = {
       id: crypto.randomUUID(),
       title: `${shift.type.toUpperCase()} Shift`,
       type: 'shift',
       shiftType: shift.type,
       day,
+      date: this.formatDate(eventDate),
       startTime: shift.start,
       endTime: shift.end,
     };
+    
+    // Optimistically add to local state
     this.eventsSignal.update((current) => [...current, event]);
+    
+    // Sync with backend
+    try {
+      const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(event)));
+      this.eventsSignal.update((events) =>
+        events.map((e) => (e.id === event.id ? { ...e, id: savedEvent.id } : e)),
+      );
+    } catch (error) {
+      console.error('Failed to save shift to backend:', error);
+    }
   }
 
   async addWorkout(
@@ -189,7 +341,7 @@ export class PlannerService {
     this.mealPrepSessionsSignal.update((sessions) => sessions.filter((s) => s.id !== id));
   }
 
-  addManualEvent(
+  async addManualEvent(
     day: number,
     type: 'workout' | 'mealprep',
     title: string,
@@ -199,7 +351,8 @@ export class PlannerService {
     distanceCountsAsLong?: boolean,
     startTimeMinutes?: number,
     weekOffset?: number,
-  ): void {
+    date?: string,
+  ): Promise<void> {
     let startTime = '18:00'; // Default to 6pm
 
     // Convert startTimeMinutes to HH:MM format if provided
@@ -209,11 +362,24 @@ export class PlannerService {
       startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
 
+    // Calculate actual date if not provided
+    let eventDate = date;
+    if (!eventDate && weekOffset !== undefined) {
+      const weekStart = this.getWeekStartDate();
+      weekStart.setDate(weekStart.getDate() + weekOffset * 7 + day);
+      eventDate = this.formatDate(weekStart);
+    } else if (!eventDate) {
+      const weekStart = this.getWeekStartDate();
+      weekStart.setDate(weekStart.getDate() + day);
+      eventDate = this.formatDate(weekStart);
+    }
+
     const event: CalendarEvent = {
       id: crypto.randomUUID(),
       title,
       type,
       day,
+      date: eventDate,
       startTime,
       endTime: addMinutes(startTime, duration),
       durationMinutes: duration,
@@ -222,29 +388,88 @@ export class PlannerService {
       distanceCountsAsLong,
       isLocked: true, // Mark as fixed so smart plan does not reallocate
       isManuallyPlaced: true, // Mark as manually placed by user
-      weekOffset: weekOffset ?? 0,
     };
+
+    // Optimistically add to local state
     this.eventsSignal.update((current) => [...current, event]);
+
+    // Sync with backend
+    try {
+      const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(event)));
+      // Update with server-assigned ID
+      this.eventsSignal.update((events) =>
+        events.map((e) => (e.id === event.id ? { ...e, id: savedEvent.id } : e)),
+      );
+    } catch (error) {
+      console.error('Failed to save event to backend:', error);
+      // Keep local event even if backend fails
+    }
   }
 
-  moveEvent(eventId: string, targetDay: number): void {
+  async moveEvent(eventId: string, targetDay: number, targetDate?: string): Promise<void> {
+    const currentEvent = this.eventsSignal().find((e) => e.id === eventId);
+    if (!currentEvent) return;
+
+    // Calculate new date if not provided
+    let newDate = targetDate;
+    if (!newDate && currentEvent.date) {
+      // Keep the same week, just change the day
+      const eventDate = this.parseDate(currentEvent.date);
+      const eventWeekStart = this.getWeekStartDate(eventDate);
+      const newEventDate = this.getDateForDayInWeek(eventWeekStart, targetDay);
+      newDate = this.formatDate(newEventDate);
+    }
+
+    // Optimistically update local state
     this.eventsSignal.update((events) =>
       events.map((event) =>
         event.id === eventId
-          ? { ...event, day: targetDay, isLocked: true, isManuallyPlaced: true }
+          ? { ...event, day: targetDay, date: newDate, isLocked: true, isManuallyPlaced: true }
           : event,
       ),
     );
+
+    // Sync with backend
+    try {
+      await firstValueFrom(
+        this.calendarEventApi.update(eventId, { 
+          day: targetDay, 
+          date: newDate,
+          isLocked: true, 
+          isManuallyPlaced: true 
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to update event in backend:', error);
+    }
   }
 
-  updateEvent(updatedEvent: CalendarEvent): void {
+  async updateEvent(updatedEvent: CalendarEvent): Promise<void> {
+    // Optimistically update local state
     this.eventsSignal.update((events) =>
       events.map((event) => (event.id === updatedEvent.id ? updatedEvent : event)),
     );
+
+    // Sync with backend
+    try {
+      await firstValueFrom(
+        this.calendarEventApi.update(updatedEvent.id, this.toCreateDto(updatedEvent)),
+      );
+    } catch (error) {
+      console.error('Failed to update event in backend:', error);
+    }
   }
 
-  removeEvent(eventId: string): void {
+  async removeEvent(eventId: string): Promise<void> {
+    // Optimistically remove from local state
     this.eventsSignal.update((events) => events.filter((event) => event.id !== eventId));
+
+    // Sync with backend
+    try {
+      await firstValueFrom(this.calendarEventApi.delete(eventId));
+    } catch (error) {
+      console.error('Failed to delete event from backend:', error);
+    }
   }
 
   clearGeneratedEvents(): void {
@@ -274,23 +499,68 @@ export class PlannerService {
     });
   }
 
-  addPersonalEvent(event: CalendarEvent): void {
-    const personal: CalendarEvent = { ...event, isPersonal: true, weekOffset: event.weekOffset ?? 0 };
+  async addPersonalEvent(event: CalendarEvent): Promise<void> {
+    const personal: CalendarEvent = { ...event, isPersonal: true };
+    
+    // Ensure date is set
+    if (!personal.date && personal.day !== undefined) {
+      const weekStart = this.getWeekStartDate();
+      const eventDate = this.getDateForDayInWeek(weekStart, personal.day);
+      personal.date = this.formatDate(eventDate);
+    }
+    
+    // Optimistically add to local state
     this.eventsSignal.update((current) => [...current, personal]);
     this.weekContextSignal.update((current) => ({
       ...current,
       personalEvents: [...current.personalEvents, personal],
     }));
+    
+    // Sync with backend
+    try {
+      const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(personal)));
+      this.eventsSignal.update((events) =>
+        events.map((e) => (e.id === personal.id ? { ...e, id: savedEvent.id } : e)),
+      );
+    } catch (error) {
+      console.error('Failed to save personal event to backend:', error);
+    }
   }
 
-  addCalendarEventDirectly(event: CalendarEvent): void {
+  async addCalendarEventDirectly(event: CalendarEvent): Promise<void> {
+    // Ensure date is set
+    if (!event.date && event.day !== undefined) {
+      const weekStart = this.getWeekStartDate();
+      const eventDate = this.getDateForDayInWeek(weekStart, event.day);
+      event = { ...event, date: this.formatDate(eventDate) };
+    }
+    
+    // Optimistically add to local state
     this.eventsSignal.update((current) => [...current, event]);
+    
+    // Sync with backend
+    try {
+      const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(event)));
+      this.eventsSignal.update((events) =>
+        events.map((e) => (e.id === event.id ? { ...e, id: savedEvent.id } : e)),
+      );
+    } catch (error) {
+      console.error('Failed to save event to backend:', error);
+    }
   }
 
   async generateSuggestedPlan(weekOffset: number = 0): Promise<void> {
     this.clearOptimizationProposal();
 
     const { totalSessionsPerWeek, avgDuration } = this.getMealPrepGenerationConfig();
+    
+    // Calculate the week's date range
+    const weekStart = this.getWeekStartDate();
+    weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const startDateStr = this.formatDate(weekStart);
+    const endDateStr = this.formatDate(weekEnd);
 
     try {
       const result = await firstValueFrom(
@@ -306,15 +576,26 @@ export class PlannerService {
       // Store unplaced workouts for display
       this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
 
-      // Mark placed events as locked so they are preserved on subsequent regenerations
-      const lockedPlacedEvents = result.placedEvents.map((e) => ({ ...e, isLocked: true, weekOffset }));
+      // Add dates to placed events and mark as locked
+      const lockedPlacedEvents = result.placedEvents.map((e) => {
+        const eventDate = this.getDateForDayInWeek(weekStart, e.day);
+        return { 
+          ...e, 
+          isLocked: true, 
+          date: this.formatDate(eventDate),
+        };
+      });
 
+      // Update local state
       this.eventsSignal.update((events) => {
         const preserved = events.filter((e) => {
-           // Always keep repeating events (no weekOffset = recurring across all weeks)
-           if (e.weekOffset === undefined) return true;
-           // Always keep events from OTHER weeks
-           if (e.weekOffset !== weekOffset) return true;
+           // Keep events that have isRepeatingWeekly flag
+           if (e.isRepeatingWeekly) return true;
+           // Keep events from other weeks (check by date)
+           if (e.date) {
+             const eventDate = e.date;
+             if (eventDate < startDateStr || eventDate > endDateStr) return true;
+           }
            // For the target week: keep shifts, custom events, personal events
            if (e.type === 'shift' || e.type === 'custom-event') return true;
            if (e.isPersonal) return true;
@@ -324,44 +605,93 @@ export class PlannerService {
         });
         return [...preserved, ...lockedPlacedEvents];
       });
+      
+      // Sync generated events with backend
+      try {
+        // First, delete existing workout/mealprep events for this week in the backend
+        await firstValueFrom(
+          this.calendarEventApi.deleteByDateRange(startDateStr, endDateStr)
+        ).catch(() => {}); // Ignore if endpoint doesn't exist
+        
+        // Then create the new placed events
+        if (lockedPlacedEvents.length > 0) {
+          await firstValueFrom(
+            this.calendarEventApi.createMany(lockedPlacedEvents.map(e => this.toCreateDto(e)))
+          );
+        }
+      } catch (error) {
+        console.error('Failed to sync generated plan with backend:', error);
+      }
     } catch (error) {
       console.error('Failed to generate schedule:', error);
     }
   }
 
-  addCustomEvent(customEvent: CustomEvent, days?: number[], weekOffset?: number): void {
+  async addCustomEvent(customEvent: CustomEvent, days?: number[], weekOffset?: number): Promise<void> {
     this.customEventsSignal.update((current) => [...current, customEvent]);
 
     // Add calendar events for this custom event
     const daysToAdd = days ?? [0, 1, 2, 3, 4, 5, 6]; // All days if not specified
+    
+    const weekStart = this.getWeekStartDate();
+    if (weekOffset) {
+      weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+    }
 
     for (const day of daysToAdd) {
+      const eventDate = this.getDateForDayInWeek(weekStart, day);
       const calendarEvent: CalendarEvent = {
         id: crypto.randomUUID(),
         title: customEvent.title,
         type: 'custom-event',
         day,
+        date: this.formatDate(eventDate),
         startTime: customEvent.startTime,
         endTime: customEvent.endTime,
         notes: customEvent.notes,
         commuteMinutes: customEvent.commuteMinutes,
         isRepeatingWeekly: customEvent.isRepeatingWeekly,
         isLocked: true, // Custom events should not be moved by scheduler
-        weekOffset,
       };
+      
+      // Optimistically add to local state
       this.eventsSignal.update((current) => [...current, calendarEvent]);
+      
+      // Sync with backend
+      try {
+        const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(calendarEvent)));
+        this.eventsSignal.update((events) =>
+          events.map((e) => (e.id === calendarEvent.id ? { ...e, id: savedEvent.id } : e)),
+        );
+      } catch (error) {
+        console.error('Failed to save custom event to backend:', error);
+      }
     }
   }
 
-  deleteCustomEvent(id: string): void {
+  async deleteCustomEvent(id: string): Promise<void> {
     const customEvent = this.customEventsSignal().find((ce) => ce.id === id);
     if (!customEvent) return;
+
+    // Find all calendar events to delete
+    const eventsToDelete = this.eventsSignal().filter(
+      (e) => e.type === 'custom-event' && e.title === customEvent.title
+    );
 
     this.customEventsSignal.update((events) => events.filter((e) => e.id !== id));
     // Remove all calendar events associated with this custom event
     this.eventsSignal.update((events) =>
       events.filter((e) => !(e.type === 'custom-event' && e.title === customEvent.title)),
     );
+    
+    // Sync with backend
+    try {
+      for (const event of eventsToDelete) {
+        await firstValueFrom(this.calendarEventApi.delete(event.id));
+      }
+    } catch (error) {
+      console.error('Failed to delete custom events from backend:', error);
+    }
   }
 
   addCustomShiftDefinition(customShift: CustomShift): void {
@@ -390,50 +720,101 @@ export class PlannerService {
     );
   }
 
-  deleteCustomShift(id: string): void {
+  async deleteCustomShift(id: string): Promise<void> {
     const customShift = this.customShiftsSignal().find((cs) => cs.id === id);
     if (!customShift) return;
+
+    // Find all calendar events to delete
+    const eventsToDelete = this.eventsSignal().filter(
+      (e) => e.type === 'shift' && e.title === customShift.label
+    );
 
     this.customShiftsSignal.update((shifts) => shifts.filter((s) => s.id !== id));
     // Remove all calendar events associated with this custom shift
     this.eventsSignal.update((events) =>
       events.filter((e) => !(e.type === 'shift' && e.title === customShift.label)),
     );
+    
+    // Sync with backend
+    try {
+      for (const event of eventsToDelete) {
+        await firstValueFrom(this.calendarEventApi.delete(event.id));
+      }
+    } catch (error) {
+      console.error('Failed to delete shift events from backend:', error);
+    }
   }
 
-  createShiftEvent(
+  async createShiftEvent(
     shiftLabel: string,
     startTime: string,
     endTime: string,
     day: number,
     commuteMinutes: number = 0,
     weekOffset?: number,
-  ): void {
+    date?: string,
+  ): Promise<void> {
+    // Calculate actual date if not provided
+    let eventDate = date;
+    if (!eventDate) {
+      const weekStart = this.getWeekStartDate();
+      if (weekOffset) {
+        weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+      }
+      const dateObj = this.getDateForDayInWeek(weekStart, day);
+      eventDate = this.formatDate(dateObj);
+    }
+    
     const calendarEvent: CalendarEvent = {
       id: crypto.randomUUID(),
       title: shiftLabel,
       type: 'shift',
       day,
+      date: eventDate,
       startTime,
       endTime,
       isLocked: true,
       commuteMinutes,
-      weekOffset,
     };
+    
+    // Optimistically add to local state
     this.eventsSignal.update((current) => [...current, calendarEvent]);
+    
+    // Sync with backend
+    try {
+      const savedEvent = await firstValueFrom(this.calendarEventApi.create(this.toCreateDto(calendarEvent)));
+      this.eventsSignal.update((events) =>
+        events.map((e) => (e.id === calendarEvent.id ? { ...e, id: savedEvent.id } : e)),
+      );
+    } catch (error) {
+      console.error('Failed to save shift event to backend:', error);
+    }
   }
 
-  updateEventCommute(eventId: string, commuteMinutes: number): void {
+  async updateEventCommute(eventId: string, commuteMinutes: number): Promise<void> {
+    // Optimistically update local state
     this.eventsSignal.update((events) =>
       events.map((e) => (e.id === eventId ? { ...e, commuteMinutes } : e)),
     );
+    
+    // Sync with backend
+    try {
+      await firstValueFrom(this.calendarEventApi.update(eventId, { commuteMinutes }));
+    } catch (error) {
+      console.error('Failed to update event commute in backend:', error);
+    }
   }
 
-  updateEventCommuteByShift(
+  async updateEventCommuteByShift(
     shiftLabel: string,
     shiftStartTime: string,
     commuteMinutes: number,
-  ): void {
+  ): Promise<void> {
+    // Update all matching events locally
+    const matchingEvents = this.eventsSignal().filter(
+      (e) => e.type === 'shift' && e.title === shiftLabel && e.startTime === shiftStartTime
+    );
+    
     this.eventsSignal.update((events) =>
       events.map((e) =>
         e.type === 'shift' && e.title === shiftLabel && e.startTime === shiftStartTime
@@ -441,6 +822,15 @@ export class PlannerService {
           : e,
       ),
     );
+    
+    // Sync with backend
+    try {
+      for (const event of matchingEvents) {
+        await firstValueFrom(this.calendarEventApi.update(event.id, { commuteMinutes }));
+      }
+    } catch (error) {
+      console.error('Failed to update shift commute in backend:', error);
+    }
   }
 
   removeFirstUnplacedWorkout(workoutId: string): void {

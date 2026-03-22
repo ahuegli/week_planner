@@ -5,13 +5,17 @@ export class CreateCalendarEventDto {
   @IsString()
   title: string;
 
-  @IsIn(['shift', 'workout', 'mealprep'])
+  @IsIn(['shift', 'workout', 'mealprep', 'custom-event'])
   type: CalendarEventType;
 
   @IsNumber()
   @Min(0)
   @Max(6)
   day: number;
+
+  @IsOptional()
+  @IsString()
+  date?: string;
 
   @IsString()
   startTime: string;
@@ -28,12 +32,36 @@ export class CreateCalendarEventDto {
   shiftType?: ShiftType;
 
   @IsOptional()
+  @IsString()
+  workoutType?: string;
+
+  @IsOptional()
+  @IsNumber()
+  distanceKm?: number;
+
+  @IsOptional()
   @IsBoolean()
   isLocked?: boolean;
 
   @IsOptional()
   @IsBoolean()
   isPersonal?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isManuallyPlaced?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isRepeatingWeekly?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  commuteMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdateCalendarEventDto {
@@ -42,7 +70,7 @@ export class UpdateCalendarEventDto {
   title?: string;
 
   @IsOptional()
-  @IsIn(['shift', 'workout', 'mealprep'])
+  @IsIn(['shift', 'workout', 'mealprep', 'custom-event'])
   type?: CalendarEventType;
 
   @IsOptional()
@@ -50,6 +78,10 @@ export class UpdateCalendarEventDto {
   @Min(0)
   @Max(6)
   day?: number;
+
+  @IsOptional()
+  @IsString()
+  date?: string;
 
   @IsOptional()
   @IsString()
@@ -68,10 +100,34 @@ export class UpdateCalendarEventDto {
   shiftType?: ShiftType;
 
   @IsOptional()
+  @IsString()
+  workoutType?: string;
+
+  @IsOptional()
+  @IsNumber()
+  distanceKm?: number;
+
+  @IsOptional()
   @IsBoolean()
   isLocked?: boolean;
 
   @IsOptional()
   @IsBoolean()
   isPersonal?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isManuallyPlaced?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isRepeatingWeekly?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  commuteMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

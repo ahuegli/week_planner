@@ -40,14 +40,11 @@ export class MealPrepManagerComponent {
 
   onAddMealPrepSession(): void {
     const data = this.formData();
-    console.log('Form data before validation:', data);
     if (!data.name.trim() || data.duration <= 0 || data.frequencyPerWeek <= 0 || data.daysPreppedFor <= 0) {
       alert('Please fill in all required fields');
-      console.log('Validation failed');
       return;
     }
 
-    console.log('Adding meal prep:', data);
     this.addMealPrepSession.emit({
       name: data.name.trim(),
       duration: data.duration,

@@ -13,7 +13,8 @@
       <input
         id="label"
         type="text"
-        [(ngModel)]="formData().label"
+        [ngModel]="formData().label"
+        (ngModelChange)="formData.update(c => ({ ...c, label: $event }))"
         name="label"
         placeholder="e.g., Morning, Afternoon"
         required
@@ -26,7 +27,8 @@
         <input
           id="startTime"
           type="time"
-          [(ngModel)]="formData().startTime"
+          [ngModel]="formData().startTime"
+          (ngModelChange)="formData.update(c => ({ ...c, startTime: $event }))"
           name="startTime"
           required
         />
@@ -36,7 +38,8 @@
         <input
           id="endTime"
           type="time"
-          [(ngModel)]="formData().endTime"
+          [ngModel]="formData().endTime"
+          (ngModelChange)="formData.update(c => ({ ...c, endTime: $event }))"
           name="endTime"
           required
         />
@@ -48,7 +51,8 @@
       <input
         id="commuteMinutes"
         type="number"
-        [(ngModel)]="formData().commuteMinutes"
+        [ngModel]="formData().commuteMinutes"
+        (ngModelChange)="formData.update(c => ({ ...c, commuteMinutes: $event ? +$event : 0 }))"
         name="commuteMinutes"
         min="0"
         required
