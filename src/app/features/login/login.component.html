@@ -36,7 +36,6 @@
           (ngModelChange)="email.set($event)"
           name="email"
           placeholder="you@example.com"
-          required
           autocomplete="email"
         />
       </div>
@@ -50,7 +49,6 @@
           (ngModelChange)="password.set($event)"
           name="password"
           placeholder="••••••••"
-          required
           [autocomplete]="isRegisterMode() ? 'new-password' : 'current-password'"
         />
       </div>
@@ -79,6 +77,12 @@
             Use Demo Account
           </button>
           <p class="demo-hint">demo&#64;example.com / demo123</p>
+        </div>
+        <div class="offline-section">
+          <button type="button" class="offline-btn" (click)="enterOfflineMode()">
+            Continue Offline
+          </button>
+          <p class="offline-hint">Use without backend (data won't be saved)</p>
         </div>
       }
     </div>

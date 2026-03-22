@@ -92,6 +92,18 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  loginOffline(): void {
+    // Create a fake offline session for when backend is unavailable
+    const offlineUser: User = {
+      id: 'offline-user',
+      email: 'offline@local',
+      name: 'Offline User',
+    };
+    this._token.set('offline-token');
+    this._user.set(offlineUser);
+    // Don't persist offline session to localStorage
+  }
+
   clearError(): void {
     this._error.set(null);
   }
