@@ -5,24 +5,21 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
 import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
-import {
-  SchedulerSettings,
-  WorkoutType as PreferenceWorkoutType,
-} from './core/models/scheduler-settings.model';
-import {
-  DEFAULT_ONBOARDING_DATA,
-  OnboardingData,
-  ONBOARDING_LOCAL_STORAGE_KEY,
-} from './core/models/onboarding-data.model';
-import { WORKOUT_TYPE_LABELS, Workout, WorkoutType } from './core/models/workout.model';
+import { SchedulerSettings } from './core/models/scheduler-settings.model';
+import { Workout, WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { AuthService } from './core/services/auth.service';
+import { WorkoutSchedulerService } from './core/services/workout-scheduler.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
 import { DailyViewComponent } from './features/daily-view/daily-view.component';
 import { MonthViewComponent, QuickAddRequest } from './features/month-view/month-view.component';
 import { OnboardingComponent } from './features/onboarding/onboarding.component';
 import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
 import { LoginComponent } from './features/login/login.component';
+import {
+  WorkoutTemplateEditorComponent,
+  WorkoutSavePayload,
+} from './features/workout-template-editor/workout-template-editor.component';
 import { EventDetailsModalComponent } from './shared/components/event-details-modal/event-details-modal.component';
 import { ConnectionBannerComponent } from './shared/components/connection-banner/connection-banner.component';
 import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-add-workout-card.component';
@@ -84,15 +81,6 @@ interface MealPrepQuickAddPayload {
   title: string;
 }
 
-interface WorkoutEditDraft {
-  name: string;
-  workoutType: WorkoutType;
-  duration: number;
-  frequencyPerWeek: number;
-  distanceKm: number | undefined;
-  notes: string;
-}
-
 const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
 
 @Component({
@@ -107,6 +95,7 @@ const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
     OnboardingComponent,
     SchedulerSettingsComponent,
     LoginComponent,
+    WorkoutTemplateEditorComponent,
     EventDetailsModalComponent,
     ConnectionBannerComponent,
     QuickAddWorkoutCardComponent,
@@ -121,6 +110,7 @@ export class App implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly workoutScheduler = inject(WorkoutSchedulerService);
   readonly isAuthenticated = this.authService.isAuthenticated;
   readonly currentUser = this.authService.user;
   readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -148,23 +138,6 @@ export class App implements OnInit {
   quickAddTarget = signal<QuickAddTargetContext | null>(null);
   workoutPresets = signal<WorkoutPreset[]>(this.loadWorkoutPresets());
   selectedWorkoutTemplate = signal<Workout | null>(null);
-  addEditedWorkoutAsPreset = signal(false);
-  workoutEditDraft = signal<WorkoutEditDraft>({
-    name: '',
-    workoutType: 'running',
-    duration: 45,
-    frequencyPerWeek: 1,
-    distanceKm: undefined,
-    notes: '',
-  });
-
-  readonly workoutTypeOptions: Array<{ value: WorkoutType; label: string }> = [
-    { value: 'running', label: WORKOUT_TYPE_LABELS.running },
-    { value: 'swimming', label: WORKOUT_TYPE_LABELS.swimming },
-    { value: 'biking', label: WORKOUT_TYPE_LABELS.biking },
-    { value: 'strength', label: WORKOUT_TYPE_LABELS.strength },
-    { value: 'yoga', label: WORKOUT_TYPE_LABELS.yoga },
-  ];
 
   // Monthly view state
   currentMonthDate = signal<Date>(new Date());
@@ -427,20 +400,42 @@ export class App implements OnInit {
 
   openWorkoutTemplateEditor(workout: Workout): void {
     this.selectedWorkoutTemplate.set(workout);
-    this.addEditedWorkoutAsPreset.set(false);
-    this.workoutEditDraft.set({
-      name: workout.name,
-      workoutType: workout.workoutType,
-      duration: workout.duration,
-      frequencyPerWeek: workout.frequencyPerWeek,
-      distanceKm: workout.distanceKm,
-      notes: workout.notes || '',
-    });
   }
 
   closeWorkoutTemplateEditor(): void {
     this.selectedWorkoutTemplate.set(null);
-    this.addEditedWorkoutAsPreset.set(false);
+  }
+
+  async onWorkoutTemplateSaved(payload: WorkoutSavePayload): Promise<void> {
+    const selectedWorkout = this.selectedWorkoutTemplate();
+    if (!selectedWorkout) return;
+
+    await this.planner.updateWorkout(payload.workoutId, {
+      name: payload.draft.name.trim(),
+      workoutType: payload.draft.workoutType,
+      duration: payload.draft.duration,
+      frequencyPerWeek: payload.draft.frequencyPerWeek,
+      distanceKm: payload.draft.distanceKm,
+      notes: payload.draft.notes.trim() || undefined,
+      distanceCountsAsLong: selectedWorkout.distanceCountsAsLong,
+    });
+
+    if (payload.addAsPreset) {
+      this.saveWorkoutPreset({
+        name: payload.draft.name.trim(),
+        workoutType: payload.draft.workoutType,
+        duration: payload.draft.duration,
+        distanceKm: payload.draft.distanceKm,
+        notes: payload.draft.notes.trim() || undefined,
+      });
+    }
+
+    this.closeWorkoutTemplateEditor();
+  }
+
+  async onWorkoutTemplateDeleted(workoutId: string): Promise<void> {
+    await this.planner.removeWorkout(workoutId);
+    this.closeWorkoutTemplateEditor();
   }
 
   async deleteWorkoutTemplate(workoutId: string, event?: Event): Promise<void> {
@@ -450,50 +445,6 @@ export class App implements OnInit {
     if (this.selectedWorkoutTemplate()?.id === workoutId) {
       this.closeWorkoutTemplateEditor();
     }
-  }
-
-  updateWorkoutEditField(
-    field: keyof WorkoutEditDraft,
-    value: string | number | undefined,
-  ): void {
-    this.workoutEditDraft.update((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  async saveWorkoutTemplateEdits(): Promise<void> {
-    const selectedWorkout = this.selectedWorkoutTemplate();
-    if (!selectedWorkout) {
-      return;
-    }
-
-    const draft = this.workoutEditDraft();
-    if (!draft.name.trim() || draft.duration <= 0 || draft.frequencyPerWeek <= 0) {
-      return;
-    }
-
-    await this.planner.updateWorkout(selectedWorkout.id, {
-      name: draft.name.trim(),
-      workoutType: draft.workoutType,
-      duration: draft.duration,
-      frequencyPerWeek: draft.frequencyPerWeek,
-      distanceKm: draft.distanceKm,
-      notes: draft.notes.trim() || undefined,
-      distanceCountsAsLong: selectedWorkout.distanceCountsAsLong,
-    });
-
-    if (this.addEditedWorkoutAsPreset()) {
-      this.saveWorkoutPreset({
-        name: draft.name.trim(),
-        workoutType: draft.workoutType,
-        duration: draft.duration,
-        distanceKm: draft.distanceKm,
-        notes: draft.notes.trim() || undefined,
-      });
-    }
-
-    this.closeWorkoutTemplateEditor();
   }
 
   logout(): void {
@@ -791,10 +742,6 @@ export class App implements OnInit {
   }
 
   suggestWorkouts(): void {
-    const onboarding = this.getOnboardingData();
-    const selectedTypes = this.getPreferredWorkoutTypes(onboarding);
-    const weeklyTarget = Math.max(1, this.settingsTargetOrOnboarding(onboarding));
-
     // Remove previous suggested workout events from the current week before adding fresh suggestions.
     this.planner
       .events()
@@ -806,26 +753,18 @@ export class App implements OnInit {
       )
       .forEach((event) => this.planner.removeEvent(event.id));
 
-    const workoutSequence = this.buildWorkoutSequence(selectedTypes, weeklyTarget);
-    const timeSequence = this.buildPreferredTimeSequence(onboarding);
+    const suggestions = this.workoutScheduler.generateSuggestedWorkouts(this.currentWeekOffset());
 
-    workoutSequence.forEach((workoutType, index) => {
-      const day = index % 7;
-      const startTime = timeSequence[index % timeSequence.length];
-      const startMinutes = this.getWorkoutStartWithCommuteBuffer(
-        day,
-        this.timeToMinutes(startTime),
-      );
-
+    suggestions.forEach((suggestion) => {
       this.planner.addManualEvent(
-        day,
+        suggestion.day,
         'workout',
-        `${this.getWorkoutLabel(workoutType)} (suggested)`,
-        this.getDefaultDuration(workoutType),
-        workoutType,
-        this.getDefaultDistance(workoutType),
+        suggestion.title,
+        suggestion.duration,
+        suggestion.workoutType,
+        suggestion.distance,
         undefined,
-        startMinutes,
+        suggestion.startMinutes,
         this.currentWeekOffset(),
       );
     });
@@ -1177,129 +1116,9 @@ export class App implements OnInit {
     this.currentMonthDate.set(new Date(start.getFullYear(), start.getMonth(), 1));
   }
 
-  private getOnboardingData(): OnboardingData {
-    try {
-      const raw = localStorage.getItem(ONBOARDING_LOCAL_STORAGE_KEY);
-      return raw
-        ? { ...DEFAULT_ONBOARDING_DATA, ...JSON.parse(raw) }
-        : { ...DEFAULT_ONBOARDING_DATA };
-    } catch {
-      return { ...DEFAULT_ONBOARDING_DATA };
-    }
-  }
-
-  private settingsTargetOrOnboarding(onboarding: OnboardingData): number {
-    return this.planner.settings().weeklyWorkoutsTarget || onboarding.targetWorkoutsPerWeek;
-  }
-
-  private getPreferredWorkoutTypes(onboarding: OnboardingData): PreferenceWorkoutType[] {
-    const settingsTypes = this.planner.settings().workoutTypes;
-    if (settingsTypes?.length) {
-      return settingsTypes;
-    }
-
-    const mapped = onboarding.favoriteWorkouts
-      .map((type) => {
-        if (type === 'strength') return 'strength';
-        if (type === 'cardio') return 'cardio';
-        if (type === 'flexibility') return 'flexibility';
-        if (type === 'recovery') return 'recovery';
-        return null;
-      })
-      .filter((type): type is PreferenceWorkoutType => !!type);
-
-    return mapped.length ? mapped : ['strength', 'cardio'];
-  }
-
-  private buildWorkoutSequence(types: PreferenceWorkoutType[], target: number): WorkoutType[] {
-    const mapType = (type: PreferenceWorkoutType): WorkoutType => {
-      if (type === 'cardio') return 'running';
-      if (type === 'flexibility') return 'yoga';
-      if (type === 'recovery') return 'yoga';
-      return 'strength';
-    };
-
-    const sequence: WorkoutType[] = [];
-    types.forEach((type) => sequence.push(mapType(type)));
-
-    // Hardcoded fallback repetition requested by user.
-    const fallback: WorkoutType[] = ['strength', 'running'];
-    let fallbackIndex = 0;
-
-    while (sequence.length < target) {
-      sequence.push(fallback[fallbackIndex % fallback.length]);
-      fallbackIndex += 1;
-    }
-
-    return sequence.slice(0, target);
-  }
-
-  private buildPreferredTimeSequence(onboarding: OnboardingData): string[] {
-    const preferred = this.planner.settings().preferredWorkoutTimes?.length
-      ? this.planner.settings().preferredWorkoutTimes
-      : onboarding.preferredWorkoutTimes;
-
-    const mapped = preferred.map((slot) => {
-      if (slot === 'early') return '07:00';
-      if (slot === 'evening') return '18:00';
-      return '12:00';
-    });
-
-    return mapped.length ? mapped : ['18:00'];
-  }
-
-  private getWorkoutLabel(type: WorkoutType): string {
-    if (type === 'running') return 'Running';
-    if (type === 'biking') return 'Biking';
-    if (type === 'swimming') return 'Swimming';
-    if (type === 'yoga') return 'Yoga';
-    return 'Strength';
-  }
-
-  private getDefaultDuration(type: WorkoutType): number {
-    if (type === 'running') return 45;
-    if (type === 'biking') return 60;
-    if (type === 'swimming') return 60;
-    if (type === 'yoga') return 40;
-    return 50;
-  }
-
-  private getDefaultDistance(type: WorkoutType): number | undefined {
-    if (type === 'running') return 5;
-    if (type === 'biking') return 20;
-    if (type === 'swimming') return 2;
-    return undefined;
-  }
-
   private timeToMinutes(value: string): number {
     const [hours, minutes] = value.split(':').map(Number);
     return hours * 60 + minutes;
-  }
-
-  private getWorkoutStartWithCommuteBuffer(day: number, preferredStart: number): number {
-    const shifts = this.planner
-      .events()
-      .filter(
-        (event) =>
-          event.type === 'shift' &&
-          event.day === day &&
-          (event.weekOffset === undefined || event.weekOffset === this.currentWeekOffset()),
-      );
-
-    if (shifts.length === 0) {
-      return preferredStart;
-    }
-
-    const latestBlockedEnd = shifts.reduce((max, shift) => {
-      const end = this.timeToMinutes(shift.endTime);
-      const commute = shift.commuteMinutes || 0;
-      return Math.max(max, end + commute);
-    }, 0);
-
-    const adjusted = Math.max(preferredStart, latestBlockedEnd);
-    // Snap to next 30-minute interval for cleaner blocks.
-    const snapped = Math.ceil(adjusted / 30) * 30;
-    return Math.min(snapped, 23 * 60 + 30);
   }
 
   /** Returns the week offset (relative to today's real week = 0) for any arbitrary date. */
