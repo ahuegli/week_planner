@@ -1,15 +1,18 @@
 import { CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-<<<<<<< HEAD
-import { Component, computed, effect, signal } from '@angular/core';
-=======
-import { Component, effect, inject, signal } from '@angular/core';
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
 import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
-import { SchedulerSettings, WorkoutType as PreferenceWorkoutType } from './core/models/scheduler-settings.model';
-import { DEFAULT_ONBOARDING_DATA, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from './core/models/onboarding-data.model';
+import {
+  SchedulerSettings,
+  WorkoutType as PreferenceWorkoutType,
+} from './core/models/scheduler-settings.model';
+import {
+  DEFAULT_ONBOARDING_DATA,
+  OnboardingData,
+  ONBOARDING_LOCAL_STORAGE_KEY,
+} from './core/models/onboarding-data.model';
 import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { AuthService } from './core/services/auth.service';
@@ -82,16 +85,16 @@ export class App {
   currentWeekEventsByDay = computed(() => {
     const offset = this.currentWeekOffset();
     return Array.from({ length: 7 }, (_, day) =>
-      this.planner.events()
-        .filter(e => e.day === day && (e.weekOffset === undefined || e.weekOffset === offset))
-        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      this.planner
+        .events()
+        .filter((e) => e.day === day && (e.weekOffset === undefined || e.weekOffset === offset))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     );
   });
 
   constructor(readonly planner: PlannerService) {
-<<<<<<< HEAD
     this.migrateLegacyWeekOffsets();
-=======
+
     // Load workouts when user is authenticated
     effect(() => {
       if (this.isAuthenticated()) {
@@ -100,7 +103,6 @@ export class App {
         this.planner.clearAllData();
       }
     });
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
 
     effect(() => {
       if (this.showSettingsDialog || this.showEventModal() || this.showFillDialog()) {
@@ -177,10 +179,7 @@ export class App {
         shift.endTime,
         payload.day,
         shift.commuteMinutes,
-<<<<<<< HEAD
         weekOffset,
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
       );
       return;
     }
@@ -213,10 +212,7 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
-<<<<<<< HEAD
             weekOffset,
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
 
           // Create event on next day
@@ -230,10 +226,7 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             0, // Start at midnight
-<<<<<<< HEAD
             weekOffset,
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
         } else {
           // Event fits within single day
@@ -246,10 +239,7 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
-<<<<<<< HEAD
             weekOffset,
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
         }
       } else {
@@ -262,11 +252,8 @@ export class App {
           dragData.workout.workoutType,
           dragData.workout.distanceKm,
           dragData.workout.distanceCountsAsLong,
-<<<<<<< HEAD
           undefined,
           weekOffset,
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
         );
       }
 
@@ -454,7 +441,12 @@ export class App {
     // Remove previous suggested workout events from the current week before adding fresh suggestions.
     this.planner
       .events()
-      .filter((event) => event.type === 'workout' && event.title.toLowerCase().includes('(suggested)') && (event.weekOffset ?? 0) === this.currentWeekOffset())
+      .filter(
+        (event) =>
+          event.type === 'workout' &&
+          event.title.toLowerCase().includes('(suggested)') &&
+          (event.weekOffset ?? 0) === this.currentWeekOffset(),
+      )
       .forEach((event) => this.planner.removeEvent(event.id));
 
     const workoutSequence = this.buildWorkoutSequence(selectedTypes, weeklyTarget);
@@ -463,7 +455,10 @@ export class App {
     workoutSequence.forEach((workoutType, index) => {
       const day = index % 7;
       const startTime = timeSequence[index % timeSequence.length];
-      const startMinutes = this.getWorkoutStartWithCommuteBuffer(day, this.timeToMinutes(startTime));
+      const startMinutes = this.getWorkoutStartWithCommuteBuffer(
+        day,
+        this.timeToMinutes(startTime),
+      );
 
       this.planner.addManualEvent(
         day,
@@ -573,7 +568,10 @@ export class App {
     const todayIndex = this.getTodayIndex();
     return this.planner
       .events()
-      .filter((event) => event.day === todayIndex && (event.weekOffset === undefined || event.weekOffset === 0))
+      .filter(
+        (event) =>
+          event.day === todayIndex && (event.weekOffset === undefined || event.weekOffset === 0),
+      )
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
@@ -767,20 +765,13 @@ export class App {
     this.showWorkoutCard.set(false);
   }
 
-<<<<<<< HEAD
   onWorkShiftAdded(payload: {
-=======
-  onWorkEventAdded(payload: {
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
     title: string;
     startTime: string;
     endTime: string;
     commute: number;
-<<<<<<< HEAD
     bedtime?: string;
     wakeTime?: string;
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
     repeat: number[];
   }): void {
     // Create a custom work shift and schedule it for the selected days
@@ -792,10 +783,7 @@ export class App {
         payload.endTime,
         dayIndex,
         payload.commute,
-<<<<<<< HEAD
         this.currentWeekOffset(),
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
       );
     });
     this.showWorkShiftCard.set(false);
@@ -843,7 +831,6 @@ export class App {
     return { start: weekStart, end: weekEnd };
   }
 
-<<<<<<< HEAD
   private syncMonthToCurrentWeek(): void {
     const { start } = this.getCurrentWeekDates();
     this.currentMonthDate.set(new Date(start.getFullYear(), start.getMonth(), 1));
@@ -852,7 +839,9 @@ export class App {
   private getOnboardingData(): OnboardingData {
     try {
       const raw = localStorage.getItem(ONBOARDING_LOCAL_STORAGE_KEY);
-      return raw ? { ...DEFAULT_ONBOARDING_DATA, ...JSON.parse(raw) } : { ...DEFAULT_ONBOARDING_DATA };
+      return raw
+        ? { ...DEFAULT_ONBOARDING_DATA, ...JSON.parse(raw) }
+        : { ...DEFAULT_ONBOARDING_DATA };
     } catch {
       return { ...DEFAULT_ONBOARDING_DATA };
     }
@@ -985,25 +974,6 @@ export class App {
     todayMonday.setHours(0, 0, 0, 0);
 
     return Math.round((dateMonday.getTime() - todayMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
-=======
-  /**
-   * Get the weekday index (0=Mon, 6=Sun) for a given calendar date,
-   * relative to the current week.
-   * Returns -1 if the date is not in the current week.
-   */
-  getWeekdayIndexForDate(dateOfMonth: number): number {
-    const currentMonth = this.currentMonthDate();
-    const targetDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
-    const { start: weekStart, end: weekEnd } = this.getCurrentWeekDates();
-
-    // Check if target date is within current week
-    if (targetDate >= weekStart && targetDate <= weekEnd) {
-      const jsDay = targetDate.getDay(); // 0 = Sunday
-      return jsDay === 0 ? 6 : jsDay - 1; // Convert to our format (0=Mon, 6=Sun)
-    }
-
-    return -1;
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
   }
 
   /**
@@ -1011,24 +981,19 @@ export class App {
    * Shows week-specific events (matching weekOffset) and repeating events (weekOffset === undefined).
    */
   getEventsForMonthDay(dateOfMonth: number): CalendarEvent[] {
-<<<<<<< HEAD
     const currentMonth = this.currentMonthDate();
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
     const jsDay = date.getDay();
     const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
     const weekOffset = this.getWeekOffsetForDate(date);
 
-    return this.planner.events()
-      .filter(e => e.day === weekdayIndex && (e.weekOffset === undefined || e.weekOffset === weekOffset))
+    return this.planner
+      .events()
+      .filter(
+        (e) =>
+          e.day === weekdayIndex && (e.weekOffset === undefined || e.weekOffset === weekOffset),
+      )
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-=======
-    const weekdayIndex = this.getWeekdayIndexForDate(dateOfMonth);
-    if (weekdayIndex === -1) {
-      return [];
-    }
-
-    return this.planner.eventsByDay()[weekdayIndex] || [];
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
   }
 
   /**
@@ -1055,7 +1020,6 @@ export class App {
       custom: events.filter((e) => e.type === 'custom-event').length,
     };
   }
-<<<<<<< HEAD
 
   // ===== TODAY PAGE HELPERS =====
 
@@ -1064,7 +1028,12 @@ export class App {
    */
   getTodayDateString(): string {
     const today = new Date();
-    return today.toLocaleString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return today.toLocaleString('default', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   }
 
   /**
@@ -1186,11 +1155,13 @@ export class App {
     // Reminder for unplaced workouts
     const unplaced = this.planner.unplacedWorkouts().length;
     if (unplaced > 0) {
-      reminders.push(`📌 You have ${unplaced} unplaced workout${unplaced > 1 ? 's' : ''} this week`);
+      reminders.push(
+        `📌 You have ${unplaced} unplaced workout${unplaced > 1 ? 's' : ''} this week`,
+      );
     }
 
     // Reminder for busy days
-    const workoutCount = todaysEvents.filter(e => e.type === 'workout').length;
+    const workoutCount = todaysEvents.filter((e) => e.type === 'workout').length;
     if (workoutCount > 2) {
       reminders.push('💪 You have a lot of workouts today - make sure you stay hydrated!');
     }
@@ -1202,7 +1173,7 @@ export class App {
     }
 
     // Reminder about meal prep
-    const mealPrepEvents = todaysEvents.filter(e => e.type === 'mealprep').length;
+    const mealPrepEvents = todaysEvents.filter((e) => e.type === 'mealprep').length;
     if (mealPrepEvents === 0) {
       reminders.push('🍽️ No meal prep scheduled today. Consider planning your meals!');
     }
@@ -1233,6 +1204,4 @@ export class App {
     const remainingMins = minutesDiff % 60;
     return remainingMins > 0 ? `${hoursDiff}h ${remainingMins}m` : `${hoursDiff}h`;
   }
-=======
->>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
 }
