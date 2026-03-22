@@ -13,7 +13,7 @@ import {
   OnboardingData,
   ONBOARDING_LOCAL_STORAGE_KEY,
 } from './core/models/onboarding-data.model';
-import { WorkoutType } from './core/models/workout.model';
+import { WORKOUT_TYPE_LABELS, Workout, WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { AuthService } from './core/services/auth.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
@@ -25,6 +25,72 @@ import { ConnectionBannerComponent } from './shared/components/connection-banner
 import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-add-workout-card.component';
 import { QuickAddWorkShiftCardComponent } from './features/quick-add-cards/quick-add-work-event-card.component';
 import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/quick-add-personal-event-card.component';
+import { QuickAddMealPrepCardComponent } from './features/quick-add-cards/quick-add-mealprep-card.component';
+import { WorkoutPreset } from './core/models/workout-preset.model';
+
+interface QuickAddTargetContext {
+  day: number;
+  weekOffset: number;
+  label: string;
+  date: Date;
+}
+
+type WorkoutQuickAddPayload =
+  | {
+      kind: 'new';
+      type: WorkoutType;
+      sessionName: string;
+      duration: number;
+      timeframe: number;
+      distance?: number;
+      notes?: string;
+      saveAsPreset: boolean;
+    }
+  | {
+      kind: 'preset';
+      presetId: string;
+      timeframe: number;
+      notes?: string;
+    }
+  | {
+      kind: 'new-planned';
+      day: number;
+      weekOffset: number;
+      startTime: string;
+      type: WorkoutType;
+      sessionName: string;
+      duration: number;
+      distance?: number;
+      notes?: string;
+      saveAsPreset: boolean;
+    }
+  | {
+      kind: 'preset-planned';
+      day: number;
+      weekOffset: number;
+      startTime: string;
+      presetId: string;
+      notes?: string;
+    };
+
+interface MealPrepQuickAddPayload {
+  day: number;
+  weekOffset: number;
+  startTime: string;
+  duration: number;
+  title: string;
+}
+
+interface WorkoutEditDraft {
+  name: string;
+  workoutType: WorkoutType;
+  duration: number;
+  frequencyPerWeek: number;
+  distanceKm: number | undefined;
+  notes: string;
+}
+
+const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
 
 @Component({
   selector: 'app-root',
@@ -41,6 +107,7 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
     QuickAddWorkoutCardComponent,
     QuickAddWorkShiftCardComponent,
     QuickAddPersonalEventCardComponent,
+    QuickAddMealPrepCardComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -68,6 +135,28 @@ export class App {
   showWorkoutCard = signal(false);
   showWorkShiftCard = signal(false);
   showPersonalEventCard = signal(false);
+  showMealPrepCard = signal(false);
+  quickAddTarget = signal<QuickAddTargetContext | null>(null);
+  selectedMonthDay = signal<QuickAddTargetContext | null>(null);
+  workoutPresets = signal<WorkoutPreset[]>(this.loadWorkoutPresets());
+  selectedWorkoutTemplate = signal<Workout | null>(null);
+  addEditedWorkoutAsPreset = signal(false);
+  workoutEditDraft = signal<WorkoutEditDraft>({
+    name: '',
+    workoutType: 'running',
+    duration: 45,
+    frequencyPerWeek: 1,
+    distanceKm: undefined,
+    notes: '',
+  });
+
+  readonly workoutTypeOptions: Array<{ value: WorkoutType; label: string }> = [
+    { value: 'running', label: WORKOUT_TYPE_LABELS.running },
+    { value: 'swimming', label: WORKOUT_TYPE_LABELS.swimming },
+    { value: 'biking', label: WORKOUT_TYPE_LABELS.biking },
+    { value: 'strength', label: WORKOUT_TYPE_LABELS.strength },
+    { value: 'yoga', label: WORKOUT_TYPE_LABELS.yoga },
+  ];
 
   // Monthly view state
   currentMonthDate = signal<Date>(new Date());
@@ -105,7 +194,17 @@ export class App {
     });
 
     effect(() => {
-      if (this.showSettingsDialog || this.showEventModal() || this.showFillDialog()) {
+      if (
+        this.showSettingsDialog ||
+        this.showEventModal() ||
+        this.showFillDialog() ||
+        this.showWorkoutCard() ||
+        this.showWorkShiftCard() ||
+        this.showPersonalEventCard() ||
+        this.showMealPrepCard() ||
+        this.selectedMonthDay() ||
+        this.selectedWorkoutTemplate()
+      ) {
         document.body.style.overflow = 'hidden';
       } else {
         document.body.style.overflow = '';
@@ -151,6 +250,166 @@ export class App {
 
   closeSettingsDialog(): void {
     this.showSettingsDialog = false;
+  }
+
+  openWorkShiftDialog(target: QuickAddTargetContext | null = null): void {
+    this.setActiveQuickAddDialog('work', target);
+  }
+
+  closeWorkShiftDialog(): void {
+    this.showWorkShiftCard.set(false);
+    this.clearQuickAddTargetIfIdle();
+  }
+
+  openWorkoutDialog(target: QuickAddTargetContext | null = null): void {
+    this.setActiveQuickAddDialog('workout', target);
+  }
+
+  closeWorkoutDialog(): void {
+    this.showWorkoutCard.set(false);
+    this.clearQuickAddTargetIfIdle();
+  }
+
+  openPersonalEventDialog(target: QuickAddTargetContext | null = null): void {
+    this.setActiveQuickAddDialog('personal', target);
+  }
+
+  closePersonalEventDialog(): void {
+    this.showPersonalEventCard.set(false);
+    this.clearQuickAddTargetIfIdle();
+  }
+
+  openMealPrepDialog(target: QuickAddTargetContext | null = null): void {
+    this.setActiveQuickAddDialog('mealprep', target);
+  }
+
+  closeMealPrepDialog(): void {
+    this.showMealPrepCard.set(false);
+    this.clearQuickAddTargetIfIdle();
+  }
+
+  openMonthDayDetails(dateOfMonth: number): void {
+    this.selectedMonthDay.set(this.getQuickAddTargetForMonthDay(dateOfMonth));
+  }
+
+  closeMonthDayDetails(): void {
+    this.selectedMonthDay.set(null);
+  }
+
+  openWorkShiftFromMonthDay(): void {
+    const selectedDay = this.selectedMonthDay();
+    if (!selectedDay) {
+      return;
+    }
+
+    this.closeMonthDayDetails();
+    this.openWorkShiftDialog(selectedDay);
+  }
+
+  openWorkoutFromMonthDay(): void {
+    const selectedDay = this.selectedMonthDay();
+    if (!selectedDay) {
+      return;
+    }
+
+    this.closeMonthDayDetails();
+    this.openWorkoutDialog(selectedDay);
+  }
+
+  openPersonalEventFromMonthDay(): void {
+    const selectedDay = this.selectedMonthDay();
+    if (!selectedDay) {
+      return;
+    }
+
+    this.closeMonthDayDetails();
+    this.openPersonalEventDialog(selectedDay);
+  }
+
+  openMealPrepFromMonthDay(): void {
+    const selectedDay = this.selectedMonthDay();
+    if (!selectedDay) {
+      return;
+    }
+
+    this.closeMonthDayDetails();
+    this.openMealPrepDialog(selectedDay);
+  }
+
+  openEventFromMonthDetails(event: CalendarEvent): void {
+    this.closeMonthDayDetails();
+    this.onEventSelected(event);
+  }
+
+  openWorkoutTemplateEditor(workout: Workout): void {
+    this.selectedWorkoutTemplate.set(workout);
+    this.addEditedWorkoutAsPreset.set(false);
+    this.workoutEditDraft.set({
+      name: workout.name,
+      workoutType: workout.workoutType,
+      duration: workout.duration,
+      frequencyPerWeek: workout.frequencyPerWeek,
+      distanceKm: workout.distanceKm,
+      notes: workout.notes || '',
+    });
+  }
+
+  closeWorkoutTemplateEditor(): void {
+    this.selectedWorkoutTemplate.set(null);
+    this.addEditedWorkoutAsPreset.set(false);
+  }
+
+  async deleteWorkoutTemplate(workoutId: string, event?: Event): Promise<void> {
+    event?.stopPropagation();
+    await this.planner.removeWorkout(workoutId);
+
+    if (this.selectedWorkoutTemplate()?.id === workoutId) {
+      this.closeWorkoutTemplateEditor();
+    }
+  }
+
+  updateWorkoutEditField(
+    field: keyof WorkoutEditDraft,
+    value: string | number | undefined,
+  ): void {
+    this.workoutEditDraft.update((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async saveWorkoutTemplateEdits(): Promise<void> {
+    const selectedWorkout = this.selectedWorkoutTemplate();
+    if (!selectedWorkout) {
+      return;
+    }
+
+    const draft = this.workoutEditDraft();
+    if (!draft.name.trim() || draft.duration <= 0 || draft.frequencyPerWeek <= 0) {
+      return;
+    }
+
+    await this.planner.updateWorkout(selectedWorkout.id, {
+      name: draft.name.trim(),
+      workoutType: draft.workoutType,
+      duration: draft.duration,
+      frequencyPerWeek: draft.frequencyPerWeek,
+      distanceKm: draft.distanceKm,
+      notes: draft.notes.trim() || undefined,
+      distanceCountsAsLong: selectedWorkout.distanceCountsAsLong,
+    });
+
+    if (this.addEditedWorkoutAsPreset()) {
+      this.saveWorkoutPreset({
+        name: draft.name.trim(),
+        workoutType: draft.workoutType,
+        duration: draft.duration,
+        distanceKm: draft.distanceKm,
+        notes: draft.notes.trim() || undefined,
+      });
+    }
+
+    this.closeWorkoutTemplateEditor();
   }
 
   logout(): void {
@@ -213,6 +472,7 @@ export class App {
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
             weekOffset,
+            dragData.workout.notes,
           );
 
           // Create event on next day
@@ -227,6 +487,7 @@ export class App {
             dragData.workout.distanceCountsAsLong,
             0, // Start at midnight
             weekOffset,
+            dragData.workout.notes,
           );
         } else {
           // Event fits within single day
@@ -240,6 +501,7 @@ export class App {
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
             weekOffset,
+            dragData.workout.notes,
           );
         }
       } else {
@@ -254,6 +516,7 @@ export class App {
           dragData.workout.distanceCountsAsLong,
           undefined,
           weekOffset,
+          dragData.workout.notes,
         );
       }
 
@@ -739,30 +1002,135 @@ export class App {
     const current = this.currentMonthDate();
     const prev = new Date(current.getFullYear(), current.getMonth() - 1, 1);
     this.currentMonthDate.set(prev);
+    this.closeMonthDayDetails();
   }
 
   nextMonth(): void {
     const current = this.currentMonthDate();
     const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
     this.currentMonthDate.set(next);
+    this.closeMonthDayDetails();
   }
 
   // Quick-add card event handlers
-  async onWorkoutAdded(payload: {
-    type: WorkoutType;
-    sessionName: string;
-    duration: number;
-    timeframe: number;
-    distance?: number;
-  }): Promise<void> {
+  async onWorkoutAdded(payload: WorkoutQuickAddPayload): Promise<void> {
+    if (payload.kind === 'preset-planned') {
+      const preset = this.workoutPresets().find((item) => item.id === payload.presetId);
+      if (!preset) {
+        return;
+      }
+
+      this.planner.addManualEvent(
+        payload.day,
+        'workout',
+        preset.name,
+        preset.duration,
+        preset.workoutType,
+        preset.distanceKm,
+        undefined,
+        this.timeToMinutes(payload.startTime),
+        payload.weekOffset,
+        payload.notes || preset.notes,
+      );
+      this.closeWorkoutDialog();
+      return;
+    }
+
+    if (payload.kind === 'new-planned') {
+      this.planner.addManualEvent(
+        payload.day,
+        'workout',
+        payload.sessionName,
+        payload.duration,
+        payload.type,
+        payload.distance,
+        undefined,
+        this.timeToMinutes(payload.startTime),
+        payload.weekOffset,
+        payload.notes,
+      );
+
+      if (payload.saveAsPreset) {
+        this.saveWorkoutPreset({
+          name: payload.sessionName,
+          workoutType: payload.type,
+          duration: payload.duration,
+          distanceKm: payload.distance,
+          notes: payload.notes,
+        });
+      }
+
+      this.closeWorkoutDialog();
+      return;
+    }
+
+    if (payload.kind === 'preset') {
+      const preset = this.workoutPresets().find((item) => item.id === payload.presetId);
+      if (!preset) {
+        return;
+      }
+
+      await this.planner.addWorkout(
+        preset.workoutType,
+        preset.name,
+        preset.duration,
+        payload.timeframe,
+        preset.distanceKm,
+        payload.notes || preset.notes,
+      );
+      this.closeWorkoutDialog();
+      return;
+    }
+
     await this.planner.addWorkout(
       payload.type,
       payload.sessionName,
       payload.duration,
       payload.timeframe,
       payload.distance,
+      payload.notes,
     );
-    this.showWorkoutCard.set(false);
+
+    if (payload.saveAsPreset) {
+      this.saveWorkoutPreset({
+        name: payload.sessionName,
+        workoutType: payload.type,
+        duration: payload.duration,
+        distanceKm: payload.distance,
+        notes: payload.notes,
+      });
+    }
+
+    this.closeWorkoutDialog();
+  }
+
+  onWorkoutPresetUpdated(payload: {
+    id: string;
+    name: string;
+    workoutType: WorkoutType;
+    duration: number;
+    distanceKm?: number;
+    notes?: string;
+  }): void {
+    const nextPresets = this.workoutPresets().map((preset) =>
+      preset.id === payload.id
+        ? {
+            ...preset,
+            name: payload.name,
+            workoutType: payload.workoutType,
+            duration: payload.duration,
+            distanceKm: payload.distanceKm,
+            notes: payload.notes,
+          }
+        : preset,
+    );
+
+    this.persistWorkoutPresets(nextPresets);
+  }
+
+  onWorkoutPresetDeleted(presetId: string): void {
+    const nextPresets = this.workoutPresets().filter((preset) => preset.id !== presetId);
+    this.persistWorkoutPresets(nextPresets);
   }
 
   onWorkShiftAdded(payload: {
@@ -773,6 +1141,7 @@ export class App {
     bedtime?: string;
     wakeTime?: string;
     repeat: number[];
+    weekOffset: number;
   }): void {
     // Create a custom work shift and schedule it for the selected days
     const selectedDays = payload.repeat.length > 0 ? payload.repeat : [this.getTodayIndex()];
@@ -783,10 +1152,10 @@ export class App {
         payload.endTime,
         dayIndex,
         payload.commute,
-        this.currentWeekOffset(),
+        payload.weekOffset,
       );
     });
-    this.showWorkShiftCard.set(false);
+    this.closeWorkShiftDialog();
   }
 
   onPersonalEventAdded(payload: {
@@ -795,6 +1164,7 @@ export class App {
     endTime: string;
     commute: number;
     repeat: number[];
+    weekOffset: number;
   }): void {
     // Create custom event for each selected day
     const customEvent: CustomEvent = {
@@ -808,10 +1178,25 @@ export class App {
 
     const selectedDays = payload.repeat.length > 0 ? payload.repeat : [this.getTodayIndex()];
     selectedDays.forEach((dayIndex) => {
-      const weekOffset = customEvent.isRepeatingWeekly ? undefined : this.currentWeekOffset();
+      const weekOffset = customEvent.isRepeatingWeekly ? undefined : payload.weekOffset;
       this.planner.addCustomEvent(customEvent, [dayIndex], weekOffset);
     });
-    this.showPersonalEventCard.set(false);
+    this.closePersonalEventDialog();
+  }
+
+  onMealPrepAdded(payload: MealPrepQuickAddPayload): void {
+    this.planner.addManualEvent(
+      payload.day,
+      'mealprep',
+      payload.title || 'Meal Prep',
+      payload.duration,
+      undefined,
+      undefined,
+      undefined,
+      this.timeToMinutes(payload.startTime),
+      payload.weekOffset,
+    );
+    this.closeMealPrepDialog();
   }
 
   // Month view event mapping
@@ -983,6 +1368,38 @@ export class App {
   getEventsForMonthDay(dateOfMonth: number): CalendarEvent[] {
     const currentMonth = this.currentMonthDate();
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
+    return this.getEventsForDate(date);
+  }
+
+  getSelectedMonthDayEvents(): CalendarEvent[] {
+    const selectedDay = this.selectedMonthDay();
+    return selectedDay ? this.getEventsForDate(selectedDay.date) : [];
+  }
+
+  getSelectedMonthDayLabel(): string {
+    const selectedDay = this.selectedMonthDay();
+    if (!selectedDay) {
+      return '';
+    }
+
+    return selectedDay.date.toLocaleString('default', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
+  getSelectedMonthDaySubtitle(): string {
+    const count = this.getSelectedMonthDayEvents().length;
+    if (count === 0) {
+      return 'No events scheduled yet';
+    }
+
+    return `${count} scheduled item${count === 1 ? '' : 's'}`;
+  }
+
+  private getEventsForDate(date: Date): CalendarEvent[] {
     const jsDay = date.getDay();
     const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
     const weekOffset = this.getWeekOffsetForDate(date);
@@ -1203,5 +1620,84 @@ export class App {
     const hoursDiff = Math.floor(minutesDiff / 60);
     const remainingMins = minutesDiff % 60;
     return remainingMins > 0 ? `${hoursDiff}h ${remainingMins}m` : `${hoursDiff}h`;
+  }
+
+  private setActiveQuickAddDialog(
+    kind: 'work' | 'workout' | 'personal' | 'mealprep',
+    target: QuickAddTargetContext | null,
+  ): void {
+    this.showWorkShiftCard.set(kind === 'work');
+    this.showWorkoutCard.set(kind === 'workout');
+    this.showPersonalEventCard.set(kind === 'personal');
+    this.showMealPrepCard.set(kind === 'mealprep');
+    this.quickAddTarget.set(target);
+  }
+
+  private clearQuickAddTargetIfIdle(): void {
+    if (
+      !this.showWorkShiftCard() &&
+      !this.showWorkoutCard() &&
+      !this.showPersonalEventCard() &&
+      !this.showMealPrepCard()
+    ) {
+      this.quickAddTarget.set(null);
+    }
+  }
+
+  private getQuickAddTargetForMonthDay(dateOfMonth: number): QuickAddTargetContext {
+    const currentMonth = this.currentMonthDate();
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
+    const jsDay = date.getDay();
+
+    return {
+      day: jsDay === 0 ? 6 : jsDay - 1,
+      weekOffset: this.getWeekOffsetForDate(date),
+      label: date.toLocaleString('default', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }),
+      date,
+    };
+  }
+
+  private loadWorkoutPresets(): WorkoutPreset[] {
+    try {
+      const raw = localStorage.getItem(WORKOUT_PRESETS_STORAGE_KEY);
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw) as WorkoutPreset[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveWorkoutPreset(preset: Omit<WorkoutPreset, 'id'>): void {
+    const nextPresets = [
+      ...this.workoutPresets(),
+      {
+        id: crypto.randomUUID(),
+        name: preset.name.trim(),
+        workoutType: preset.workoutType,
+        duration: preset.duration,
+        distanceKm: preset.distanceKm,
+        notes: preset.notes,
+      },
+    ];
+
+    this.persistWorkoutPresets(nextPresets);
+  }
+
+  private persistWorkoutPresets(nextPresets: WorkoutPreset[]): void {
+    this.workoutPresets.set(nextPresets);
+
+    try {
+      localStorage.setItem(WORKOUT_PRESETS_STORAGE_KEY, JSON.stringify(nextPresets));
+    } catch {
+      // Ignore storage failures and keep the in-memory presets available for the session.
+    }
   }
 }

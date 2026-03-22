@@ -335,16 +335,10 @@
                 <button
                   type="button"
                   class="quick-add-header-btn work-btn"
-                  (click)="showWorkShiftCard.set(!showWorkShiftCard())"
+                  (click)="openWorkShiftDialog()"
                 >
                   📅 Add Work Shift
                 </button>
-                @if (showWorkShiftCard()) {
-                  <app-quick-add-work-shift-card
-                    (eventAdded)="onWorkShiftAdded($event)"
-                    (closed)="showWorkShiftCard.set(false)"
-                  ></app-quick-add-work-shift-card>
-                }
               </div>
 
               <!-- Column 2: Workouts -->
@@ -352,16 +346,10 @@
                 <button
                   type="button"
                   class="quick-add-header-btn workout-btn"
-                  (click)="showWorkoutCard.set(!showWorkoutCard())"
+                  (click)="openWorkoutDialog()"
                 >
                   💪 Add Workout
                 </button>
-                @if (showWorkoutCard()) {
-                  <app-quick-add-workout-card
-                    (workoutAdded)="onWorkoutAdded($event)"
-                    (closed)="showWorkoutCard.set(false)"
-                  ></app-quick-add-workout-card>
-                }
 
                 <!-- Saved Workouts Display -->
                 @if (planner.workouts().length > 0) {
@@ -375,6 +363,7 @@
                       <div
                         class="saved-workout-card"
                         cdkDrag
+                        (click)="openWorkoutTemplateEditor(workout)"
                         [cdkDragData]="
                           createUnplacedWorkoutDragData({
                             id: workout.id,
@@ -386,8 +375,16 @@
                             distanceCountsAsLong: workout.distanceCountsAsLong,
                           })
                         "
-                        title="Drag to schedule this workout"
+                        title="Click to edit, or drag to schedule"
                       >
+                        <button
+                          type="button"
+                          class="saved-workout-delete-btn"
+                          title="Delete workout"
+                          (click)="deleteWorkoutTemplate(workout.id, $event)"
+                        >
+                          ×
+                        </button>
                         <div class="workout-card-header">
                           <strong>{{ workout.name }}</strong>
                         </div>
@@ -409,16 +406,10 @@
                 <button
                   type="button"
                   class="quick-add-header-btn personal-btn"
-                  (click)="showPersonalEventCard.set(!showPersonalEventCard())"
+                  (click)="openPersonalEventDialog()"
                 >
                   📌 Add Personal Event
                 </button>
-                @if (showPersonalEventCard()) {
-                  <app-quick-add-personal-event-card
-                    (eventAdded)="onPersonalEventAdded($event)"
-                    (closed)="showPersonalEventCard.set(false)"
-                  ></app-quick-add-personal-event-card>
-                }
               </div>
             </div>
           </div>
@@ -543,6 +534,11 @@
                   class="calendar-day"
                   [class.is-today]="isToday(day)"
                   [class.has-events]="hasEventsOnMonthDay(day)"
+                  role="button"
+                  tabindex="0"
+                  (click)="openMonthDayDetails(day)"
+                  (keydown.enter)="openMonthDayDetails(day)"
+                  (keydown.space)="openMonthDayDetails(day); $event.preventDefault()"
                 >
                   <div class="day-number">{{ day }}</div>
                   <div class="day-content">
@@ -561,10 +557,10 @@
                               "
                               [class.mealprep-type]="event.type === 'mealprep'"
                               [class.custom-type]="event.type === 'custom-event'"
-                              (click)="onEventSelected(event)"
-                              title="Click to view details"
+                              title="Click the day to view details and quick actions"
                             >
-                              {{ event.title }}
+                              <span class="event-card-time">{{ event.startTime }}</span>
+                              <span>{{ event.title }}</span>
                             </div>
                           }
                         </div>
@@ -602,9 +598,9 @@
       <div class="dialog-overlay" (click)="closeSettingsDialog()">
         <div class="dialog" (click)="$event.stopPropagation()">
           <div class="dialog-header">
-            <h2>G��n+� Scheduler Settings</h2>
+            <h2>⚙️ Scheduler Settings</h2>
             <button type="button" class="button-icon close-btn" (click)="closeSettingsDialog()">
-              G��
+              ✕
             </button>
           </div>
 
@@ -627,6 +623,240 @@
         (updateCommuteForDay)="onUpdateCommuteForDay($event)"
         (updateCommuteForAllShifts)="onUpdateCommuteForAllShifts($event)"
       ></app-event-details-modal>
+    }
+
+    @if (selectedMonthDay()) {
+      <div class="dialog-overlay" (click)="closeMonthDayDetails()">
+        <div class="dialog month-day-dialog" (click)="$event.stopPropagation()">
+          <div class="dialog-header month-day-header">
+            <div>
+              <h2>{{ getSelectedMonthDayLabel() }}</h2>
+              <p class="dialog-subtitle">{{ getSelectedMonthDaySubtitle() }}</p>
+            </div>
+            <button type="button" class="button-icon close-btn" (click)="closeMonthDayDetails()">
+              ✕
+            </button>
+          </div>
+
+          <div class="dialog-content month-day-content">
+            <div class="month-day-actions">
+              <button type="button" class="button-secondary" (click)="openWorkShiftFromMonthDay()">
+                Add Work
+              </button>
+              <button type="button" class="button-primary" (click)="openWorkoutFromMonthDay()">
+                Add Workout
+              </button>
+              <button type="button" class="button-secondary" (click)="openPersonalEventFromMonthDay()">
+                Add Event
+              </button>
+              <button type="button" class="button-secondary" (click)="openMealPrepFromMonthDay()">
+                Add Meal Prep
+              </button>
+            </div>
+
+            @if (getSelectedMonthDayEvents(); as dayEvents) {
+              @if (dayEvents.length > 0) {
+                <div class="month-day-event-list">
+                  @for (event of dayEvents; track event.id) {
+                    <button
+                      type="button"
+                      class="month-day-event-item"
+                      [class.shift-type]="event.type === 'shift'"
+                      [class.workout-type]="event.type === 'workout'"
+                      [class.mealprep-type]="event.type === 'mealprep'"
+                      [class.custom-type]="event.type === 'custom-event'"
+                      (click)="openEventFromMonthDetails(event)"
+                    >
+                      <span class="month-day-event-time">{{ event.startTime }} - {{ event.endTime }}</span>
+                      <strong>{{ event.title }}</strong>
+                      <span class="month-day-event-type">{{ getEventTypeTag(event.type) }}</span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="month-day-empty-state">
+                  <strong>No plans on this day yet.</strong>
+                  <p>Use the actions above to add work, a workout, a personal event, or meal prep.</p>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showWorkShiftCard()) {
+      <app-quick-add-work-shift-card
+        [presetDay]="quickAddTarget()?.day ?? null"
+        [presetDayLabel]="quickAddTarget()?.label ?? ''"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [allowRepeat]="quickAddTarget() === null"
+        (eventAdded)="onWorkShiftAdded($event)"
+        (closed)="closeWorkShiftDialog()"
+      ></app-quick-add-work-shift-card>
+    }
+
+    @if (showWorkoutCard()) {
+      <app-quick-add-workout-card
+        [presetDay]="quickAddTarget()?.day ?? null"
+        [presetDayLabel]="quickAddTarget()?.label ?? ''"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [availablePresets]="workoutPresets()"
+        (workoutAdded)="onWorkoutAdded($event)"
+        (presetUpdated)="onWorkoutPresetUpdated($event)"
+        (presetDeleted)="onWorkoutPresetDeleted($event)"
+        (closed)="closeWorkoutDialog()"
+      ></app-quick-add-workout-card>
+    }
+
+    @if (showPersonalEventCard()) {
+      <app-quick-add-personal-event-card
+        [presetDay]="quickAddTarget()?.day ?? null"
+        [presetDayLabel]="quickAddTarget()?.label ?? ''"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [allowRepeat]="quickAddTarget() === null"
+        (eventAdded)="onPersonalEventAdded($event)"
+        (closed)="closePersonalEventDialog()"
+      ></app-quick-add-personal-event-card>
+    }
+
+    @if (showMealPrepCard()) {
+      <app-quick-add-mealprep-card
+        [presetDay]="quickAddTarget()?.day ?? null"
+        [presetDayLabel]="quickAddTarget()?.label ?? ''"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        (mealPrepAdded)="onMealPrepAdded($event)"
+        (closed)="closeMealPrepDialog()"
+      ></app-quick-add-mealprep-card>
+    }
+
+    @if (selectedWorkoutTemplate()) {
+      <div class="dialog-overlay" (click)="closeWorkoutTemplateEditor()">
+        <div class="dialog workout-template-dialog" (click)="$event.stopPropagation()">
+          <div class="dialog-header">
+            <h2>Edit Workout Template</h2>
+            <button
+              type="button"
+              class="button-icon close-btn"
+              (click)="closeWorkoutTemplateEditor()"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="dialog-content workout-template-content">
+            <div class="form-group">
+              <label for="editWorkoutName">Session Name</label>
+              <input
+                id="editWorkoutName"
+                type="text"
+                [value]="workoutEditDraft().name"
+                (input)="updateWorkoutEditField('name', $any($event.target).value)"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="editWorkoutType">Workout Type</label>
+              <select
+                id="editWorkoutType"
+                [value]="workoutEditDraft().workoutType"
+                (input)="updateWorkoutEditField('workoutType', $any($event.target).value)"
+                class="form-select"
+              >
+                @for (option of workoutTypeOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-grid-two">
+              <div class="form-group">
+                <label for="editWorkoutDuration">Duration (mins)</label>
+                <input
+                  id="editWorkoutDuration"
+                  type="number"
+                  min="15"
+                  step="5"
+                  [value]="workoutEditDraft().duration"
+                  (input)="updateWorkoutEditField('duration', +$any($event.target).value)"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="editWorkoutFrequency">Frequency (sessions/week)</label>
+                <input
+                  id="editWorkoutFrequency"
+                  type="number"
+                  min="1"
+                  max="7"
+                  step="1"
+                  [value]="workoutEditDraft().frequencyPerWeek"
+                  (input)="updateWorkoutEditField('frequencyPerWeek', +$any($event.target).value)"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editWorkoutDistance">Distance (km, optional)</label>
+              <input
+                id="editWorkoutDistance"
+                type="number"
+                min="0"
+                step="0.5"
+                [value]="workoutEditDraft().distanceKm ?? ''"
+                (input)="updateWorkoutEditField('distanceKm', $any($event.target).value ? +$any($event.target).value : undefined)"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="editWorkoutNotes">Notes</label>
+              <textarea
+                id="editWorkoutNotes"
+                rows="3"
+                [value]="workoutEditDraft().notes"
+                (input)="updateWorkoutEditField('notes', $any($event.target).value)"
+                class="form-input"
+                placeholder="Optional notes for this workout"
+              ></textarea>
+            </div>
+
+            <label class="workout-preset-checkbox">
+              <input
+                type="checkbox"
+                [checked]="addEditedWorkoutAsPreset()"
+                (change)="addEditedWorkoutAsPreset.set($any($event.target).checked)"
+              />
+              <span>Add as preset</span>
+            </label>
+          </div>
+
+          <div class="dialog-footer workout-template-footer">
+            <button
+              type="button"
+              class="button-danger"
+              (click)="deleteWorkoutTemplate(selectedWorkoutTemplate()!.id); closeWorkoutTemplateEditor()"
+            >
+              Delete Workout
+            </button>
+            <div class="dialog-footer-actions">
+              <button
+                type="button"
+                class="button-secondary"
+                (click)="closeWorkoutTemplateEditor()"
+              >
+                Cancel
+              </button>
+              <button type="button" class="button-primary" (click)="saveWorkoutTemplateEdits()">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     }
 
     <!-- ===================================================================

@@ -1,10 +1,15 @@
-<div class="card-container personal-event-card">
-  <div class="card-header">
-    <h3>📌 Add Personal Event</h3>
-    <button type="button" class="close-btn" (click)="onCancel()">✕</button>
-  </div>
+<div class="quick-add-overlay" (click)="onCancel()">
+  <div class="card-container personal-event-card" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <div class="card-header">
+      <h3>📌 Add Personal Event</h3>
+      <button type="button" class="close-btn" (click)="onCancel()">✕</button>
+    </div>
 
-  <form (ngSubmit)="onAdd()" class="card-form">
+    @if (presetDayLabel) {
+      <div class="target-day-chip">Scheduling for {{ presetDayLabel }}</div>
+    }
+
+    <form (ngSubmit)="onAdd()" class="card-form">
     <!-- Event Title -->
     <div class="form-group">
       <label for="eventTitle">Event Title</label>
@@ -62,26 +67,29 @@
     </div>
 
     <!-- Repeat Days -->
-    <div class="form-group">
-      <label>Repeat</label>
-      <div class="days-grid">
-        @for (day of daysOfWeek; let index = $index; track index) {
-          <label class="day-checkbox">
-            <input
-              type="checkbox"
-              [checked]="isDaySelected(index)"
-              (change)="onDayToggle(index)"
-            />
-            <span>{{ day }}</span>
-          </label>
-        }
+    @if (allowRepeat) {
+      <div class="form-group">
+        <label>Repeat</label>
+        <div class="days-grid">
+          @for (day of daysOfWeek; let index = $index; track index) {
+            <label class="day-checkbox">
+              <input
+                type="checkbox"
+                [checked]="isDaySelected(index)"
+                (change)="onDayToggle(index)"
+              />
+              <span>{{ day }}</span>
+            </label>
+          }
+        </div>
       </div>
-    </div>
+    }
 
     <!-- Actions -->
     <div class="form-actions">
       <button type="button" class="btn-secondary" (click)="onCancel()">Cancel</button>
       <button type="submit" class="btn-primary personal-btn">Add</button>
     </div>
-  </form>
+    </form>
+  </div>
 </div>
