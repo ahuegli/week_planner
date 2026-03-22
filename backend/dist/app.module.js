@@ -16,30 +16,34 @@ const calendar_event_module_1 = require("./calendar-event/calendar-event.module"
 const mealprep_module_1 = require("./mealprep/mealprep.module");
 const scheduler_settings_module_1 = require("./scheduler-settings/scheduler-settings.module");
 const scheduler_module_1 = require("./scheduler/scheduler.module");
+const mock_data_module_1 = require("./mock-data/mock-data.module");
+const USE_DATABASE = process.env.USE_DATABASE !== 'false';
+const databaseImports = USE_DATABASE
+    ? [
+        typeorm_1.TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT || '5432', 10),
+            username: process.env.DB_USER || 'postgres',
+            password: process.env.DB_PASSWORD || 'password',
+            database: process.env.DB_NAME || 'myapp',
+            autoLoadEntities: true,
+            synchronize: true,
+        }),
+        auth_module_1.AuthModule,
+        user_module_1.UserModule,
+        workout_module_1.WorkoutModule,
+        calendar_event_module_1.CalendarEventModule,
+        mealprep_module_1.MealPrepModule,
+        scheduler_settings_module_1.SchedulerSettingsModule,
+    ]
+    : [mock_data_module_1.MockDataModule];
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            typeorm_1.TypeOrmModule.forRoot({
-                type: 'postgres',
-                host: process.env.DB_HOST || 'localhost',
-                port: parseInt(process.env.DB_PORT || '5432', 10),
-                username: process.env.DB_USER || 'postgres',
-                password: process.env.DB_PASSWORD || 'password',
-                database: process.env.DB_NAME || 'myapp',
-                autoLoadEntities: true,
-                synchronize: true,
-            }),
-            auth_module_1.AuthModule,
-            user_module_1.UserModule,
-            workout_module_1.WorkoutModule,
-            calendar_event_module_1.CalendarEventModule,
-            mealprep_module_1.MealPrepModule,
-            scheduler_settings_module_1.SchedulerSettingsModule,
-            scheduler_module_1.SchedulerModule,
-        ],
+        imports: [...databaseImports, scheduler_module_1.SchedulerModule],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

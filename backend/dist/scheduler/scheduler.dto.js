@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidateConstraintsDto = exports.GenerateScheduleDto = exports.WeekContextDto = exports.SchedulerSettingsDto = exports.CalendarEventDto = exports.MealPrepDto = exports.WorkoutDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 class WorkoutDto {
 }
 exports.WorkoutDto = WorkoutDto;
@@ -38,11 +39,20 @@ __decorate([
     __metadata("design:type", Array)
 ], GenerateScheduleDto.prototype, "workouts", void 0);
 __decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => MealPrepDto),
+    __metadata("design:type", MealPrepDto)
+], GenerateScheduleDto.prototype, "mealPrep", void 0);
+__decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => SchedulerSettingsDto),
     __metadata("design:type", SchedulerSettingsDto)
 ], GenerateScheduleDto.prototype, "settings", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => WeekContextDto),
     __metadata("design:type", WeekContextDto)
 ], GenerateScheduleDto.prototype, "weekContext", void 0);
 class ValidateConstraintsDto {

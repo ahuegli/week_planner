@@ -14,7 +14,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchedulerController = void 0;
 const common_1 = require("@nestjs/common");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const schedule_generator_service_1 = require("./schedule-generator.service");
 const scheduler_dto_1 = require("./scheduler.dto");
 const constraint_checker_service_1 = require("./constraint-checker.service");
@@ -79,7 +78,6 @@ __decorate([
 ], SchedulerController.prototype, "validate", null);
 exports.SchedulerController = SchedulerController = __decorate([
     (0, common_1.Controller)('scheduler'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [schedule_generator_service_1.ScheduleGeneratorService,
         constraint_checker_service_1.ConstraintCheckerService,
         scoring_engine_service_1.ScoringEngineService])

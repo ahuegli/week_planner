@@ -1,12 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
 const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const useDatabase = process.env.USE_DATABASE !== 'false';
+    console.log(`Running in ${useDatabase ? 'DATABASE' : 'MOCK'} mode`);
     app.enableCors({
-        origin: ['http://localhost:4200', 'http://localhost:3000'],
+        origin: [
+            'http://localhost:4200',
+            'http://localhost:4300',
+            'http://localhost:4301',
+            'http://localhost:3000',
+        ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
         credentials: true,
     });

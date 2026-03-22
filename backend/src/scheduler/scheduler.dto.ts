@@ -49,12 +49,18 @@ export class GenerateScheduleDto {
   @IsArray()
   workouts: WorkoutDto[];
 
+  @ValidateNested()
+  @Type(() => MealPrepDto)
   mealPrep: MealPrepDto;
 
   @IsOptional()
+  @ValidateNested()
+  @Type(() => SchedulerSettingsDto)
   settings?: SchedulerSettingsDto;
 
   @IsOptional()
+  @ValidateNested()
+  @Type(() => WeekContextDto)
   weekContext?: WeekContextDto;
 }
 

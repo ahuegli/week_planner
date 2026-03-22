@@ -1,5 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Controller, Post, Body } from '@nestjs/common';
 import { ScheduleGeneratorService } from './schedule-generator.service';
 import { GenerateScheduleDto, ValidateConstraintsDto } from './scheduler.dto';
 import { ConstraintCheckerService } from './constraint-checker.service';
@@ -19,7 +18,6 @@ const DEFAULT_WEEK_CONTEXT = {
 };
 
 @Controller('scheduler')
-@UseGuards(JwtAuthGuard)
 export class SchedulerController {
   constructor(
     private readonly scheduleGenerator: ScheduleGeneratorService,
