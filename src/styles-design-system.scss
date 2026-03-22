@@ -1,0 +1,610 @@
+/* ===================================================================
+   WEEK PLANNER - GLOBAL DESIGN SYSTEM
+   CSS Variables for Colors, Typography, Spacing, Shadows, Borders
+   =================================================================== */
+
+:root {
+  /* ==================== COLORS ==================== */
+  
+  /* Primary Colors */
+  --color-primary-green: #5FB295;
+  --color-primary-green-hover: #4A9179;
+  --color-primary-green-active: #2C6B52;
+  --color-primary-green-disabled: rgba(95, 178, 149, 0.5);
+
+  --color-primary-blue: #4A90E2;
+  --color-primary-blue-dark: #185FA5;
+  --color-primary-blue-light-bg: #E6F1FB;
+  --color-primary-blue-disabled: rgba(74, 144, 226, 0.5);
+
+  --color-primary-tan: #E8DCC4;
+  --color-primary-tan-dark: #666666;
+
+  --color-primary-purple: #D4B5E8;
+  --color-primary-purple-dark: #5C3D7A;
+
+  --color-primary-red: #F0D4D4;
+  --color-primary-red-dark: #A64D4D;
+  --color-error: #E67C73;
+
+  /* Neutral Colors - Backgrounds */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F8F8F8;
+  --color-bg-tertiary: #F0F0F0;
+  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  --color-bg-hover: #F3F4F6;
+
+  /* Neutral Colors - Text */
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #888888;
+  --color-text-tertiary: #BBBBBB;
+
+  /* Neutral Colors - Borders */
+  --color-border-light: #E8E8E8;
+  --color-border-medium: #DDDDDD;
+
+  /* Accents */
+  --color-success: #5FB295;
+  --color-warning: #FFA500;
+  --color-info: #4A90E2;
+
+  /* Surface Colors (for components) */
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8F8F8;
+
+  /* Event Type Colors - Work/Shifts (Blue) */
+  --color-event-shift-bg: #E6F1FB;
+  --color-event-shift-text: #185FA5;
+  --color-event-shift-border: #B5D4F4;
+
+  /* Event Type Colors - Strength/Cardio (Green) */
+  --color-event-strength-bg: #D9E8C5;
+  --color-event-strength-text: #3B6D11;
+  --color-event-strength-border: #C0DD97;
+
+  /* Event Type Colors - Flexibility/Recovery (Purple) */
+  --color-event-flexibility-bg: #D4B5E8;
+  --color-event-flexibility-text: #5C3D7A;
+  --color-event-flexibility-border: #C0A8D8;
+
+  /* Event Type Colors - Meal Prep (Tan) */
+  --color-event-mealprep-bg: #E8DCC4;
+  --color-event-mealprep-text: #666666;
+  --color-event-mealprep-border: #DDDDDD;
+
+  /* Event Type Colors - Endurance (Red) */
+  --color-event-endurance-bg: #F0D4D4;
+  --color-event-endurance-text: #A64D4D;
+  --color-event-endurance-border: #E0B8B8;
+
+  /* ==================== TYPOGRAPHY ==================== */
+
+  /* Font Family */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Font Sizes */
+  --font-size-h1: 28px;
+  --font-size-h2: 20px;
+  --font-size-h3: 16px;
+  --font-size-h4: 15px;
+  --font-size-base: 14px;
+  --font-size-body: 14px;
+  --font-size-label: 13px;
+  --font-size-small: 12px;
+  --font-size-metadata: 11px;
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line Heights */
+  --line-height-heading: 1.2;
+  --line-height-body: 1.5;
+  --line-height-small: 1.4;
+
+  /* ==================== SPACING (8px Grid) ==================== */
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+
+  /* ==================== BORDER RADIUS ==================== */
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ==================== SHADOWS ==================== */
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+  /* ==================== TRANSITIONS ==================== */
+
+  --transition-default: all 150ms ease-in-out;
+  --transition-slow: all 200ms ease-in-out;
+}
+
+/* ===================================================================
+   GLOBAL TYPOGRAPHY & RESET
+   =================================================================== */
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  line-height: var(--line-height-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Headings */
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+  margin: 0;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+  margin: 0;
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+/* ===================================================================
+   PRIMARY BUTTON
+   =================================================================== */
+
+.button-primary,
+button.btn-primary {
+  background-color: var(--color-primary-green);
+  color: white;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  min-height: 40px;
+  min-width: 120px;
+  transition: var(--transition-default);
+
+  &:hover {
+    background-color: var(--color-primary-green-hover);
+    box-shadow: var(--shadow-md);
+  }
+
+  &:active {
+    background-color: var(--color-primary-green-active);
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    background-color: var(--color-primary-green-disabled);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* ===================================================================
+   SECONDARY BUTTON
+   =================================================================== */
+
+.button-secondary,
+button.btn-secondary {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  padding: 12px 24px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  cursor: pointer;
+  min-height: 40px;
+  transition: var(--transition-default);
+
+  &:hover {
+    background-color: var(--color-bg-secondary);
+    border-color: #D5D5D5;
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    background-color: var(--color-bg-tertiary);
+    border-color: #D5D5D5;
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* ===================================================================
+   GHOST BUTTON (TERTIARY)
+   =================================================================== */
+
+.button-ghost,
+button.btn-ghost {
+  background-color: transparent;
+  color: var(--color-primary-blue);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-default);
+  text-decoration: none;
+
+  &:hover {
+    background-color: #F0F8FF;
+    text-decoration: underline;
+  }
+
+  &:active {
+    color: var(--color-primary-blue-dark);
+    background-color: transparent;
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* ===================================================================
+   ICON BUTTON
+   =================================================================== */
+
+.button-icon,
+button.btn-icon {
+  background-color: transparent;
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-default);
+
+  &:hover {
+    background-color: var(--color-bg-secondary);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    background-color: var(--color-bg-tertiary);
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* ===================================================================
+   FORM INPUTS
+   =================================================================== */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="time"],
+textarea,
+select {
+  font-family: var(--font-family);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+  border: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  padding: 10px;
+  border-radius: var(--radius-md);
+  min-height: 40px;
+  transition: var(--transition-default);
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-green);
+    box-shadow: 0 0 0 3px rgba(95, 178, 149, 0.1);
+  }
+
+  &:hover:not(:focus) {
+    border-color: #D5D5D5;
+  }
+
+  &:disabled {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-border-light);
+    color: var(--color-text-tertiary);
+    cursor: not-allowed;
+  }
+}
+
+/* Error state for inputs */
+input[type="text"].error,
+input[type="email"].error,
+input[type="number"].error,
+textarea.error {
+  border-color: var(--color-error);
+  background-color: #FEE8E8;
+}
+
+/* ===================================================================
+   CHECKBOX
+   =================================================================== */
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-primary);
+  cursor: pointer;
+  transition: var(--transition-default);
+
+  &:checked {
+    background-color: var(--color-primary-green);
+    border-color: var(--color-primary-green);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-primary-blue);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* ===================================================================
+   TOGGLE/SWITCH
+   =================================================================== */
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: var(--color-border-light);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition-slow);
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: var(--color-bg-primary);
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: var(--transition-slow);
+  }
+
+  &.active {
+    background-color: var(--color-primary-green);
+
+    &::after {
+      left: 22px;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* ===================================================================
+   CARDS
+   =================================================================== */
+
+.card {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-default);
+
+  &:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: #D5D5D5;
+  }
+
+  &.clickable {
+    cursor: pointer;
+  }
+}
+
+/* Event Card Colors */
+.event-card {
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: var(--font-size-metadata);
+  font-weight: 500;
+  cursor: grab;
+}
+
+/* ===================================================================
+   CDK DRAG-DROP STYLING
+   =================================================================== */
+
+// Ghost effect for dragged items
+.cdk-drag-preview {
+  opacity: 0.3;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+  border-radius: var(--radius-md);
+}
+
+.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-preview):not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Event Card Colors - continued */
+.event-card {
+  border: 0.5px solid;
+
+  &.shift {
+    background-color: var(--color-event-shift-bg);
+    color: var(--color-event-shift-text);
+    border-color: var(--color-event-shift-border);
+  }
+
+  &.strength {
+    background-color: var(--color-event-strength-bg);
+    color: var(--color-event-strength-text);
+    border-color: var(--color-event-strength-border);
+  }
+
+  &.flexibility {
+    background-color: var(--color-event-flexibility-bg);
+    color: var(--color-event-flexibility-text);
+    border-color: var(--color-event-flexibility-border);
+  }
+
+  &.mealprep {
+    background-color: var(--color-event-mealprep-bg);
+    color: var(--color-event-mealprep-text);
+    border-color: var(--color-event-mealprep-border);
+  }
+
+  &.endurance {
+    background-color: var(--color-event-endurance-bg);
+    color: var(--color-event-endurance-text);
+    border-color: var(--color-event-endurance-border);
+  }
+}
+
+/* ===================================================================
+   ALERT/INFO CARDS
+   =================================================================== */
+
+.alert {
+  border-left: 3px solid;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+
+  &.info {
+    background-color: #F0F8F5;
+    border-left-color: var(--color-primary-green);
+    color: #3B6D11;
+  }
+
+  &.error {
+    background-color: #FEE8E8;
+    border-left-color: var(--color-error);
+    color: var(--color-primary-red-dark);
+    padding: 8px 12px;
+  }
+
+  &.warning {
+    background-color: #FFF8E1;
+    border-left-color: var(--color-warning);
+    color: #8B6914;
+  }
+}
+
+/* ===================================================================
+   LABEL
+   =================================================================== */
+
+.label {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-primary);
+}
+
+/* ===================================================================
+   UTILITIES
+   =================================================================== */
+
+.text-small {
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-muted {
+  color: var(--color-text-tertiary);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.text-success {
+  color: var(--color-success);
+}

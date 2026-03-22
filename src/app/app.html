@@ -1,166 +1,544 @@
+<!-- ===================================================================
+   WEEK PLANNER - MAIN APP LAYOUT WITH TABS
+   =================================================================== -->
+
 <main class="layout">
-  <aside class="sidebar">
-    <header>
+  <!-- ===================================================================
+       HEADER WITH TABS
+       =================================================================== -->
+  <header class="header">
+    <div class="header-top">
       <h1>🗓️ Week Planner</h1>
-      <p>Balance shifts, workouts, and meal prep in one weekly view.</p>
-    </header>
+      <div class="header-actions">
+        <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
+          ↻ Generate Plan
+        </button>
+        <button type="button" class="button-secondary" (click)="openSettingsDialog()">
+          ⚙️ Settings
+        </button>
+      </div>
+    </div>
 
-    <div class="actions">
-      <button type="button" (click)="planner.generateSuggestedPlan()">Generate Smart Plan</button>
-      <button type="button" class="secondary" (click)="planner.clearGeneratedEvents()">
-        Clear Generated
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="currentView() === 'daily'"
+        (click)="showDailyView()"
+      >
+        Today
       </button>
-      <button type="button" class="settings-btn" (click)="openSettingsDialog()">⚙️ Settings</button>
-    </div>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="currentView() === 'week'"
+        (click)="showWeekView()"
+      >
+        Week
+      </button>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="currentView() === 'month'"
+        (click)="showMonthView()"
+      >
+        Month
+      </button>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="currentView() === 'onboarding'"
+        (click)="showOnboardingView()"
+      >
+        Setup
+      </button>
+    </nav>
+  </header>
 
-    <div class="managers-grid">
-      <app-shift-selector
-        [dayDropListIds]="dayDropListIds"
-        [customShifts]="planner.customShifts()"
-        (addCustomShift)="onAddCustomShift($event)"
-        (updateCustomShift)="onUpdateCustomShift($event)"
-        (deleteCustomShift)="onDeleteCustomShift($event)"
-        (placeWeekly)="onPlaceShiftWeekly($event)"
-      ></app-shift-selector>
-
-      <app-workout-manager
-        [workouts]="planner.workouts()"
-        [dayDropListIds]="dayDropListIds"
-        [settings]="planner.settings()"
-        (addWorkout)="onAddWorkout($event)"
-        (deleteWorkout)="onDeleteWorkout($event)"
-      ></app-workout-manager>
-
-      <app-custom-events-manager
-        [customEvents]="planner.customEvents()"
-        [dayDropListIds]="dayDropListIds"
-        (addCustomEvent)="onAddCustomEvent($event)"
-        (deleteCustomEvent)="onDeleteCustomEvent($event)"
-      ></app-custom-events-manager>
-
-      <app-mealprep-manager
-        [mealPrepSessions]="planner.mealPrepSessions()"
-        [dayDropListIds]="dayDropListIds"
-        (addMealPrepSession)="onAddMealPrepSession($event)"
-        (deleteMealPrepSession)="onDeleteMealPrepSession($event)"
-      ></app-mealprep-manager>
-    </div>
-  </aside>
-
-  <section class="calendar-wrap">
-    <app-calendar
-      [dayLabels]="dayLabels"
-      [eventsByDay]="planner.eventsByDay()"
-      [connectedDropListIds]="connectedDropListIds"
-      (dayDrop)="onDayDrop($event)"
-      (eventRemoved)="planner.removeEvent($event)"
-      (eventSelected)="onEventSelected($event)"
-    ></app-calendar>
-
-    @if (planner.unplacedWorkouts().length > 0) {
-      <div class="unplaced-workouts">
-        <div class="unplaced-header">
+  <!-- ===================================================================
+       CONTENT AREA (View-based)
+       =================================================================== -->
+  <section class="content">
+    <!-- DAILY VIEW -->
+    @if (currentView() === 'daily') {
+      <div class="daily-wrapper">
+        <!-- Header -->
+        <div class="view-header">
           <div>
-            <h3>⚠️ Workouts That Couldn't Be Scheduled</h3>
-            <p class="info-text">These workouts couldn't be automatically placed due to recovery requirements or scheduling conflicts. Drag them directly to the calendar below to place them manually.</p>
+            <h2>Today</h2>
+            <p class="subtitle">{{ getCurrentTime() }}</p>
           </div>
-          <button type="button" class="optimize-btn" (click)="planner.optimizeSchedule()">🔄 Try to optimize</button>
+          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
+            ↻ Regenerate
+          </button>
         </div>
-        <div
-          id="unplaced-workout-palette"
-          class="unplaced-list"
-          cdkDropList
-          [cdkDropListConnectedTo]="dayDropListIds"
-          [cdkDropListSortingDisabled]="true"
-        >
-          @for (workout of planner.unplacedWorkouts(); track workout.workoutId + '-' + workout.frequency) {
-            <div
-              class="unplaced-item"
-              cdkDrag
-              [cdkDragData]="createUnplacedWorkoutDragData(workout.workout)"
-            >
-              <div class="item-header">
-                <strong>{{ workout.workoutName }}</strong>
-                @if (workout.frequency > 1) {
-                  <span class="frequency">(#{{ workout.frequency }})</span>
-                }
+
+        <!-- Earlier Today -->
+        <section class="earlier-today-section">
+          <h3 class="section-title">Earlier Today</h3>
+          @if (getEarlierTodayEvents().length > 0) {
+            <div class="events-list">
+              @for (event of getEarlierTodayEvents(); track event.id) {
+                <div class="event-item">
+                  <div class="event-time">
+                    <span class="time-label">{{ event.startTime }}-{{ event.endTime }}</span>
+                  </div>
+                  <div class="event-info">
+                    <strong>{{ event.title }}</strong>
+                    <p class="text-secondary text-small">Duration: {{ event.durationMinutes || 0 }} mins</p>
+                  </div>
+                  <button type="button" class="button-icon" (click)="onEventSelected(event)" title="View details">
+                    →
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="events-list">
+              <div class="event-item placeholder-item">
+                <div class="event-time">
+                  <span class="time-label">09:00–10:30</span>
+                </div>
+                <div class="event-info">
+                  <strong>Morning Workout</strong>
+                  <p class="text-secondary text-small">Duration: 90 mins</p>
+                </div>
+                <button type="button" class="button-icon" disabled title="Placeholder">
+                  →
+                </button>
               </div>
-              <div class="item-reason">{{ workout.reason }}</div>
+              <div class="event-item placeholder-item">
+                <div class="event-time">
+                  <span class="time-label">12:00–13:00</span>
+                </div>
+                <div class="event-info">
+                  <strong>Lunch Break</strong>
+                  <p class="text-secondary text-small">Duration: 60 mins</p>
+                </div>
+                <button type="button" class="button-icon" disabled title="Placeholder">
+                  →
+                </button>
+              </div>
             </div>
           }
+        </section>
+
+        <!-- NOW Divider -->
+        <div class="now-divider">
+          <div class="divider-line"></div>
+          <div class="divider-badge">
+            <span>NOW</span>
+          </div>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- Next Events -->
+        <section class="next-events-section">
+          <h3 class="section-title">Next Events</h3>
+          @if (getNextUpcomingEvents().length > 0) {
+            <div class="events-list">
+              @for (event of getNextUpcomingEvents(); track event.id) {
+                <div class="event-item">
+                  <div class="event-time">
+                    <span class="time-label">{{ event.startTime }}</span>
+                  </div>
+                  <div class="event-info">
+                    <strong>{{ event.title }}</strong>
+                    <p class="text-secondary text-small">Duration: {{ event.durationMinutes || 0 }} mins</p>
+                  </div>
+                  <button type="button" class="button-icon" (click)="onEventSelected(event)" title="View details">
+                    →
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="events-list">
+              <div class="event-item placeholder-item">
+                <div class="event-time">
+                  <span class="time-label">16:00</span>
+                </div>
+                <div class="event-info">
+                  <strong>Strength Training</strong>
+                  <p class="text-secondary text-small">Duration: 60 mins</p>
+                </div>
+                <button type="button" class="button-icon" disabled title="Placeholder">
+                  →
+                </button>
+              </div>
+              <div class="event-item placeholder-item">
+                <div class="event-time">
+                  <span class="time-label">18:00</span>
+                </div>
+                <div class="event-info">
+                  <strong>Meal Prep</strong>
+                  <p class="text-secondary text-small">Duration: 90 mins</p>
+                </div>
+                <button type="button" class="button-icon" disabled title="Placeholder">
+                  →
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+
+        <!-- Weekly Snapshot -->
+        @if (getWeeklySnapshot(); as snapshot) {
+          <section class="snapshot-section">
+            <h3 class="section-title">This Week</h3>
+            <div class="snapshot-grid">
+              <div class="snapshot-card">
+                <div class="snapshot-label">Workouts Placed</div>
+                <div class="snapshot-value">{{ snapshot.placedWorkouts }}</div>
+              </div>
+              <div class="snapshot-card">
+                <div class="snapshot-label">Total Duration</div>
+                <div class="snapshot-value">{{ snapshot.totalDuration }} min</div>
+              </div>
+              <div class="snapshot-card">
+                <div class="snapshot-label">Avg Per Workout</div>
+                <div class="snapshot-value">{{ snapshot.averagePerDay }} min</div>
+              </div>
+              <div class="snapshot-card" [class.has-unplaced]="snapshot.unplacedWorkouts > 0">
+                <div class="snapshot-label">Unplaced</div>
+                <div class="snapshot-value">{{ snapshot.unplacedWorkouts }}</div>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+    }
+
+    <!-- WEEK VIEW -->
+    @if (currentView() === 'week') {
+      <div class="week-wrapper">
+        <!-- Header -->
+        <div class="view-header">
+          <div>
+            <h2>My Week</h2>
+            <p class="subtitle">{{ getCurrentWeekLabel() }}</p>
+          </div>
+          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
+            ↻ Regenerate
+          </button>
+        </div>
+
+        <!-- Quick Add Section - 3 Column Layout -->
+        <div class="quick-add-section">
+          <h3 class="quick-add-title">Quick Add</h3>
+          <div class="quick-add-grid">
+            <!-- Column 1: Work Events -->
+            <div class="quick-add-column">
+              <button
+                type="button"
+                class="quick-add-header-btn work-btn"
+                (click)="showWorkEventCard.set(!showWorkEventCard())"
+              >
+                📅 Add Work Event
+              </button>
+              @if (showWorkEventCard()) {
+                <app-quick-add-work-event-card
+                  (eventAdded)="onWorkEventAdded($event)"
+                  (closed)="showWorkEventCard.set(false)"
+                ></app-quick-add-work-event-card>
+              }
+            </div>
+
+            <!-- Column 2: Workouts -->
+            <div class="quick-add-column">
+              <button
+                type="button"
+                class="quick-add-header-btn workout-btn"
+                (click)="showWorkoutCard.set(!showWorkoutCard())"
+              >
+                💪 Add Workout
+              </button>
+              @if (showWorkoutCard()) {
+                <app-quick-add-workout-card
+                  (workoutAdded)="onWorkoutAdded($event)"
+                  (closed)="showWorkoutCard.set(false)"
+                ></app-quick-add-workout-card>
+              }
+
+              <!-- Saved Workouts Display -->
+              @if (planner.workouts().length > 0) {
+                <div class="saved-workouts-list" cdkDropList id="saved-workouts-palette" [cdkDropListConnectedTo]="connectedDropListIds">
+                  @for (workout of planner.workouts(); track workout.id) {
+                    <div
+                      class="saved-workout-card"
+                      cdkDrag
+                      [cdkDragData]="createUnplacedWorkoutDragData({
+                        id: workout.id,
+                        workoutType: workout.workoutType,
+                        name: workout.name,
+                        duration: workout.duration,
+                        frequencyPerWeek: workout.frequencyPerWeek,
+                        distanceKm: workout.distanceKm,
+                        distanceCountsAsLong: workout.distanceCountsAsLong
+                      })"
+                      title="Drag to schedule this workout"
+                    >
+                      <div class="workout-card-header">
+                        <strong>{{ workout.name }}</strong>
+                      </div>
+                      <div class="workout-card-details">
+                        <span class="badge duration">{{ workout.duration }}m</span>
+                        <span class="badge frequency">{{ workout.frequencyPerWeek }}x/week</span>
+                      </div>
+                      @if (workout.distanceKm) {
+                        <div class="workout-card-distance">
+                          📍 {{ workout.distanceKm }} km
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Column 3: Personal Events -->
+            <div class="quick-add-column">
+              <button
+                type="button"
+                class="quick-add-header-btn personal-btn"
+                (click)="showPersonalEventCard.set(!showPersonalEventCard())"
+              >
+                📌 Add Personal Event
+              </button>
+              @if (showPersonalEventCard()) {
+                <app-quick-add-personal-event-card
+                  (eventAdded)="onPersonalEventAdded($event)"
+                  (closed)="showPersonalEventCard.set(false)"
+                ></app-quick-add-personal-event-card>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <app-calendar
+          [dayLabels]="dayLabels"
+          [eventsByDay]="planner.eventsByDay()"
+          [connectedDropListIds]="connectedDropListIds"
+          (dayDrop)="onDayDrop($event)"
+          (eventRemoved)="planner.removeEvent($event)"
+          (eventSelected)="onEventSelected($event)"
+        ></app-calendar>
+
+        <!-- Unplaced Workouts Section (conditional) -->
+        @if (planner.unplacedWorkouts().length > 0) {
+          <div class="unplaced-workouts">
+            <div class="unplaced-header">
+              <div class="unplaced-title">
+                <h3>⚠️ Unplaced Workouts ({{ planner.unplacedWorkouts().length }})</h3>
+                <p class="unplaced-description">
+                  The following workouts could not be placed while respecting your work schedule, private events, and rest days. 
+                  You can drag and drop mandatory workouts to override, or regenerate the plan if you want to adjust the schedule.
+                </p>
+              </div>
+            </div>
+
+            <div class="unplaced-list">
+              @for (workout of planner.unplacedWorkouts(); track workout.workoutId + '-' + workout.frequency) {
+                <div
+                  class="unplaced-item card"
+                  cdkDrag
+                  [cdkDragData]="createUnplacedWorkoutDragData(workout.workout)"
+                >
+                  <div class="item-header">
+                    <strong>{{ workout.workoutName }}</strong>
+                    @if (workout.frequency > 1) {
+                      <span class="frequency-badge">{{ workout.frequency }} of week</span>
+                    }
+                  </div>
+
+                  <div class="item-meta">
+                    <span>{{ workout.workout.duration }} mins</span>
+                  </div>
+
+                  <div class="reason-box alert error">
+                    <strong>Reason:</strong> {{ workout.reason }}
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="unplaced-actions">
+              <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
+                ↻ Regenerate Plan
+              </button>
+              <button type="button" class="button-secondary">View Details</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- MONTH VIEW -->
+    @if (currentView() === 'month') {
+      <div class="month-wrapper">
+        <!-- Header with navigation and title -->
+        <div class="month-header">
+          <div class="month-title-section">
+            <button type="button" class="button-icon nav-btn" (click)="previousMonth()" title="Previous month">
+              ←
+            </button>
+            <div class="month-title-text">
+              <h2>{{ getMonthName() }}</h2>
+              <p class="month-subtitle">Monthly overview</p>
+            </div>
+            <button type="button" class="button-icon nav-btn" (click)="nextMonth()" title="Next month">
+              →
+            </button>
+          </div>
+          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
+            ↻ Regenerate
+          </button>
+        </div>
+
+        <!-- Day names header (Sun-Sat) -->
+        <div class="calendar-grid-header">
+          <div class="day-name">Sun</div>
+          <div class="day-name">Mon</div>
+          <div class="day-name">Tue</div>
+          <div class="day-name">Wed</div>
+          <div class="day-name">Thu</div>
+          <div class="day-name">Fri</div>
+          <div class="day-name">Sat</div>
+        </div>
+
+        <!-- Calendar grid -->
+        <div class="calendar-grid">
+          @for (day of getMonthCalendarDays(); track $index) {
+            @if (day === null) {
+              <div class="calendar-day empty-day"></div>
+            } @else {
+              <div class="calendar-day" [class.is-today]="isToday(day)" [class.has-events]="hasEventsOnMonthDay(day)">
+                <div class="day-number">{{ day }}</div>
+                <div class="day-content">
+                  <!-- Event cards -->
+                  @if (getEventsForMonthDay(day); as events) {
+                    @if (events.length > 0) {
+                      <div class="event-cards">
+                        @for (event of events; track event.id) {
+                          <div 
+                            class="event-card"
+                            [class.shift-type]="event.type === 'shift'"
+                            [class.workout-type]="event.type === 'workout'"
+                            [class.mealprep-type]="event.type === 'mealprep'"
+                            [class.custom-type]="event.type === 'custom-event'"
+                            (click)="onEventSelected(event)"
+                            title="Click to view details">
+                            {{ event.title }}
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- Event type legend -->
+        <div class="calendar-legend">
+          <div class="legend-label">Event Types:</div>
+          <div class="legend-items">
+            <span class="legend-item shift-color">Work/Shift</span>
+            <span class="legend-item workout-color">Workout</span>
+            <span class="legend-item mealprep-color">Meal Prep</span>
+            <span class="legend-item custom-color">Other</span>
+          </div>
         </div>
       </div>
     }
+
+    <!-- ONBOARDING VIEW -->
+    @if (currentView() === 'onboarding') {
+      <app-onboarding (navigateToWeek)="showWeekView()"></app-onboarding>
+    }
   </section>
 
+  <!-- ===================================================================
+       SETTINGS DIALOG
+       =================================================================== -->
   @if (showSettingsDialog) {
-  <div class="settings-backdrop" (click)="closeSettingsDialog()"></div>
-  <aside class="settings-panel">
-    <div class="settings-header">
-      <h2>⚙️ Scheduler Settings</h2>
-      <button class="close-btn" (click)="closeSettingsDialog()">✕</button>
+    <div class="dialog-overlay" (click)="closeSettingsDialog()">
+      <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h2>⚙️ Scheduler Settings</h2>
+          <button type="button" class="button-icon close-btn" (click)="closeSettingsDialog()">✕</button>
+        </div>
+
+        <app-scheduler-settings
+          [settings]="planner.settings()"
+          (settingsChanged)="onSettingsChanged($event)"
+        ></app-scheduler-settings>
+      </div>
     </div>
-    <div class="settings-content">
-      <app-scheduler-settings
-        [settings]="planner.settings()"
-        (settingsChanged)="onSettingsChanged($event)"
-      ></app-scheduler-settings>
-    </div>
-  </aside>
   }
 
+  <!-- ===================================================================
+       EVENT DETAILS MODAL
+       =================================================================== -->
   @if (showEventModal() && selectedEvent()) {
-  <app-event-details-modal
-    [event]="selectedEvent()!"
-    (close)="onEventModalClose()"
-    (updateEvent)="onEventUpdated($event)"
-    (updateCommuteForDay)="onUpdateCommuteForDay($event)"
-    (updateCommuteForAllShifts)="onUpdateCommuteForAllShifts($event)"
-  ></app-event-details-modal>
+    <app-event-details-modal
+      [event]="selectedEvent()!"
+      (close)="onEventModalClose()"
+      (updateEvent)="onEventUpdated($event)"
+      (updateCommuteForDay)="onUpdateCommuteForDay($event)"
+      (updateCommuteForAllShifts)="onUpdateCommuteForAllShifts($event)"
+    ></app-event-details-modal>
   }
 
+  <!-- ===================================================================
+       OPTIMIZATION PROPOSAL PANEL
+       =================================================================== -->
   @if (planner.optimizationProposal(); as proposal) {
-  <div class="settings-backdrop" (click)="cancelOptimizationProposal()"></div>
-  <aside class="optimization-panel">
-    <div class="settings-header">
-      <h2>⚠️ Optimization Conflicts</h2>
-      <button class="close-btn" (click)="cancelOptimizationProposal()">✕</button>
+    <div class="dialog-overlay" (click)="cancelOptimizationProposal()">
+      <div class="dialog optimization-dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h2>⚠️ Optimization Conflicts</h2>
+          <button type="button" class="button-icon close-btn" (click)="cancelOptimizationProposal()">✕</button>
+        </div>
+
+        <div class="dialog-content">
+          <p class="proposal-summary">
+            A better schedule is possible by rescheduling selected manual sessions.
+            Unplaced workouts can drop from {{ proposal.baselineUnplacedCount }} to {{ proposal.improvedUnplacedCount }}.
+          </p>
+
+          <div class="proposal-actions">
+            <button type="button" class="button-secondary" (click)="keepAllConflicts()">Keep All</button>
+            <button type="button" class="button-primary" (click)="acceptAllConflicts()">Accept All</button>
+          </div>
+
+          <div class="conflict-list">
+            @for (event of proposal.conflictEvents; track event.id) {
+              <label class="conflict-item">
+                <input
+                  type="checkbox"
+                  [checked]="isConflictSelected(event.id)"
+                  (change)="toggleConflictSelection(event.id, $event.target.checked)"
+                />
+                <div>
+                  <strong>{{ event.title }}</strong>
+                  <p><strong>Current:</strong> {{ planner.optimizationProposal()!.conflictMoves[event.id].current }}</p>
+                  <p><strong>Change:</strong> {{ planner.optimizationProposal()!.conflictMoves[event.id].change }}</p>
+                  <p class="conflict-gain">{{ getConflictGainLabel(event.id) }}</p>
+                </div>
+              </label>
+            }
+          </div>
+
+          <div class="dialog-footer">
+            <button type="button" class="button-secondary" (click)="cancelOptimizationProposal()">Cancel</button>
+            <button type="button" class="button-primary" (click)="applyConflictSelection()">Apply Selection</button>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <div class="settings-content">
-      <p class="proposal-summary">
-        A better schedule is possible by rescheduling selected manual sessions.
-        Unplaced workouts can drop from {{ proposal.baselineUnplacedCount }} to {{ proposal.improvedUnplacedCount }}.
-      </p>
-
-      <div class="proposal-actions">
-        <button type="button" class="secondary" (click)="keepAllConflicts()">Keep All</button>
-        <button type="button" (click)="acceptAllConflicts()">Accept All</button>
-      </div>
-
-      <div class="conflict-list">
-        @for (event of proposal.conflictEvents; track event.id) {
-          <label class="conflict-item">
-            <input
-              type="checkbox"
-              [checked]="isConflictSelected(event.id)"
-              (change)="toggleConflictSelection(event.id, $event.target.checked)"
-            />
-            <div>
-              <strong>{{ event.title }}</strong>
-              <p><strong>Current:</strong> {{ planner.optimizationProposal()!.conflictMoves[event.id].current }}</p>
-              <p><strong>Change:</strong> {{ planner.optimizationProposal()!.conflictMoves[event.id].change }}</p>
-              <p class="conflict-gain">{{ getConflictGainLabel(event.id) }}</p>
-            </div>
-          </label>
-        }
-      </div>
-
-      <div class="proposal-footer">
-        <button type="button" class="secondary" (click)="cancelOptimizationProposal()">Cancel</button>
-        <button type="button" (click)="applyConflictSelection()">Apply Selection</button>
-      </div>
-    </div>
-  </aside>
   }
 </main>

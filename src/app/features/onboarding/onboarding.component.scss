@@ -1,0 +1,579 @@
+// ─────────────────────────────────────────────────────────────
+//  Onboarding Page
+// ─────────────────────────────────────────────────────────────
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.onboarding-page {
+  min-height: 100%;
+  background: var(--color-bg-secondary);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--spacing-xxl) var(--spacing-md);
+}
+
+// ── Card ──────────────────────────────────────────────────────
+.onboarding-card {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 520px;
+  padding: var(--spacing-xxl) var(--spacing-xxl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+// ── Progress Dots ──────────────────────────────────────────────
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: var(--spacing-sm);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-border-medium);
+  transition: background var(--transition-default);
+
+  &.active {
+    background: var(--color-primary-green);
+  }
+}
+
+// ── Step Typography ────────────────────────────────────────────
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.step-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.step-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin: calc(-1 * var(--spacing-sm)) 0 0;
+  line-height: 1.5;
+}
+
+// ── Field Group ────────────────────────────────────────────────
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.sub-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--color-primary-green);
+  margin: 0;
+}
+
+// ── Dark Inputs ────────────────────────────────────────────────
+.dark-input {
+  background: #2b2b2b;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 2px var(--color-primary-green);
+  }
+
+  // Remove native time icon on Chrome/Edge
+  &::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
+  &[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      opacity: 1;
+      filter: invert(1);
+    }
+  }
+}
+
+// ── Time Range ─────────────────────────────────────────────────
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.time-range-dash {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.time-input-wrapper {
+  position: relative;
+  flex: 1;
+
+  .time-input {
+    padding-right: 36px;
+  }
+
+  .clock-icon {
+    position: absolute;
+    right: var(--spacing-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+}
+
+// ── Sleep Row ──────────────────────────────────────────────────
+.sleep-row {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.sleep-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// ── Select Dropdown ────────────────────────────────────────────
+.select-wrapper {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--color-text-secondary);
+    pointer-events: none;
+  }
+}
+
+.select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: var(--spacing-md) 40px var(--spacing-md) var(--spacing-md);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--color-primary-green);
+    box-shadow: 0 0 0 2px rgba(95, 178, 149, 0.2);
+  }
+}
+
+// ── Checkbox List ──────────────────────────────────────────────
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-default), background var(--transition-default);
+  user-select: none;
+
+  &:hover {
+    border-color: var(--color-border-medium);
+    background: var(--color-bg-secondary);
+  }
+}
+
+.checkbox-box {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border-medium);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition-default), border-color var(--transition-default);
+
+  svg {
+    width: 12px;
+    height: 10px;
+  }
+
+  &.checked {
+    background: var(--color-primary-green);
+    border-color: var(--color-primary-green);
+  }
+}
+
+.checkbox-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+// ── Day Toggles (for shift day selection) ──────────────────────
+.day-toggles {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--spacing-xs);
+}
+
+.day-toggle {
+  padding: var(--spacing-sm);
+  border: 1.5px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-default);
+  text-align: center;
+
+  &:hover {
+    border-color: var(--color-primary-green);
+  }
+
+  &.selected {
+    border-color: var(--color-primary-green);
+    background: var(--color-primary-green);
+    color: #fff;
+  }
+}
+
+// ── Shift Patterns List ────────────────────────────────────────
+.patterns-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.pattern-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  align-items: start;
+}
+
+.pattern-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pattern-name {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.pattern-times {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pattern-days {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.pattern-sleep {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-error);
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: opacity var(--transition-default);
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+// ── Pill / Toggle Buttons ──────────────────────────────────────
+.pill-group {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.pill-btn {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1.5px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-default);
+
+  &:hover {
+    border-color: var(--color-primary-green);
+  }
+
+  &.selected {
+    border-color: var(--color-primary-green);
+    color: var(--color-primary-green);
+    background: rgba(95, 178, 149, 0.06);
+    font-weight: 600;
+  }
+}
+
+// ── Tip Box ────────────────────────────────────────────────────
+.tip-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  background: rgba(95, 178, 149, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+
+  .tip-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+// ── Divider ────────────────────────────────────────────────────
+.divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 0 calc(-1 * var(--spacing-xxl));
+}
+
+// ── Step Action Buttons ────────────────────────────────────────
+.step-actions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1.5px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-default);
+
+  &:hover {
+    border-color: var(--color-text-secondary);
+  }
+
+  &.btn-full {
+    width: 100%;
+    margin-top: var(--spacing-sm);
+  }
+}
+
+.btn-primary {
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-green);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition-default);
+
+  &:hover {
+    background: var(--color-primary-green-hover);
+  }
+
+  &.btn-full {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 16px;
+  }
+}
+
+// ── Summary Cards (Step 4) ─────────────────────────────────────
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.summary-card {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.summary-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 2px;
+}
+
+.summary-sub {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+// ── Rotating Patterns Summary (for Step 4) ────────────────────
+.rotating-patterns-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.pattern-summary-item {
+  padding: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary-green);
+  background: rgba(95, 178, 149, 0.05);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-summary-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.pattern-summary-times {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.pattern-summary-days {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.pattern-summary-sleep {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+// ── Confirmation Actions (Step 4) ─────────────────────────────
+.confirmation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.secondary-links {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 13px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary-blue);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: opacity var(--transition-default);
+
+  &:hover {
+    opacity: 0.75;
+    text-decoration: underline;
+  }
+}
+
+.link-separator {
+  color: var(--color-text-tertiary);
+}

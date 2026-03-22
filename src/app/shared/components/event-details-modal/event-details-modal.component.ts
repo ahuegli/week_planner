@@ -18,6 +18,8 @@ export class EventDetailsModalComponent implements OnInit {
   @Output() updateCommuteForDay = new EventEmitter<{ eventId: string; commuteMinutes: number }>();
   @Output() updateCommuteForAllShifts = new EventEmitter<{ shiftLabel: string; shiftStartTime: string; commuteMinutes: number }>();
 
+  readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
   isEditing = signal(false);
   editData = signal({
     title: '',
@@ -25,6 +27,7 @@ export class EventDetailsModalComponent implements OnInit {
     endTime: '',
     notes: '',
     commuteMinutes: 0,
+    day: 0,
   });
 
   constructor(private readonly planner: PlannerService) {}
@@ -40,6 +43,7 @@ export class EventDetailsModalComponent implements OnInit {
       endTime: this.event.endTime,
       notes: this.event.notes || '',
       commuteMinutes: this.event.commuteMinutes || 0,
+      day: this.event.day,
     });
   }
 
@@ -58,6 +62,7 @@ export class EventDetailsModalComponent implements OnInit {
       title: this.editData().title,
       startTime,
       endTime,
+      day: this.editData().day,
       notes: this.editData().notes || undefined,
       commuteMinutes: this.editData().commuteMinutes,
     };

@@ -1,0 +1,93 @@
+<div class="card-container workout-card">
+  <div class="card-header">
+    <h3>💪 Add Workout</h3>
+    <button type="button" class="close-btn" (click)="onCancel()">✕</button>
+  </div>
+
+  <form (ngSubmit)="onAdd()" class="card-form">
+    <!-- Type -->
+    <div class="form-group">
+      <label for="workoutType">Type</label>
+      <select
+        id="workoutType"
+        [value]="type()"
+        (input)="type.set($any($event.target).value)"
+        name="type"
+        class="form-select"
+      >
+        @for (typeOption of workoutTypes; track typeOption.value) {
+          <option [value]="typeOption.value">{{ typeOption.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Session Name -->
+    <div class="form-group">
+      <label for="sessionName">Session Name</label>
+      <input
+        id="sessionName"
+        type="text"
+        [value]="sessionName()"
+        (input)="sessionName.set($any($event.target).value)"
+        name="sessionName"
+        placeholder="e.g. Morning run"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Duration -->
+    <div class="form-group">
+      <label for="duration">Duration (mins)</label>
+      <input
+        id="duration"
+        type="number"
+        [value]="duration()"
+        (input)="duration.set(+$any($event.target).value)"
+        name="duration"
+        min="15"
+        step="5"
+        class="form-input"
+      />
+    </div>
+
+    <!-- Timeframe -->
+    <div class="form-group">
+      <label for="timeframe">Frequency Per Week</label>
+      <select
+        id="timeframe"
+        [value]="timeframe()"
+        (input)="timeframe.set(+$any($event.target).value)"
+        name="timeframe"
+        class="form-select"
+      >
+        @for (tf of timeframeOptions; track tf.value) {
+          <option [value]="tf.value">{{ tf.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Distance (for endurance workouts) -->
+    @if (isEnduranceType()) {
+      <div class="form-group">
+        <label for="distance">Distance (km)</label>
+        <input
+          id="distance"
+          type="number"
+          [value]="distance() ?? ''"
+          (input)="distance.set($any($event.target).value ? +$any($event.target).value : undefined)"
+          name="distance"
+          min="0"
+          step="0.5"
+          placeholder="Optional"
+          class="form-input"
+        />
+      </div>
+    }
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="onCancel()">Cancel</button>
+      <button type="submit" class="btn-primary workout-btn">Add</button>
+    </div>
+  </form>
+</div>

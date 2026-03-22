@@ -102,6 +102,18 @@ export class PlannerService {
     this.workoutsSignal.update((workouts) => workouts.filter((w) => w.id !== id));
   }
 
+  decreaseWorkoutFrequency(id: string): void {
+    this.workoutsSignal.update((workouts) =>
+      workouts
+        .map((w) =>
+          w.id === id
+            ? { ...w, frequencyPerWeek: Math.max(0, w.frequencyPerWeek - 1) }
+            : w,
+        )
+        .filter((w) => w.frequencyPerWeek > 0), // Remove workouts with 0 frequency
+    );
+  }
+
   addMealPrepSession(
     name: string,
     duration: number,
@@ -130,8 +142,17 @@ export class PlannerService {
     workoutType?: WorkoutType,
     distanceKm?: number,
     distanceCountsAsLong?: boolean,
+    startTimeMinutes?: number,
   ): void {
-    const startTime = '18:00';
+    let startTime = '18:00'; // Default to 6pm
+    
+    // Convert startTimeMinutes to HH:MM format if provided
+    if (startTimeMinutes !== undefined) {
+      const hours = Math.floor(startTimeMinutes / 60);
+      const minutes = startTimeMinutes % 60;
+      startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+    
     const event: CalendarEvent = {
       id: crypto.randomUUID(),
       title,
@@ -208,15 +229,7 @@ export class PlannerService {
   async generateSuggestedPlan(): Promise<void> {
     this.clearOptimizationProposal();
 
-    // Aggregate meal prep sessions into a single config for schedule generator
-    const mealPrepSessions = this.mealPrepSessionsSignal();
-    const totalSessionsPerWeek = mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0);
-    const avgDuration =
-      mealPrepSessions.length > 0
-        ? Math.round(
-            mealPrepSessions.reduce((sum, s) => sum + s.duration, 0) / mealPrepSessions.length,
-          )
-        : 90;
+    const { totalSessionsPerWeek, avgDuration } = this.getMealPrepGenerationConfig();
 
     try {
       const result = await firstValueFrom(
@@ -236,9 +249,15 @@ export class PlannerService {
       const lockedPlacedEvents = result.placedEvents.map((e) => ({ ...e, isLocked: true }));
 
       this.eventsSignal.update((events) => {
-        const preserved = events.filter(
-          (e) => e.type === 'shift' || e.type === 'custom-event' || e.isLocked || e.isPersonal,
-        );
+        const preserved = events.filter((e) => {
+          // Always keep shifts and custom events
+          if (e.type === 'shift' || e.type === 'custom-event') return true;
+          // Always keep personal events
+          if (e.isPersonal) return true;
+          // Keep locked events UNLESS they are workouts or meal prep (those should be regenerated based on current settings)
+          if (e.isLocked && e.type !== 'workout' && e.type !== 'mealprep') return true;
+          return false;
+        });
         return [...preserved, ...lockedPlacedEvents];
       });
     } catch (error) {
@@ -528,8 +547,14 @@ export class PlannerService {
 
   private getMealPrepGenerationConfig(): { totalSessionsPerWeek: number; avgDuration: number } {
     const mealPrepSessions = this.mealPrepSessionsSignal();
+    const configuredMealPrepSessions = this.settingsSignal().mealPrepSessionsPerWeek ?? 0;
+    const sessionsFromMealPrepManager = mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0);
+
     return {
-      totalSessionsPerWeek: mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0),
+      totalSessionsPerWeek:
+        configuredMealPrepSessions === 0
+          ? 0
+          : (sessionsFromMealPrepManager > 0 ? sessionsFromMealPrepManager : configuredMealPrepSessions),
       avgDuration:
         mealPrepSessions.length > 0
           ? Math.round(

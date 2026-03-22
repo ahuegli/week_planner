@@ -1,0 +1,182 @@
+.card-container {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  animation: slideDown 0.3s ease-out;
+}
+
+.card-container.work-event-card {
+  border-left: 4px solid var(--color-primary-blue);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+
+  h3 {
+    margin: 0;
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-default);
+
+    &:hover {
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.card-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+
+  label {
+    font-size: var(--font-size-label);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-input,
+  .form-select {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-body);
+    font-family: var(--font-family);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: var(--transition-default);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary-blue);
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+
+    &::placeholder {
+      color: var(--color-text-tertiary);
+    }
+  }
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--spacing-xs);
+}
+
+.day-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-default);
+  background: var(--color-bg-primary);
+
+  input {
+    margin: 0;
+    cursor: pointer;
+  }
+
+  span {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &:has(input:checked) {
+    background: var(--color-primary-blue-light-bg);
+    border-color: var(--color-primary-blue);
+  }
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: var(--transition-default);
+}
+
+.btn-primary {
+  background: var(--color-primary-blue);
+  color: white;
+
+  &:hover {
+    background: var(--color-primary-blue-dark);
+    box-shadow: var(--shadow-md);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.btn-primary.work-btn {
+  background: var(--color-primary-blue);
+
+  &:hover {
+    background: var(--color-primary-blue-dark);
+  }
+}
+
+.btn-secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-medium);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
