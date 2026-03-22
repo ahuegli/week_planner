@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres
+    image: postgres:17
     container_name: my-postgres
     restart: always
     environment:
@@ -26,6 +26,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      USE_DATABASE: "true"
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: postgres

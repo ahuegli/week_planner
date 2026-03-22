@@ -13,6 +13,7 @@ import {
   SchedulerApiService,
   UnplacedWorkout,
 } from './scheduler-api.service';
+import { WorkoutApiService } from './workout-api.service';
 import { firstValueFrom } from 'rxjs';
 
 export interface OptimizationProposal {
@@ -62,7 +63,29 @@ export class PlannerService {
     ),
   );
 
-  constructor(private readonly schedulerApi: SchedulerApiService) {}
+  constructor(
+    private readonly schedulerApi: SchedulerApiService,
+    private readonly workoutApi: WorkoutApiService,
+  ) {}
+
+  async loadWorkouts(): Promise<void> {
+    try {
+      const workouts = await firstValueFrom(this.workoutApi.getAll());
+      this.workoutsSignal.set(workouts);
+    } catch (error) {
+      console.error('Failed to load workouts:', error);
+    }
+  }
+
+  clearAllData(): void {
+    this.workoutsSignal.set([]);
+    this.mealPrepSessionsSignal.set([]);
+    this.eventsSignal.set([]);
+    this.customEventsSignal.set([]);
+    this.customShiftsSignal.set([]);
+    this.unplacedWorkoutsSignal.set([]);
+    this.optimizationProposalSignal.set(null);
+  }
 
   addShift(day: number, shiftType: ShiftType): void {
     const shift = SHIFT_DEFINITIONS[shiftType];
@@ -78,40 +101,72 @@ export class PlannerService {
     this.eventsSignal.update((current) => [...current, event]);
   }
 
-  addWorkout(
+  async addWorkout(
     workoutType: WorkoutType,
     name: string,
     duration: number,
     frequencyPerWeek: number,
     distanceKm?: number,
     distanceCountsAsLong?: boolean,
-  ): void {
-    const workout: Workout = {
-      id: crypto.randomUUID(),
-      workoutType,
-      name,
-      duration,
-      frequencyPerWeek,
-      distanceKm,
-      distanceCountsAsLong,
-    };
-    this.workoutsSignal.update((current) => [...current, workout]);
+  ): Promise<void> {
+    try {
+      const workout = await firstValueFrom(
+        this.workoutApi.create({
+          workoutType,
+          name,
+          duration,
+          frequencyPerWeek,
+          distanceKm,
+        }),
+      );
+      // Add distanceCountsAsLong locally (not persisted in backend)
+      const workoutWithLocal: Workout = { ...workout, distanceCountsAsLong };
+      this.workoutsSignal.update((current) => [...current, workoutWithLocal]);
+    } catch (error) {
+      console.error('Failed to create workout:', error);
+      // Fallback to local-only if API fails
+      const workout: Workout = {
+        id: crypto.randomUUID(),
+        workoutType,
+        name,
+        duration,
+        frequencyPerWeek,
+        distanceKm,
+        distanceCountsAsLong,
+      };
+      this.workoutsSignal.update((current) => [...current, workout]);
+    }
   }
 
-  removeWorkout(id: string): void {
+  async removeWorkout(id: string): Promise<void> {
+    try {
+      await firstValueFrom(this.workoutApi.delete(id));
+    } catch (error) {
+      console.error('Failed to delete workout from API:', error);
+    }
     this.workoutsSignal.update((workouts) => workouts.filter((w) => w.id !== id));
   }
 
-  decreaseWorkoutFrequency(id: string): void {
-    this.workoutsSignal.update((workouts) =>
-      workouts
-        .map((w) =>
-          w.id === id
-            ? { ...w, frequencyPerWeek: Math.max(0, w.frequencyPerWeek - 1) }
-            : w,
-        )
-        .filter((w) => w.frequencyPerWeek > 0), // Remove workouts with 0 frequency
-    );
+  async decreaseWorkoutFrequency(id: string): Promise<void> {
+    const workout = this.workoutsSignal().find((w) => w.id === id);
+    if (!workout) return;
+
+    const newFrequency = Math.max(0, workout.frequencyPerWeek - 1);
+
+    if (newFrequency === 0) {
+      // Delete the workout entirely
+      await this.removeWorkout(id);
+    } else {
+      // Update the frequency
+      try {
+        await firstValueFrom(this.workoutApi.update(id, { frequencyPerWeek: newFrequency }));
+      } catch (error) {
+        console.error('Failed to update workout frequency:', error);
+      }
+      this.workoutsSignal.update((workouts) =>
+        workouts.map((w) => (w.id === id ? { ...w, frequencyPerWeek: newFrequency } : w)),
+      );
+    }
   }
 
   addMealPrepSession(
@@ -145,14 +200,14 @@ export class PlannerService {
     startTimeMinutes?: number,
   ): void {
     let startTime = '18:00'; // Default to 6pm
-    
+
     // Convert startTimeMinutes to HH:MM format if provided
     if (startTimeMinutes !== undefined) {
       const hours = Math.floor(startTimeMinutes / 60);
       const minutes = startTimeMinutes % 60;
       startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
-    
+
     const event: CalendarEvent = {
       id: crypto.randomUUID(),
       title,
@@ -548,13 +603,18 @@ export class PlannerService {
   private getMealPrepGenerationConfig(): { totalSessionsPerWeek: number; avgDuration: number } {
     const mealPrepSessions = this.mealPrepSessionsSignal();
     const configuredMealPrepSessions = this.settingsSignal().mealPrepSessionsPerWeek ?? 0;
-    const sessionsFromMealPrepManager = mealPrepSessions.reduce((sum, s) => sum + s.frequencyPerWeek, 0);
+    const sessionsFromMealPrepManager = mealPrepSessions.reduce(
+      (sum, s) => sum + s.frequencyPerWeek,
+      0,
+    );
 
     return {
       totalSessionsPerWeek:
         configuredMealPrepSessions === 0
           ? 0
-          : (sessionsFromMealPrepManager > 0 ? sessionsFromMealPrepManager : configuredMealPrepSessions),
+          : sessionsFromMealPrepManager > 0
+            ? sessionsFromMealPrepManager
+            : configuredMealPrepSessions,
       avgDuration:
         mealPrepSessions.length > 0
           ? Math.round(

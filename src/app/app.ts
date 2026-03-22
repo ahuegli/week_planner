@@ -70,6 +70,15 @@ export class App {
   selectedConflictIds = signal<Set<string>>(new Set());
 
   constructor(readonly planner: PlannerService) {
+    // Load workouts when user is authenticated
+    effect(() => {
+      if (this.isAuthenticated()) {
+        this.planner.loadWorkouts();
+      } else {
+        this.planner.clearAllData();
+      }
+    });
+
     effect(() => {
       if (this.showSettingsDialog || this.showEventModal()) {
         document.body.style.overflow = 'hidden';
@@ -527,14 +536,14 @@ export class App {
   }
 
   // Quick-add card event handlers
-  onWorkoutAdded(payload: {
+  async onWorkoutAdded(payload: {
     type: WorkoutType;
     sessionName: string;
     duration: number;
     timeframe: number;
     distance?: number;
-  }): void {
-    this.planner.addWorkout(
+  }): Promise<void> {
+    await this.planner.addWorkout(
       payload.type,
       payload.sessionName,
       payload.duration,
