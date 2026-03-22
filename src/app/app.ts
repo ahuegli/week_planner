@@ -18,6 +18,8 @@ import { WORKOUT_TYPE_LABELS, Workout, WorkoutType } from './core/models/workout
 import { PlannerService } from './core/services/planner.service';
 import { AuthService } from './core/services/auth.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
+import { DailyViewComponent } from './features/daily-view/daily-view.component';
+import { MonthViewComponent, QuickAddRequest } from './features/month-view/month-view.component';
 import { OnboardingComponent } from './features/onboarding/onboarding.component';
 import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
 import { LoginComponent } from './features/login/login.component';
@@ -100,6 +102,8 @@ const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
     CdkDrag,
     CdkDropList,
     CalendarComponent,
+    DailyViewComponent,
+    MonthViewComponent,
     OnboardingComponent,
     SchedulerSettingsComponent,
     LoginComponent,
@@ -142,7 +146,6 @@ export class App implements OnInit {
   showPersonalEventCard = signal(false);
   showMealPrepCard = signal(false);
   quickAddTarget = signal<QuickAddTargetContext | null>(null);
-  selectedMonthDay = signal<QuickAddTargetContext | null>(null);
   workoutPresets = signal<WorkoutPreset[]>(this.loadWorkoutPresets());
   selectedWorkoutTemplate = signal<Workout | null>(null);
   addEditedWorkoutAsPreset = signal(false);
@@ -277,7 +280,6 @@ export class App implements OnInit {
         this.showWorkShiftCard() ||
         this.showPersonalEventCard() ||
         this.showMealPrepCard() ||
-        this.selectedMonthDay() ||
         this.selectedWorkoutTemplate()
       ) {
         document.body.style.overflow = 'hidden';
@@ -405,57 +407,22 @@ export class App implements OnInit {
     this.clearQuickAddTargetIfIdle();
   }
 
-  openMonthDayDetails(dateOfMonth: number): void {
-    this.selectedMonthDay.set(this.getQuickAddTargetForMonthDay(dateOfMonth));
-  }
-
-  closeMonthDayDetails(): void {
-    this.selectedMonthDay.set(null);
-  }
-
-  openWorkShiftFromMonthDay(): void {
-    const selectedDay = this.selectedMonthDay();
-    if (!selectedDay) {
-      return;
+  handleMonthQuickAdd(request: QuickAddRequest): void {
+    // The MonthViewComponent closes its own modal, so we just open the quick-add dialog
+    switch (request.kind) {
+      case 'work':
+        this.openWorkShiftDialog(request.context);
+        break;
+      case 'workout':
+        this.openWorkoutDialog(request.context);
+        break;
+      case 'personal':
+        this.openPersonalEventDialog(request.context);
+        break;
+      case 'mealprep':
+        this.openMealPrepDialog(request.context);
+        break;
     }
-
-    this.closeMonthDayDetails();
-    this.openWorkShiftDialog(selectedDay);
-  }
-
-  openWorkoutFromMonthDay(): void {
-    const selectedDay = this.selectedMonthDay();
-    if (!selectedDay) {
-      return;
-    }
-
-    this.closeMonthDayDetails();
-    this.openWorkoutDialog(selectedDay);
-  }
-
-  openPersonalEventFromMonthDay(): void {
-    const selectedDay = this.selectedMonthDay();
-    if (!selectedDay) {
-      return;
-    }
-
-    this.closeMonthDayDetails();
-    this.openPersonalEventDialog(selectedDay);
-  }
-
-  openMealPrepFromMonthDay(): void {
-    const selectedDay = this.selectedMonthDay();
-    if (!selectedDay) {
-      return;
-    }
-
-    this.closeMonthDayDetails();
-    this.openMealPrepDialog(selectedDay);
-  }
-
-  openEventFromMonthDetails(event: CalendarEvent): void {
-    this.closeMonthDayDetails();
-    this.onEventSelected(event);
   }
 
   openWorkoutTemplateEditor(workout: Workout): void {
@@ -954,115 +921,6 @@ export class App implements OnInit {
     return jsDay === 0 ? 6 : jsDay - 1;
   }
 
-  getTodaysEvents(): CalendarEvent[] {
-    const today = new Date();
-    const todayIndex = this.getTodayIndex();
-    const todayDateStr = this.planner.formatDate(today);
-    
-    return this.planner
-      .events()
-      .filter((event) => {
-        if (event.day !== todayIndex) return false;
-        
-        // Repeating events show every day
-        if (event.isRepeatingWeekly) return true;
-        
-        // Events with dates must match today's date
-        if (event.date) {
-          return event.date === todayDateStr;
-        }
-        
-        // Legacy events without date - only show if weekOffset is 0 or undefined
-        return event.weekOffset === undefined || event.weekOffset === 0;
-      })
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }
-
-  getCurrentTime(): string {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  }
-
-  getRightNowEvent(): CalendarEvent | null {
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todaysEvents = this.getTodaysEvents();
-
-    // Find event that is currently happening or next event
-    return (
-      todaysEvents.find((event) => {
-        const [startH, startM] = event.startTime.split(':').map(Number);
-        const [endH, endM] = event.endTime.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-        const endMinutes = endH * 60 + endM;
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        return startMinutes <= nowMinutes && nowMinutes < endMinutes;
-      }) ||
-      todaysEvents.find((event) => event.startTime > currentTime) ||
-      null
-    );
-  }
-
-  getEarlierTodayEvents(): CalendarEvent[] {
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todaysEvents = this.getTodaysEvents();
-
-    return todaysEvents.filter((event) => event.endTime <= currentTime);
-  }
-
-  getNextUpcomingEvents(): CalendarEvent[] {
-    const now = new Date();
-    const upcoming: Array<{ event: CalendarEvent; start: number }> = [];
-
-    // Look ahead two weeks and place events on real calendar dates.
-    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
-      const date = new Date(now);
-      date.setDate(now.getDate() + dayOffset);
-      date.setHours(0, 0, 0, 0);
-
-      const jsDay = date.getDay();
-      const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
-      const dateStr = this.planner.formatDate(date);
-
-      const dayEvents = this.planner
-        .events()
-        .filter((event) => {
-          if (event.day !== weekdayIndex) return false;
-          
-          // Repeating events show every week
-          if (event.isRepeatingWeekly) return true;
-          
-          // Events with dates must match
-          if (event.date) {
-            return event.date === dateStr;
-          }
-          
-          // Legacy events without date - calculate based on weekOffset
-          const weekOffset = this.getWeekOffsetForDate(date);
-          return event.weekOffset === undefined || event.weekOffset === weekOffset;
-        });
-
-      dayEvents.forEach((event) => {
-        const [hours, minutes] = event.startTime.split(':').map(Number);
-        const eventStart = new Date(date);
-        eventStart.setHours(hours, minutes, 0, 0);
-
-        // "Next Events" should be future events only; current live event is shown in the NOW card.
-        if (eventStart.getTime() <= now.getTime()) {
-          return;
-        }
-
-        upcoming.push({ event, start: eventStart.getTime() });
-      });
-    }
-
-    return upcoming
-      .sort((a, b) => a.start - b.start)
-      .slice(0, 6)
-      .map((item) => item.event);
-  }
-
   getWeeklySnapshot(): {
     totalWorkouts: number;
     totalDuration: number;
@@ -1098,67 +956,16 @@ export class App implements OnInit {
     };
   }
 
-  // Monthly view helpers
-  getMonthName(): string {
-    const date = this.currentMonthDate();
-    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-  }
-
-  getMonthCalendarDays(): (number | null)[] {
-    const date = this.currentMonthDate();
-    const year = date.getFullYear();
-    const month = date.getMonth();
-
-    // Get first day of month and number of days
-    // Convert from Sunday-first (0) to Monday-first (0) system
-    let firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday, 1 = Monday, ...
-    firstDay = (firstDay + 6) % 7; // Convert to Monday-first: Sun(0)→6, Mon(1)→0, ..., Sat(6)→5
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Create flat array of all days with nulls for empty cells
-    const days: (number | null)[] = [];
-
-    // Add empty cells before the 1st of the month
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-
-    // Add all days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(day);
-    }
-
-    // Add empty cells after the last day to complete the grid (optional, for visual padding)
-    // This ensures the grid is always a multiple of 7 (complete weeks)
-    while (days.length % 7 !== 0) {
-      days.push(null);
-    }
-
-    return days;
-  }
-
-  isToday(day: number): boolean {
-    const today = new Date();
-    const currentDate = this.currentMonthDate();
-    return (
-      day === today.getDate() &&
-      today.getMonth() === currentDate.getMonth() &&
-      today.getFullYear() === currentDate.getFullYear()
-    );
-  }
-
   previousMonth(): void {
     const current = this.currentMonthDate();
     const prev = new Date(current.getFullYear(), current.getMonth() - 1, 1);
     this.currentMonthDate.set(prev);
-    this.closeMonthDayDetails();
   }
 
   nextMonth(): void {
     const current = this.currentMonthDate();
     const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
     this.currentMonthDate.set(next);
-    this.closeMonthDayDetails();
   }
 
   // Quick-add card event handlers
@@ -1511,264 +1318,69 @@ export class App implements OnInit {
   }
 
   /**
-   * Get all events for a specific calendar date in the month view.
-   * Shows week-specific events (matching weekOffset) and repeating events (weekOffset === undefined).
+   * Get reminders based on today's schedule
+   * Used by the daily view component for backwards compatibility
    */
-  getEventsForMonthDay(dateOfMonth: number): CalendarEvent[] {
-    const currentMonth = this.currentMonthDate();
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
-    return this.getEventsForDate(date);
-  }
-
-  getSelectedMonthDayEvents(): CalendarEvent[] {
-    const selectedDay = this.selectedMonthDay();
-    return selectedDay ? this.getEventsForDate(selectedDay.date) : [];
-  }
-
-  getSelectedMonthDayLabel(): string {
-    const selectedDay = this.selectedMonthDay();
-    if (!selectedDay) {
-      return '';
-    }
-
-    return selectedDay.date.toLocaleString('default', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }
-
-  getSelectedMonthDaySubtitle(): string {
-    const count = this.getSelectedMonthDayEvents().length;
-    if (count === 0) {
-      return 'No events scheduled yet';
-    }
-
-    return `${count} scheduled item${count === 1 ? '' : 's'}`;
-  }
-
-  private getEventsForDate(date: Date): CalendarEvent[] {
-    const jsDay = date.getDay();
-    const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
-    const weekOffset = this.getWeekOffsetForDate(date);
-
+  private getTodaysEvents(): CalendarEvent[] {
+    const today = new Date();
+    const todayIndex = this.getTodayIndex();
+    const todayDateStr = this.planner.formatDate(today);
+    
     return this.planner
       .events()
-      .filter(
-        (e) =>
-          e.day === weekdayIndex && (e.weekOffset === undefined || e.weekOffset === weekOffset),
-      )
+      .filter((event) => {
+        if (event.day !== todayIndex) return false;
+        if (event.isRepeatingWeekly) return true;
+        if (event.date) {
+          return event.date === todayDateStr;
+        }
+        return event.weekOffset === undefined || event.weekOffset === 0;
+      })
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
-
-  /**
-   * Check if a specific calendar date has any events
-   */
-  hasEventsOnMonthDay(dateOfMonth: number): boolean {
-    return this.getEventsForMonthDay(dateOfMonth).length > 0;
-  }
-
-  /**
-   * Get event type counts for a specific calendar date
-   */
-  getEventTypeCountsForMonthDay(dateOfMonth: number): {
-    shifts: number;
-    workouts: number;
-    mealpreps: number;
-    custom: number;
-  } {
-    const events = this.getEventsForMonthDay(dateOfMonth);
-    return {
-      shifts: events.filter((e) => e.type === 'shift').length,
-      workouts: events.filter((e) => e.type === 'workout').length,
-      mealpreps: events.filter((e) => e.type === 'mealprep').length,
-      custom: events.filter((e) => e.type === 'custom-event').length,
-    };
-  }
-
-  // ===== TODAY PAGE HELPERS =====
-
-  /**
-   * Get today's date in long format (e.g., "Monday, March 22, 2026")
-   */
-  getTodayDateString(): string {
-    const today = new Date();
-    return today.toLocaleString('default', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-
-  /**
-   * Get today's snapshot (workout/event stats for today only)
-   */
-  getTodaySnapshot(): {
-    totalWorkouts: number;
-    totalDuration: number;
-    totalShifts: number;
-    mealPrepEvents: number;
-    averageWorkoutTime: number;
-  } {
-    const todaysEvents = this.getTodaysEvents();
-    let workoutCount = 0;
-    let totalDuration = 0;
-    let shiftCount = 0;
-    let mealPrepCount = 0;
-
-    todaysEvents.forEach((event) => {
-      const [startH, startM] = event.startTime.split(':').map(Number);
-      const [endH, endM] = event.endTime.split(':').map(Number);
-      let duration = endH * 60 + endM - (startH * 60 + startM);
-      if (duration < 0) duration += 24 * 60;
-
-      if (event.type === 'workout') {
-        workoutCount++;
-        totalDuration += duration;
-      } else if (event.type === 'shift') {
-        shiftCount++;
-      } else if (event.type === 'mealprep') {
-        mealPrepCount++;
-      }
-    });
-
-    return {
-      totalWorkouts: workoutCount,
-      totalDuration,
-      totalShifts: shiftCount,
-      mealPrepEvents: mealPrepCount,
-      averageWorkoutTime: workoutCount > 0 ? Math.round(totalDuration / workoutCount) : 0,
-    };
-  }
-
-  /**
-   * Calculate progress percentage for an event (0-100%)
-   * Returns null if event hasn't started or is finished
-   */
-  getEventProgressPercentage(event: CalendarEvent): number | null {
+  
+  private getNextUpcomingEvents(): CalendarEvent[] {
     const now = new Date();
-    const [startH, startM] = event.startTime.split(':').map(Number);
-    const [endH, endM] = event.endTime.split(':').map(Number);
+    const upcoming: Array<{ event: CalendarEvent; start: number }> = [];
 
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() + dayOffset);
+      date.setHours(0, 0, 0, 0);
 
-    // Event hasn't started
-    if (nowMinutes < startMinutes) {
-      return null;
+      const jsDay = date.getDay();
+      const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
+      const dateStr = this.planner.formatDate(date);
+
+      const dayEvents = this.planner
+        .events()
+        .filter((event) => {
+          if (event.day !== weekdayIndex) return false;
+          if (event.isRepeatingWeekly) return true;
+          if (event.date) {
+            return event.date === dateStr;
+          }
+          const weekOffset = this.getWeekOffsetForDate(date);
+          return event.weekOffset === undefined || event.weekOffset === weekOffset;
+        });
+
+      dayEvents.forEach((event) => {
+        const [hours, minutes] = event.startTime.split(':').map(Number);
+        const eventStart = new Date(date);
+        eventStart.setHours(hours, minutes, 0, 0);
+
+        if (eventStart.getTime() <= now.getTime()) {
+          return;
+        }
+
+        upcoming.push({ event, start: eventStart.getTime() });
+      });
     }
 
-    // Event is finished
-    if (nowMinutes >= endMinutes) {
-      return null;
-    }
-
-    // Event is ongoing
-    const totalDuration = endMinutes - startMinutes;
-    const elapsed = nowMinutes - startMinutes;
-    return Math.round((elapsed / totalDuration) * 100);
-  }
-
-  /**
-   * Get the currently active event (occurring right now)
-   */
-  getEventCurrentlyHappening(): CalendarEvent | null {
-    const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todaysEvents = this.getTodaysEvents();
-
-    return (
-      todaysEvents.find((event) => {
-        const [startH, startM] = event.startTime.split(':').map(Number);
-        const [endH, endM] = event.endTime.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-        const endMinutes = endH * 60 + endM;
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-        return startMinutes <= nowMinutes && nowMinutes < endMinutes;
-      }) || null
-    );
-  }
-
-  /**
-   * Get tag label for event type
-   */
-  getEventTypeTag(eventType: string): string {
-    switch (eventType) {
-      case 'workout':
-        return '🏋️ Workout';
-      case 'shift':
-        return '💼 Work';
-      case 'mealprep':
-        return '🍽️ Meal Prep';
-      case 'custom-event':
-        return '📌 Event';
-      default:
-        return '📅 Event';
-    }
-  }
-
-  /**
-   * Get reminders based on today's schedule
-   */
-  getReminders(): string[] {
-    const reminders: string[] = [];
-    const todaysEvents = this.getTodaysEvents();
-    const upcomingEvents = this.getNextUpcomingEvents().slice(0, 3);
-
-    // Reminder for unplaced workouts
-    const unplaced = this.planner.unplacedWorkouts().length;
-    if (unplaced > 0) {
-      reminders.push(
-        `📌 You have ${unplaced} unplaced workout${unplaced > 1 ? 's' : ''} this week`,
-      );
-    }
-
-    // Reminder for busy days
-    const workoutCount = todaysEvents.filter((e) => e.type === 'workout').length;
-    if (workoutCount > 2) {
-      reminders.push('💪 You have a lot of workouts today - make sure you stay hydrated!');
-    }
-
-    // Reminder for upcoming events
-    if (upcomingEvents.length > 0) {
-      const nextEvent = upcomingEvents[0];
-      reminders.push(`📍 Next up in ${this.getTimeDifference(nextEvent)}: ${nextEvent.title}`);
-    }
-
-    // Reminder about meal prep
-    const mealPrepEvents = todaysEvents.filter((e) => e.type === 'mealprep').length;
-    if (mealPrepEvents === 0) {
-      reminders.push('🍽️ No meal prep scheduled today. Consider planning your meals!');
-    }
-
-    // Placeholder for more backend-driven reminders
-    reminders.push('⚡ (Backend reminders coming soon)');
-
-    return reminders;
-  }
-
-  /**
-   * Helper to calculate time difference between now and an event
-   */
-  private getTimeDifference(event: CalendarEvent): string {
-    const now = new Date();
-    const [hours, minutes] = event.startTime.split(':').map(Number);
-    const eventTime = new Date();
-    eventTime.setHours(hours, minutes, 0);
-
-    const diff = eventTime.getTime() - now.getTime();
-    if (diff < 0) return 'Now'; // Already started or passed
-
-    const minutesDiff = Math.floor(diff / (1000 * 60));
-    if (minutesDiff < 60) {
-      return `${minutesDiff}m`;
-    }
-    const hoursDiff = Math.floor(minutesDiff / 60);
-    const remainingMins = minutesDiff % 60;
-    return remainingMins > 0 ? `${hoursDiff}h ${remainingMins}m` : `${hoursDiff}h`;
+    return upcoming
+      .sort((a, b) => a.start - b.start)
+      .slice(0, 6)
+      .map((item) => item.event);
   }
 
   private setActiveQuickAddDialog(

@@ -1,0 +1,209 @@
+<div class="daily-wrapper">
+  <div class="view-header">
+    <div>
+      <h2>Today</h2>
+      <p class="subtitle">{{ getTodayDateString() }}</p>
+    </div>
+  </div>
+
+  @if (getTodaySnapshot(); as todaySnapshot) {
+    <section class="snapshot-section">
+      <h3 class="section-title">Today's Snapshot</h3>
+      <div class="snapshot-grid">
+        <div class="snapshot-card">
+          <div class="snapshot-label">Workouts</div>
+          <div class="snapshot-value">{{ todaySnapshot.totalWorkouts }}</div>
+        </div>
+        <div class="snapshot-card">
+          <div class="snapshot-label">Total Duration</div>
+          <div class="snapshot-value">{{ todaySnapshot.totalDuration }} min</div>
+        </div>
+        <div class="snapshot-card">
+          <div class="snapshot-label">Work Shifts</div>
+          <div class="snapshot-value">{{ todaySnapshot.totalShifts }}</div>
+        </div>
+        <div class="snapshot-card">
+          <div class="snapshot-label">Meal Prep</div>
+          <div class="snapshot-value">{{ todaySnapshot.mealPrepEvents }}</div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <section class="earlier-today-section">
+    <h3 class="section-title">Earlier Today</h3>
+    @if (getEarlierTodayEvents().length > 0) {
+      <div class="events-list">
+        @for (event of getEarlierTodayEvents(); track event.id) {
+          <div
+            class="event-item past-event clickable-event"
+            role="button"
+            tabindex="0"
+            (click)="onEventSelected(event)"
+          >
+            <div class="event-time">
+              <span class="time-label">{{ event.startTime }}-{{ event.endTime }}</span>
+            </div>
+            <div class="event-info">
+              <div class="event-header">
+                <strong>{{ event.title }}</strong>
+                <span class="event-tag">{{ getEventTypeTag(event.type) }}</span>
+              </div>
+              <p class="text-secondary text-small">
+                Duration: {{ event.durationMinutes || 0 }} mins
+              </p>
+            </div>
+            <button
+              type="button"
+              class="button-icon"
+              (click)="$event.stopPropagation(); onEventSelected(event)"
+              title="View details"
+            >
+              →
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="events-list">
+        <div class="empty-state">
+          <p class="text-secondary">No events earlier today</p>
+        </div>
+      </div>
+    }
+  </section>
+
+  @if (getEventCurrentlyHappening(); as currentEvent) {
+    <div
+      class="now-divider-active"
+      [style.--progress]="(getEventProgressPercentage(currentEvent) || 0) + '%'"
+    >
+      <div class="divider-progress-bar"></div>
+      <div class="divider-badge"><span>NOW</span></div>
+      <div class="divider-event-info">
+        <span class="progress-text">In Progress: {{ currentEvent.title }}</span>
+      </div>
+    </div>
+    <div class="current-event-card" (click)="onEventSelected(currentEvent)">
+      <div class="current-event-header">
+        <div class="current-event-title-section">
+          <h3>🎯 {{ currentEvent.title }}</h3>
+        </div>
+        <div class="current-event-progress">
+          <div class="current-event-progress-label">Now</div>
+          <div class="current-event-progress-track">
+            <div
+              class="current-event-progress-fill"
+              [style.width.%]="getEventProgressPercentage(currentEvent) || 0"
+            ></div>
+          </div>
+        </div>
+      </div>
+      <div class="current-event-details">
+        <div class="detail-row">
+          <span class="detail-label">Time</span>
+          <span class="detail-value"
+            >{{ currentEvent.startTime }} - {{ currentEvent.endTime }}</span
+          >
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Type</span>
+          <span class="detail-value">{{ getEventTypeTag(currentEvent.type) }}</span>
+        </div>
+      </div>
+      <div class="current-event-actions">
+        <button type="button" class="btn-action" (click)="onEventSelected(currentEvent)">
+          View Details & Notes
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="now-divider">
+      <div class="divider-line"></div>
+      <div class="divider-badge"><span>NOW</span></div>
+      <div class="divider-line"></div>
+    </div>
+  }
+
+  <section class="next-events-section">
+    <h3 class="section-title">Next Events</h3>
+    @if (getNextUpcomingEvents().length > 0) {
+      <div class="events-list">
+        @for (event of getNextUpcomingEvents(); track $index; let i = $index) {
+          <div
+            class="event-item clickable-event"
+            [class.next-upcoming]="i === 0"
+            role="button"
+            tabindex="0"
+            (click)="onEventSelected(event)"
+          >
+            @if (i === 0) {
+              <div class="event-badge">Next</div>
+            }
+            <div class="event-time">
+              <span class="time-label">{{ event.startTime }}</span>
+            </div>
+            <div class="event-info">
+              <div class="event-header">
+                <strong>{{ event.title }}</strong>
+                <span class="event-tag">{{ getEventTypeTag(event.type) }}</span>
+              </div>
+              <p class="text-secondary text-small">
+                Duration: {{ event.durationMinutes || 0 }} mins
+              </p>
+            </div>
+            <button
+              type="button"
+              class="button-icon"
+              (click)="$event.stopPropagation(); onEventSelected(event)"
+              title="View details"
+            >
+              →
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="events-list">
+        <div class="empty-state">
+          <p class="text-secondary">No upcoming events</p>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="reminders-section">
+    <h3 class="section-title">Reminders</h3>
+    <div class="reminders-list">
+      @for (reminder of getReminders(); track $index) {
+        <div class="reminder-item">
+          <p class="reminder-text">{{ reminder }}</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (weeklySnapshot; as snapshot) {
+    <section class="snapshot-section">
+      <h3 class="section-title">Full Week Snapshot</h3>
+      <div class="snapshot-grid">
+        <div class="snapshot-card">
+          <div class="snapshot-label">Workouts Placed</div>
+          <div class="snapshot-value">{{ snapshot.placedWorkouts }}</div>
+        </div>
+        <div class="snapshot-card">
+          <div class="snapshot-label">Total Duration</div>
+          <div class="snapshot-value">{{ snapshot.totalDuration }} min</div>
+        </div>
+        <div class="snapshot-card">
+          <div class="snapshot-label">Avg Per Workout</div>
+          <div class="snapshot-value">{{ snapshot.averagePerDay }} min</div>
+        </div>
+        <div class="snapshot-card" [class.has-unplaced]="snapshot.unplacedWorkouts > 0">
+          <div class="snapshot-label">Unplaced</div>
+          <div class="snapshot-value">{{ snapshot.unplacedWorkouts }}</div>
+        </div>
+      </div>
+    </section>
+  }
+</div>

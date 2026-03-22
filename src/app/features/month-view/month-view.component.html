@@ -1,0 +1,166 @@
+<div class="month-wrapper">
+  <!-- Header with navigation and title -->
+  <div class="month-header">
+    <div class="month-title-section">
+      <button
+        type="button"
+        class="button-icon nav-btn"
+        (click)="onGoToToday()"
+        title="Go to today"
+      >
+        ⌂
+      </button>
+      <button
+        type="button"
+        class="button-icon nav-btn"
+        (click)="onPreviousMonth()"
+        title="Previous month"
+      >
+        ←
+      </button>
+      <div class="month-title-text">
+        <h2>{{ getMonthName() }}</h2>
+        <p class="month-subtitle">Monthly overview</p>
+      </div>
+      <button
+        type="button"
+        class="button-icon nav-btn"
+        (click)="onNextMonth()"
+        title="Next month"
+      >
+        →
+      </button>
+    </div>
+  </div>
+
+  <!-- Day names header (Mon-Sun) -->
+  <div class="calendar-grid-header">
+    <div class="day-name">Mon</div>
+    <div class="day-name">Tue</div>
+    <div class="day-name">Wed</div>
+    <div class="day-name">Thu</div>
+    <div class="day-name">Fri</div>
+    <div class="day-name">Sat</div>
+    <div class="day-name">Sun</div>
+  </div>
+
+  <!-- Calendar grid -->
+  <div class="calendar-grid">
+    @for (day of getMonthCalendarDays(); track $index) {
+      @if (day === null) {
+        <div class="calendar-day empty-day"></div>
+      } @else {
+        <div
+          class="calendar-day"
+          [class.is-today]="isToday(day)"
+          [class.has-events]="hasEventsOnMonthDay(day)"
+          role="button"
+          tabindex="0"
+          (click)="openMonthDayDetails(day)"
+          (keydown.enter)="openMonthDayDetails(day)"
+          (keydown.space)="openMonthDayDetails(day); $event.preventDefault()"
+        >
+          <div class="day-number">{{ day }}</div>
+          <div class="day-content">
+            <!-- Event cards -->
+            @if (getEventsForMonthDay(day); as events) {
+              @if (events.length > 0) {
+                <div class="event-cards">
+                  @for (event of events; track event.id) {
+                    <div
+                      class="event-card"
+                      [class.shift-type]="event.type === 'shift'"
+                      [class.workout-type]="event.type === 'workout'"
+                      [class.suggested-type]="
+                        event.type === 'workout' &&
+                        event.title.toLowerCase().includes('(suggested)')
+                      "
+                      [class.mealprep-type]="event.type === 'mealprep'"
+                      [class.custom-type]="event.type === 'custom-event'"
+                      title="Click the day to view details and quick actions"
+                    >
+                      <span class="event-card-time">{{ event.startTime }}</span>
+                      <span>{{ event.title }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Event type legend -->
+  <div class="calendar-legend">
+    <div class="legend-label">Event Types:</div>
+    <div class="legend-items">
+      <span class="legend-item shift-color">Work/Shift</span>
+      <span class="legend-item workout-color">Workout</span>
+      <span class="legend-item mealprep-color">Meal Prep</span>
+      <span class="legend-item custom-color">Other</span>
+    </div>
+  </div>
+</div>
+
+<!-- Month Day Details Modal -->
+@if (selectedMonthDay()) {
+  <div class="dialog-overlay" (click)="closeMonthDayDetails()">
+    <div class="dialog month-day-dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-header month-day-header">
+        <div>
+          <h2>{{ getSelectedMonthDayLabel() }}</h2>
+          <p class="dialog-subtitle">{{ getSelectedMonthDaySubtitle() }}</p>
+        </div>
+        <button type="button" class="button-icon close-btn" (click)="closeMonthDayDetails()">
+          ✕
+        </button>
+      </div>
+
+      <div class="dialog-content month-day-content">
+        <div class="month-day-actions">
+          <button type="button" class="button-secondary" (click)="openWorkQuickAdd()">
+            Add Work
+          </button>
+          <button type="button" class="button-primary" (click)="openWorkoutQuickAdd()">
+            Add Workout
+          </button>
+          <button type="button" class="button-secondary" (click)="openPersonalQuickAdd()">
+            Add Event
+          </button>
+          <button type="button" class="button-secondary" (click)="openMealPrepQuickAdd()">
+            Add Meal Prep
+          </button>
+        </div>
+
+        @if (getSelectedMonthDayEvents(); as dayEvents) {
+          @if (dayEvents.length > 0) {
+            <div class="month-day-event-list">
+              @for (event of dayEvents; track event.id) {
+                <button
+                  type="button"
+                  class="month-day-event-item"
+                  [class.shift-type]="event.type === 'shift'"
+                  [class.workout-type]="event.type === 'workout'"
+                  [class.mealprep-type]="event.type === 'mealprep'"
+                  [class.custom-type]="event.type === 'custom-event'"
+                  (click)="onEventClicked(event)"
+                >
+                  <span class="month-day-event-time">{{ event.startTime }} - {{ event.endTime }}</span>
+                  <strong>{{ event.title }}</strong>
+                  <span class="month-day-event-type">{{ getEventTypeTag(event.type) }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="month-day-empty-state">
+              <strong>No plans on this day yet.</strong>
+              <p>Use the actions above to add work, a workout, a personal event, or meal prep.</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
