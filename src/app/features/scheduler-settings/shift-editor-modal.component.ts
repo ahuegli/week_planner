@@ -55,6 +55,18 @@ import { ShiftPattern, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from '../.
                   </div>
                 </div>
 
+                <div class="field-group">
+                  <label class="field-label" for="fixedCommute">Commute (minutes)</label>
+                  <input
+                    id="fixedCommute"
+                    class="dark-input"
+                    type="number"
+                    min="0"
+                    step="5"
+                    [(ngModel)]="currentShift.commuteMinutes"
+                  />
+                </div>
+
                 <!-- Sleep Schedule -->
                 <div class="field-group">
                   <label class="field-label">Sleep Schedule</label>
@@ -122,6 +134,18 @@ import { ShiftPattern, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from '../.
                         <span class="clock-icon">🕐</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div class="field-group">
+                    <label class="field-label" for="rotatingCommute">Commute (minutes)</label>
+                    <input
+                      id="rotatingCommute"
+                      class="dark-input"
+                      type="number"
+                      min="0"
+                      step="5"
+                      [(ngModel)]="currentShift.commuteMinutes"
+                    />
                   </div>
 
                   <div class="field-group">
@@ -206,6 +230,9 @@ import { ShiftPattern, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from '../.
                           </div>
                           <div class="pattern-times">
                             {{ pattern.startTime }}–{{ pattern.endTime }}
+                          </div>
+                          <div class="pattern-times">
+                            Commute: {{ pattern.commuteMinutes || 0 }} min
                           </div>
                           <div class="pattern-days">
                             {{ pattern.daysOfWeek.map(d => dayLabels[d]).join(', ') }}
@@ -625,6 +652,7 @@ export class ShiftEditorModalComponent {
     startTime: '08:00',
     endTime: '17:00',
     daysOfWeek: [],
+    commuteMinutes: 0,
     bedtime: '23:00',
     wakeTime: '07:00',
   };
@@ -635,6 +663,7 @@ export class ShiftEditorModalComponent {
       startTime: '08:00',
       endTime: '17:00',
       daysOfWeek: [],
+      commuteMinutes: 0,
       bedtime: data.bedtime,
       wakeTime: data.wakeTime,
     };
@@ -670,6 +699,7 @@ export class ShiftEditorModalComponent {
       startTime: '08:00',
       endTime: '17:00',
       daysOfWeek: [],
+      commuteMinutes: this.currentShift.commuteMinutes || 0,
       bedtime: this.currentShift.bedtime,
       wakeTime: this.currentShift.wakeTime,
     };
@@ -686,6 +716,7 @@ export class ShiftEditorModalComponent {
       startTime: '08:00',
       endTime: '17:00',
       daysOfWeek: [],
+      commuteMinutes: this.currentShift.commuteMinutes || 0,
       bedtime: this.currentShift.bedtime,
       wakeTime: this.currentShift.wakeTime,
     };

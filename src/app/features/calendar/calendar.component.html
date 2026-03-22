@@ -39,9 +39,10 @@
         <app-day-column
           [dayIndex]="dayIndex"
           [dayLabel]="dayLabel"
+          [dayDateLabel]="dayDateLabels[dayIndex] || ''"
           [events]="eventsByDay[dayIndex]"
           [connectedDropLists]="connectedDropListIds"
-          [isToday]="dayIndex === todayIndex"
+          [isToday]="isTodayColumn(dayIndex)"
           (eventDropped)="onDayDrop(dayIndex, $event)"
           (eventRemoved)="eventRemoved.emit($event)"
           (eventSelected)="onEventSelected($event)"

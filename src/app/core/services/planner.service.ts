@@ -143,6 +143,7 @@ export class PlannerService {
     distanceKm?: number,
     distanceCountsAsLong?: boolean,
     startTimeMinutes?: number,
+    weekOffset?: number,
   ): void {
     let startTime = '18:00'; // Default to 6pm
     
@@ -166,6 +167,7 @@ export class PlannerService {
       distanceCountsAsLong,
       isLocked: true, // Mark as fixed so smart plan does not reallocate
       isManuallyPlaced: true, // Mark as manually placed by user
+      weekOffset: weekOffset ?? 0,
     };
     this.eventsSignal.update((current) => [...current, event]);
   }
@@ -218,7 +220,7 @@ export class PlannerService {
   }
 
   addPersonalEvent(event: CalendarEvent): void {
-    const personal: CalendarEvent = { ...event, isPersonal: true };
+    const personal: CalendarEvent = { ...event, isPersonal: true, weekOffset: event.weekOffset ?? 0 };
     this.eventsSignal.update((current) => [...current, personal]);
     this.weekContextSignal.update((current) => ({
       ...current,
@@ -226,7 +228,11 @@ export class PlannerService {
     }));
   }
 
-  async generateSuggestedPlan(): Promise<void> {
+  addCalendarEventDirectly(event: CalendarEvent): void {
+    this.eventsSignal.update((current) => [...current, event]);
+  }
+
+  async generateSuggestedPlan(weekOffset: number = 0): Promise<void> {
     this.clearOptimizationProposal();
 
     const { totalSessionsPerWeek, avgDuration } = this.getMealPrepGenerationConfig();
@@ -246,17 +252,20 @@ export class PlannerService {
       this.unplacedWorkoutsSignal.set(result.unplacedWorkouts);
 
       // Mark placed events as locked so they are preserved on subsequent regenerations
-      const lockedPlacedEvents = result.placedEvents.map((e) => ({ ...e, isLocked: true }));
+      const lockedPlacedEvents = result.placedEvents.map((e) => ({ ...e, isLocked: true, weekOffset }));
 
       this.eventsSignal.update((events) => {
         const preserved = events.filter((e) => {
-          // Always keep shifts and custom events
-          if (e.type === 'shift' || e.type === 'custom-event') return true;
-          // Always keep personal events
-          if (e.isPersonal) return true;
-          // Keep locked events UNLESS they are workouts or meal prep (those should be regenerated based on current settings)
-          if (e.isLocked && e.type !== 'workout' && e.type !== 'mealprep') return true;
-          return false;
+           // Always keep repeating events (no weekOffset = recurring across all weeks)
+           if (e.weekOffset === undefined) return true;
+           // Always keep events from OTHER weeks
+           if (e.weekOffset !== weekOffset) return true;
+           // For the target week: keep shifts, custom events, personal events
+           if (e.type === 'shift' || e.type === 'custom-event') return true;
+           if (e.isPersonal) return true;
+           // Keep other locked non-workout/mealprep events
+           if (e.isLocked && e.type !== 'workout' && e.type !== 'mealprep') return true;
+           return false;
         });
         return [...preserved, ...lockedPlacedEvents];
       });
@@ -265,7 +274,7 @@ export class PlannerService {
     }
   }
 
-  addCustomEvent(customEvent: CustomEvent, days?: number[]): void {
+  addCustomEvent(customEvent: CustomEvent, days?: number[], weekOffset?: number): void {
     this.customEventsSignal.update((current) => [...current, customEvent]);
 
     // Add calendar events for this custom event
@@ -283,6 +292,7 @@ export class PlannerService {
         commuteMinutes: customEvent.commuteMinutes,
         isRepeatingWeekly: customEvent.isRepeatingWeekly,
         isLocked: true, // Custom events should not be moved by scheduler
+        weekOffset,
       };
       this.eventsSignal.update((current) => [...current, calendarEvent]);
     }
@@ -342,6 +352,7 @@ export class PlannerService {
     endTime: string,
     day: number,
     commuteMinutes: number = 0,
+    weekOffset?: number,
   ): void {
     const calendarEvent: CalendarEvent = {
       id: crypto.randomUUID(),
@@ -352,6 +363,7 @@ export class PlannerService {
       endTime,
       isLocked: true,
       commuteMinutes,
+      weekOffset,
     };
     this.eventsSignal.update((current) => [...current, calendarEvent]);
   }

@@ -63,130 +63,148 @@
     <!-- DAILY VIEW -->
     @if (currentView() === 'daily') {
       <div class="daily-wrapper">
-        <!-- Header -->
         <div class="view-header">
           <div>
             <h2>Today</h2>
-            <p class="subtitle">{{ getCurrentTime() }}</p>
+            <p class="subtitle">{{ getTodayDateString() }}</p>
           </div>
-          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
-            ↻ Regenerate
-          </button>
         </div>
-
-        <!-- Earlier Today -->
+        @if (getTodaySnapshot(); as todaySnapshot) {
+          <section class="snapshot-section">
+            <h3 class="section-title">Today's Snapshot</h3>
+            <div class="snapshot-grid">
+              <div class="snapshot-card">
+                <div class="snapshot-label">Workouts</div>
+                <div class="snapshot-value">{{ todaySnapshot.totalWorkouts }}</div>
+              </div>
+              <div class="snapshot-card">
+                <div class="snapshot-label">Total Duration</div>
+                <div class="snapshot-value">{{ todaySnapshot.totalDuration }} min</div>
+              </div>
+              <div class="snapshot-card">
+                <div class="snapshot-label">Work Shifts</div>
+                <div class="snapshot-value">{{ todaySnapshot.totalShifts }}</div>
+              </div>
+              <div class="snapshot-card">
+                <div class="snapshot-label">Meal Prep</div>
+                <div class="snapshot-value">{{ todaySnapshot.mealPrepEvents }}</div>
+              </div>
+            </div>
+          </section>
+        }
         <section class="earlier-today-section">
           <h3 class="section-title">Earlier Today</h3>
           @if (getEarlierTodayEvents().length > 0) {
             <div class="events-list">
               @for (event of getEarlierTodayEvents(); track event.id) {
-                <div class="event-item">
+                <div class="event-item past-event clickable-event" role="button" tabindex="0" (click)="onEventSelected(event)">
                   <div class="event-time">
                     <span class="time-label">{{ event.startTime }}-{{ event.endTime }}</span>
                   </div>
                   <div class="event-info">
-                    <strong>{{ event.title }}</strong>
+                    <div class="event-header">
+                      <strong>{{ event.title }}</strong>
+                      <span class="event-tag">{{ getEventTypeTag(event.type) }}</span>
+                    </div>
                     <p class="text-secondary text-small">Duration: {{ event.durationMinutes || 0 }} mins</p>
                   </div>
-                  <button type="button" class="button-icon" (click)="onEventSelected(event)" title="View details">
-                    →
-                  </button>
+                  <button type="button" class="button-icon" (click)="$event.stopPropagation(); onEventSelected(event)" title="View details">→</button>
                 </div>
               }
             </div>
           } @else {
             <div class="events-list">
-              <div class="event-item placeholder-item">
-                <div class="event-time">
-                  <span class="time-label">09:00–10:30</span>
-                </div>
-                <div class="event-info">
-                  <strong>Morning Workout</strong>
-                  <p class="text-secondary text-small">Duration: 90 mins</p>
-                </div>
-                <button type="button" class="button-icon" disabled title="Placeholder">
-                  →
-                </button>
-              </div>
-              <div class="event-item placeholder-item">
-                <div class="event-time">
-                  <span class="time-label">12:00–13:00</span>
-                </div>
-                <div class="event-info">
-                  <strong>Lunch Break</strong>
-                  <p class="text-secondary text-small">Duration: 60 mins</p>
-                </div>
-                <button type="button" class="button-icon" disabled title="Placeholder">
-                  →
-                </button>
+              <div class="empty-state">
+                <p class="text-secondary">No events earlier today</p>
               </div>
             </div>
           }
         </section>
-
-        <!-- NOW Divider -->
-        <div class="now-divider">
-          <div class="divider-line"></div>
-          <div class="divider-badge">
-            <span>NOW</span>
+        @if (getEventCurrentlyHappening(); as currentEvent) {
+          <div class="now-divider-active" [style.--progress]="(getEventProgressPercentage(currentEvent) || 0) + '%'">
+            <div class="divider-progress-bar"></div>
+            <div class="divider-badge"><span>NOW</span></div>
+            <div class="divider-event-info">
+              <span class="progress-text">In Progress: {{ currentEvent.title }}</span>
+            </div>
           </div>
-          <div class="divider-line"></div>
-        </div>
-
-        <!-- Next Events -->
+          <div class="current-event-card" (click)="onEventSelected(currentEvent)">
+            <div class="current-event-header">
+              <div class="current-event-title-section">
+                <h3>🎯 {{ currentEvent.title }}</h3>
+              </div>
+              <div class="current-event-progress">
+                <div class="current-event-progress-label">Now</div>
+                <div class="current-event-progress-track">
+                  <div class="current-event-progress-fill" [style.width.%]="getEventProgressPercentage(currentEvent) || 0"></div>
+                </div>
+              </div>
+            </div>
+            <div class="current-event-details">
+              <div class="detail-row">
+                <span class="detail-label">Time</span>
+                <span class="detail-value">{{ currentEvent.startTime }} - {{ currentEvent.endTime }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Type</span>
+                <span class="detail-value">{{ getEventTypeTag(currentEvent.type) }}</span>
+              </div>
+            </div>
+            <div class="current-event-actions">
+              <button type="button" class="btn-action" (click)="onEventSelected(currentEvent)">View Details & Notes</button>
+            </div>
+          </div>
+        } @else {
+          <div class="now-divider">
+            <div class="divider-line"></div>
+            <div class="divider-badge"><span>NOW</span></div>
+            <div class="divider-line"></div>
+          </div>
+        }
         <section class="next-events-section">
           <h3 class="section-title">Next Events</h3>
           @if (getNextUpcomingEvents().length > 0) {
             <div class="events-list">
-              @for (event of getNextUpcomingEvents(); track event.id) {
-                <div class="event-item">
+              @for (event of getNextUpcomingEvents(); track $index; let i = $index) {
+                <div class="event-item clickable-event" [class.next-upcoming]="i === 0" role="button" tabindex="0" (click)="onEventSelected(event)">
+                  @if (i === 0) {
+                    <div class="event-badge">Next</div>
+                  }
                   <div class="event-time">
                     <span class="time-label">{{ event.startTime }}</span>
                   </div>
                   <div class="event-info">
-                    <strong>{{ event.title }}</strong>
+                    <div class="event-header">
+                      <strong>{{ event.title }}</strong>
+                      <span class="event-tag">{{ getEventTypeTag(event.type) }}</span>
+                    </div>
                     <p class="text-secondary text-small">Duration: {{ event.durationMinutes || 0 }} mins</p>
                   </div>
-                  <button type="button" class="button-icon" (click)="onEventSelected(event)" title="View details">
-                    →
-                  </button>
+                  <button type="button" class="button-icon" (click)="$event.stopPropagation(); onEventSelected(event)" title="View details">→</button>
                 </div>
               }
             </div>
           } @else {
             <div class="events-list">
-              <div class="event-item placeholder-item">
-                <div class="event-time">
-                  <span class="time-label">16:00</span>
-                </div>
-                <div class="event-info">
-                  <strong>Strength Training</strong>
-                  <p class="text-secondary text-small">Duration: 60 mins</p>
-                </div>
-                <button type="button" class="button-icon" disabled title="Placeholder">
-                  →
-                </button>
-              </div>
-              <div class="event-item placeholder-item">
-                <div class="event-time">
-                  <span class="time-label">18:00</span>
-                </div>
-                <div class="event-info">
-                  <strong>Meal Prep</strong>
-                  <p class="text-secondary text-small">Duration: 90 mins</p>
-                </div>
-                <button type="button" class="button-icon" disabled title="Placeholder">
-                  →
-                </button>
+              <div class="empty-state">
+                <p class="text-secondary">No upcoming events</p>
               </div>
             </div>
           }
         </section>
-
-        <!-- Weekly Snapshot -->
+        <section class="reminders-section">
+          <h3 class="section-title">Reminders</h3>
+          <div class="reminders-list">
+            @for (reminder of getReminders(); track $index) {
+              <div class="reminder-item">
+                <p class="reminder-text">{{ reminder }}</p>
+              </div>
+            }
+          </div>
+        </section>
         @if (getWeeklySnapshot(); as snapshot) {
           <section class="snapshot-section">
-            <h3 class="section-title">This Week</h3>
+            <h3 class="section-title">Full Week Snapshot</h3>
             <div class="snapshot-grid">
               <div class="snapshot-card">
                 <div class="snapshot-label">Workouts Placed</div>
@@ -215,33 +233,49 @@
       <div class="week-wrapper">
         <!-- Header -->
         <div class="view-header">
-          <div>
-            <h2>My Week</h2>
-            <p class="subtitle">{{ getCurrentWeekLabel() }}</p>
+          <div class="week-title-section">
+            <button type="button" class="button-icon nav-btn" (click)="goToToday()" title="Go to today">
+              ⌂
+            </button>
+            <button type="button" class="button-icon nav-btn" (click)="previousWeek()" title="Previous week">
+              ←
+            </button>
+            <div class="week-title-text">
+              <h2>My Week</h2>
+              <p class="subtitle">{{ getCurrentWeekLabel() }}</p>
+            </div>
+            <button type="button" class="button-icon nav-btn" (click)="nextWeek()" title="Next week">
+              →
+            </button>
           </div>
-          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
-            ↻ Regenerate
-          </button>
+          <div class="week-header-actions">
+            <button type="button" class="button-primary" (click)="suggestWorkouts()">
+              Suggest workouts (based on your preferences)
+            </button>
+            <button type="button" class="button-secondary" (click)="fillFromPreviousWeek()">
+              Fill in based on previous week
+            </button>
+          </div>
         </div>
 
         <!-- Quick Add Section - 3 Column Layout -->
         <div class="quick-add-section">
           <h3 class="quick-add-title">Quick Add</h3>
           <div class="quick-add-grid">
-            <!-- Column 1: Work Events -->
+            <!-- Column 1: Work Shifts -->
             <div class="quick-add-column">
               <button
                 type="button"
                 class="quick-add-header-btn work-btn"
-                (click)="showWorkEventCard.set(!showWorkEventCard())"
+                (click)="showWorkShiftCard.set(!showWorkShiftCard())"
               >
-                📅 Add Work Event
+                📅 Add Work Shift
               </button>
-              @if (showWorkEventCard()) {
-                <app-quick-add-work-event-card
-                  (eventAdded)="onWorkEventAdded($event)"
-                  (closed)="showWorkEventCard.set(false)"
-                ></app-quick-add-work-event-card>
+              @if (showWorkShiftCard()) {
+                <app-quick-add-work-shift-card
+                  (eventAdded)="onWorkShiftAdded($event)"
+                  (closed)="showWorkShiftCard.set(false)"
+                ></app-quick-add-work-shift-card>
               }
             </div>
 
@@ -319,7 +353,9 @@
         <!-- Calendar Grid -->
         <app-calendar
           [dayLabels]="dayLabels"
-          [eventsByDay]="planner.eventsByDay()"
+          [dayDateLabels]="getWeekDateLabels()"
+          [weekOffset]="currentWeekOffset()"
+          [eventsByDay]="currentWeekEventsByDay()"
           [connectedDropListIds]="connectedDropListIds"
           (dayDrop)="onDayDrop($event)"
           (eventRemoved)="planner.removeEvent($event)"
@@ -334,7 +370,7 @@
                 <h3>⚠️ Unplaced Workouts ({{ planner.unplacedWorkouts().length }})</h3>
                 <p class="unplaced-description">
                   The following workouts could not be placed while respecting your work schedule, private events, and rest days. 
-                  You can drag and drop mandatory workouts to override, or regenerate the plan if you want to adjust the schedule.
+                  You can drag and drop mandatory workouts to override, or use Generate Plan at the top right to adjust the schedule.
                 </p>
               </div>
             </div>
@@ -365,9 +401,6 @@
             </div>
 
             <div class="unplaced-actions">
-              <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
-                ↻ Regenerate Plan
-              </button>
               <button type="button" class="button-secondary">View Details</button>
             </div>
           </div>
@@ -381,6 +414,9 @@
         <!-- Header with navigation and title -->
         <div class="month-header">
           <div class="month-title-section">
+            <button type="button" class="button-icon nav-btn" (click)="goToToday()" title="Go to today">
+              ⌂
+            </button>
             <button type="button" class="button-icon nav-btn" (click)="previousMonth()" title="Previous month">
               ←
             </button>
@@ -392,20 +428,17 @@
               →
             </button>
           </div>
-          <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
-            ↻ Regenerate
-          </button>
         </div>
 
-        <!-- Day names header (Sun-Sat) -->
+        <!-- Day names header (Mon-Sun) -->
         <div class="calendar-grid-header">
-          <div class="day-name">Sun</div>
           <div class="day-name">Mon</div>
           <div class="day-name">Tue</div>
           <div class="day-name">Wed</div>
           <div class="day-name">Thu</div>
           <div class="day-name">Fri</div>
           <div class="day-name">Sat</div>
+          <div class="day-name">Sun</div>
         </div>
 
         <!-- Calendar grid -->
@@ -426,6 +459,7 @@
                             class="event-card"
                             [class.shift-type]="event.type === 'shift'"
                             [class.workout-type]="event.type === 'workout'"
+                            [class.suggested-type]="event.type === 'workout' && event.title.toLowerCase().includes('(suggested)')"
                             [class.mealprep-type]="event.type === 'mealprep'"
                             [class.custom-type]="event.type === 'custom-event'"
                             (click)="onEventSelected(event)"
@@ -537,6 +571,40 @@
             <button type="button" class="button-secondary" (click)="cancelOptimizationProposal()">Cancel</button>
             <button type="button" class="button-primary" (click)="applyConflictSelection()">Apply Selection</button>
           </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================
+       FILL FROM PREVIOUS WEEK DIALOG
+       =================================================================== -->
+  @if (showFillDialog()) {
+    <div class="dialog-overlay" (click)="closeFillDialog()">
+      <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <h2>Fill Week From Previous Week</h2>
+          <button type="button" class="button-icon close-btn" (click)="closeFillDialog()">✕</button>
+        </div>
+
+        <div class="dialog-content">
+          <p>What would you like to fill?</p>
+          
+          <div class="fill-options">
+            <button type="button" class="button-secondary" (click)="confirmFillFromPreviousWeek('work')">
+              Just Work Shifts
+            </button>
+            <button type="button" class="button-secondary" (click)="confirmFillFromPreviousWeek('workouts-events')">
+              Just Workouts & Events
+            </button>
+            <button type="button" class="button-primary" (click)="confirmFillFromPreviousWeek('everything')">
+              Everything
+            </button>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button type="button" class="button-secondary" (click)="closeFillDialog()">Cancel</button>
         </div>
       </div>
     </div>

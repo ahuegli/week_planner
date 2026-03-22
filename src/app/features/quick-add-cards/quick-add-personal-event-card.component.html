@@ -61,35 +61,6 @@
       />
     </div>
 
-    <!-- Sleep Schedule -->
-    <div class="form-group sleep-schedule-group">
-      <label>Sleep Schedule (Optional)</label>
-      <div class="sleep-time-inputs">
-        <div class="time-input-wrapper">
-          <label for="bedtime" class="time-label">Bedtime</label>
-          <input
-            id="bedtime"
-            type="time"
-            [value]="bedtime()"
-            (input)="bedtime.set($any($event.target).value)"
-            name="bedtime"
-            class="form-input sleep-input"
-          />
-        </div>
-        <div class="time-input-wrapper">
-          <label for="wakeTime" class="time-label">Wake Time</label>
-          <input
-            id="wakeTime"
-            type="time"
-            [value]="wakeTime()"
-            (input)="wakeTime.set($any($event.target).value)"
-            name="wakeTime"
-            class="form-input sleep-input"
-          />
-        </div>
-      </div>
-    </div>
-
     <!-- Repeat Days -->
     <div class="form-group">
       <label>Repeat</label>

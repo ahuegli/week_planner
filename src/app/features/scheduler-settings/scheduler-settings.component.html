@@ -79,13 +79,30 @@
 
   <!-- 2. Auto-placement Time Range & Work Schedule Section -->
   <div class="settings-section">
-    <div class="section-header">
-      <h3>⏰ Work Schedule & Sleep Times</h3>
-      <p class="section-hint">Your sleep schedule guides automatic event placement.</p>
+    <div class="section-header section-header-editable">
+      <div class="section-header-content">
+        <h3>⏰ Work Schedule & Sleep Times</h3>
+        <p class="section-hint">Your sleep schedule guides automatic event placement.</p>
+      </div>
+      <button
+        type="button"
+        class="section-edit-icon"
+        (click)="openShiftEditor()"
+        title="Edit work schedule and sleep times"
+      >
+        ✎
+      </button>
     </div>
 
-    @if (onboardingInfo) {
-      <div class="work-schedule-section">
+    <div class="work-schedule-section">
+      @if (!onboardingInfo || onboardingInfo.shiftPatterns.length === 0) {
+        <div class="sleep-reference-box empty-work-schedule-box">
+          <span class="sleep-reference-label">No work shifts set up yet.</span>
+          <span class="sleep-pattern-times">Use the edit icon to add your first work shift and sleep times.</span>
+        </div>
+      }
+
+      @if (onboardingInfo) {
         <!-- Sleep Schedule Display -->
         @if (onboardingInfo.workPattern === 'rotating') {
           <div class="sleep-reference-box">
@@ -113,30 +130,21 @@
             @for (pattern of onboardingInfo.shiftPatterns; track $index) {
               <div class="sleep-reference-row">
                 <span class="sleep-pattern-name">{{ pattern.name || 'Shift ' + ($index + 1) }}</span>
-                <span class="sleep-pattern-times">{{ pattern.startTime }}–{{ pattern.endTime }}</span>
+                <span class="sleep-pattern-times">{{ pattern.startTime }}–{{ pattern.endTime }} · Commute {{ pattern.commuteMinutes || 0 }} min</span>
               </div>
             }
           } @else if (onboardingInfo.workPattern === 'fixed') {
             @if (onboardingInfo.shiftPatterns.length > 0) {
               <div class="sleep-reference-row">
                 <span class="sleep-pattern-name">Fixed Shift</span>
-                <span class="sleep-pattern-times">{{ onboardingInfo.shiftPatterns[0].startTime }}–{{ onboardingInfo.shiftPatterns[0].endTime }}</span>
+                <span class="sleep-pattern-times">{{ onboardingInfo.shiftPatterns[0].startTime }}–{{ onboardingInfo.shiftPatterns[0].endTime }} · Commute {{ onboardingInfo.shiftPatterns[0].commuteMinutes || 0 }} min</span>
               </div>
             }
           }
         </div>
 
-        <!-- Edit Button -->
-        <button 
-          type="button" 
-          class="btn-secondary btn-full edit-btn"
-          (click)="openShiftEditor()"
-          title="Edit your work schedule and sleep times"
-        >
-          ✎ Edit Work Schedule & Sleep Times
-        </button>
-      </div>
-    }
+      }
+    </div>
   </div>
 
   <!-- 3. Rest Day Thresholds Section (compact) -->

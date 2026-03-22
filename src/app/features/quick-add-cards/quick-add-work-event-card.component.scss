@@ -7,7 +7,7 @@
   animation: slideDown 0.3s ease-out;
 }
 
-.card-container.work-event-card {
+.card-container.work-shift-card {
   border-left: 4px solid var(--color-primary-blue);
 }
 
@@ -167,6 +167,46 @@
   &:hover {
     background: var(--color-bg-tertiary);
     border-color: var(--color-border-medium);
+  }
+}
+
+.sleep-schedule-group {
+  background: rgba(74, 144, 226, 0.06);
+  border: 1px solid rgba(74, 144, 226, 0.14);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin: var(--spacing-xs) 0;
+
+  > label {
+    font-size: var(--font-size-body);
+    text-transform: none;
+    letter-spacing: normal;
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
+.sleep-time-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.time-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+
+  .time-label {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sleep-input {
+    padding: 8px 10px;
+    font-size: 14px;
   }
 }
 

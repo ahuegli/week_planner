@@ -1,9 +1,9 @@
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DEFAULT_SETTINGS, PriorityItem, SchedulerSettings, WorkoutType, WorkoutTime, MealPrepSessions } from '../../core/models/scheduler-settings.model';
-import { ShiftPattern, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from '../../core/models/onboarding-data.model';
+import { ShiftPattern, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY, DEFAULT_ONBOARDING_DATA } from '../../core/models/onboarding-data.model';
 import { ShiftEditorModalComponent } from './shift-editor-modal.component';
 
 @Component({
@@ -76,26 +76,27 @@ export class SchedulerSettingsComponent {
   }
 
   openShiftEditor(): void {
-    if (!this.onboardingInfo) return;
+    const info = this.onboardingInfo;
     this.shiftEditorModal.open({
-      shiftPatterns: this.onboardingInfo.shiftPatterns,
-      bedtime: this.onboardingInfo.bedtime,
-      wakeTime: this.onboardingInfo.wakeTime,
+      shiftPatterns: info?.shiftPatterns?.length ? info.shiftPatterns : DEFAULT_ONBOARDING_DATA.shiftPatterns,
+      bedtime: info?.bedtime || DEFAULT_ONBOARDING_DATA.bedtime,
+      wakeTime: info?.wakeTime || DEFAULT_ONBOARDING_DATA.wakeTime,
     });
   }
 
   onShiftEditorSave(data: { shiftPatterns: ShiftPattern[]; bedtime: string; wakeTime: string }): void {
-    const raw = localStorage.getItem(ONBOARDING_LOCAL_STORAGE_KEY);
-    if (raw) {
-      try {
-        const onboardingData = JSON.parse(raw) as OnboardingData;
-        onboardingData.shiftPatterns = data.shiftPatterns;
-        onboardingData.bedtime = data.bedtime;
-        onboardingData.wakeTime = data.wakeTime;
-        localStorage.setItem(ONBOARDING_LOCAL_STORAGE_KEY, JSON.stringify(onboardingData));
-      } catch (e) {
-        console.error('Failed to update onboarding data:', e);
-      }
+    try {
+      const raw = localStorage.getItem(ONBOARDING_LOCAL_STORAGE_KEY);
+      const onboardingData: OnboardingData = raw
+        ? { ...DEFAULT_ONBOARDING_DATA, ...JSON.parse(raw) }
+        : { ...DEFAULT_ONBOARDING_DATA };
+
+      onboardingData.shiftPatterns = data.shiftPatterns;
+      onboardingData.bedtime = data.bedtime;
+      onboardingData.wakeTime = data.wakeTime;
+      localStorage.setItem(ONBOARDING_LOCAL_STORAGE_KEY, JSON.stringify(onboardingData));
+    } catch (e) {
+      console.error('Failed to update onboarding data:', e);
     }
   }
 

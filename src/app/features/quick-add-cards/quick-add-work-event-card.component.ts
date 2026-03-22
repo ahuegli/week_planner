@@ -3,18 +3,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-quick-add-work-event-card',
+  selector: 'app-quick-add-work-shift-card',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './quick-add-work-event-card.component.html',
   styleUrl: './quick-add-work-event-card.component.scss',
 })
-export class QuickAddWorkEventCardComponent {
+export class QuickAddWorkShiftCardComponent {
   @Output() eventAdded = new EventEmitter<{
     title: string;
     startTime: string;
     endTime: string;
     commute: number;
+    bedtime?: string;
+    wakeTime?: string;
     repeat: number[];
   }>();
 
@@ -25,6 +27,8 @@ export class QuickAddWorkEventCardComponent {
   startTime = signal('09:00');
   endTime = signal('10:00');
   commute = signal(0);
+  bedtime = signal('');
+  wakeTime = signal('');
   repeat = signal<number[]>([]);
 
   daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -36,6 +40,8 @@ export class QuickAddWorkEventCardComponent {
         startTime: this.startTime(),
         endTime: this.endTime(),
         commute: this.commute(),
+        bedtime: this.bedtime() || undefined,
+        wakeTime: this.wakeTime() || undefined,
         repeat: this.repeat(),
       });
       this.resetForm();
@@ -65,6 +71,8 @@ export class QuickAddWorkEventCardComponent {
     this.startTime.set('09:00');
     this.endTime.set('10:00');
     this.commute.set(0);
+    this.bedtime.set('');
+    this.wakeTime.set('');
     this.repeat.set([]);
   }
 }

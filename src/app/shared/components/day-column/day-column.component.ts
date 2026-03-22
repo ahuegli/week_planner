@@ -14,6 +14,7 @@ import { DraggableEventComponent } from '../draggable-event/draggable-event.comp
 export class DayColumnComponent {
   @Input({ required: true }) dayIndex!: number;
   @Input({ required: true }) dayLabel!: string;
+  @Input() dayDateLabel = '';
   @Input({ required: true }) events: CalendarEvent[] = [];
   @Input({ required: true }) connectedDropLists: string[] = [];
   @Input() exhaustion = 0;
@@ -47,20 +48,29 @@ export class DayColumnComponent {
 
   getEventTop(event: CalendarEvent): number {
     const [hours, minutes] = event.startTime.split(':').map(Number);
-    const totalMinutes = (hours - this.START_HOUR) * 60 + minutes;
+    const commuteOffset = this.supportsCommute(event) ? (event.commuteMinutes || 0) : 0;
+    const totalMinutes = (hours - this.START_HOUR) * 60 + minutes - commuteOffset;
     return (totalMinutes / 60) * this.SLOT_HEIGHT;
   }
 
   getEventHeight(event: CalendarEvent): number {
+    const commuteMinutes = this.supportsCommute(event) ? (event.commuteMinutes || 0) : 0;
+
     if (event.durationMinutes) {
-      return Math.max(24, (event.durationMinutes / 60) * this.SLOT_HEIGHT);
+      const totalMinutes = event.durationMinutes + commuteMinutes * 2;
+      return Math.max(24, (totalMinutes / 60) * this.SLOT_HEIGHT);
     }
     // Calculate from start/end times
     const [startH, startM] = event.startTime.split(':').map(Number);
     const [endH, endM] = event.endTime.split(':').map(Number);
     let duration = endH * 60 + endM - (startH * 60 + startM);
     if (duration < 0) duration += 24 * 60; // Overnight event
-    return Math.max(24, (duration / 60) * this.SLOT_HEIGHT);
+    const totalMinutes = duration + commuteMinutes * 2;
+    return Math.max(24, (totalMinutes / 60) * this.SLOT_HEIGHT);
+  }
+
+  private supportsCommute(event: CalendarEvent): boolean {
+    return event.type === 'shift' || event.type === 'custom-event' || !!event.isPersonal;
   }
 
   getTimeFromDropPosition(clientY: number): { timeString: string; minutes: number } {

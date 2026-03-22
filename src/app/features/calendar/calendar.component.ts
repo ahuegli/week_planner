@@ -13,6 +13,8 @@ import { DayColumnComponent } from '../../shared/components/day-column/day-colum
 })
 export class CalendarComponent implements AfterViewInit {
   @Input() dayLabels: string[] = [];
+  @Input() dayDateLabels: string[] = [];
+  @Input() weekOffset = 0;
   @Input() eventsByDay: CalendarEvent[][] = [];
   @Input() connectedDropListIds: string[] = [];
   @ViewChild('timeSlots') timeSlots!: ElementRef;
@@ -40,6 +42,10 @@ export class CalendarComponent implements AfterViewInit {
     const jsDay = new Date().getDay();
     // Convert JS day (0=Sun) to our format (0=Mon)
     return jsDay === 0 ? 6 : jsDay - 1;
+  }
+
+  isTodayColumn(dayIndex: number): boolean {
+    return this.weekOffset === 0 && dayIndex === this.todayIndex;
   }
 
   ngAfterViewInit(): void {

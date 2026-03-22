@@ -1,20 +1,20 @@
-<div class="card-container work-event-card">
+<div class="card-container work-shift-card">
   <div class="card-header">
-    <h3>📅 Add Work Event</h3>
+    <h3>📅 Add Work Shift</h3>
     <button type="button" class="close-btn" (click)="onCancel()">✕</button>
   </div>
 
   <form (ngSubmit)="onAdd()" class="card-form">
-    <!-- Event Title -->
+    <!-- Shift Title -->
     <div class="form-group">
-      <label for="eventTitle">Event Title</label>
+      <label for="shiftTitle">Shift Title</label>
       <input
-        id="eventTitle"
+        id="shiftTitle"
         type="text"
         [value]="title()"
         (input)="title.set($any($event.target).value)"
         name="title"
-        placeholder="e.g. Doctor's appointment"
+        placeholder="e.g. Morning Shift"
         class="form-input"
       />
     </div>
@@ -59,6 +59,35 @@
         step="5"
         class="form-input"
       />
+    </div>
+
+    <!-- Sleep Schedule -->
+    <div class="form-group sleep-schedule-group">
+      <label>Sleep Schedule (Optional)</label>
+      <div class="sleep-time-inputs">
+        <div class="time-input-wrapper">
+          <label for="bedtime" class="time-label">Bedtime</label>
+          <input
+            id="bedtime"
+            type="time"
+            [value]="bedtime()"
+            (input)="bedtime.set($any($event.target).value)"
+            name="bedtime"
+            class="form-input sleep-input"
+          />
+        </div>
+        <div class="time-input-wrapper">
+          <label for="wakeTime" class="time-label">Wake Time</label>
+          <input
+            id="wakeTime"
+            type="time"
+            [value]="wakeTime()"
+            (input)="wakeTime.set($any($event.target).value)"
+            name="wakeTime"
+            class="form-input sleep-input"
+          />
+        </div>
+      </div>
     </div>
 
     <!-- Repeat Days -->

@@ -23,4 +23,9 @@ export interface CalendarEvent {
   isManuallyPlaced?: boolean; // true if user dragged it to a day
   previousDay?: number; // tracks which day this was previously on (for displaced sessions)
   hasOptimizationConflict?: boolean;
+  /**
+   * Week offset relative to the current real week (0 = this week, 1 = next, -1 = last).
+   * undefined means the event repeats on every week (e.g. recurring shifts, custom events).
+   */
+  weekOffset?: number;
 }

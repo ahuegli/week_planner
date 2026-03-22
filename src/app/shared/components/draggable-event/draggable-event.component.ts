@@ -25,4 +25,24 @@ export class DraggableEventComponent {
   onSelect(): void {
     this.select.emit(this.event);
   }
+
+  isSuggestedWorkout(): boolean {
+    return this.event.type === 'workout' && this.event.title.toLowerCase().includes('(suggested)');
+  }
+
+  hasCommute(): boolean {
+    const hasMinutes = !!this.event.commuteMinutes && this.event.commuteMinutes > 0;
+    const supportsCommute = this.event.type === 'shift' || this.event.type === 'custom-event' || !!this.event.isPersonal;
+    return hasMinutes && supportsCommute;
+  }
+
+  showCommuteText(): boolean {
+    if (!this.hasCommute()) return false;
+    return this.getCommuteBandHeightPx() >= 14;
+  }
+
+  getCommuteBandHeightPx(): number {
+    const minutes = this.event.commuteMinutes || 0;
+    return (minutes / 60) * 40;
+  }
 }

@@ -1,6 +1,9 @@
 <section class="day-column" [class.is-today]="isToday">
   <h3 class="day-header">
-    {{ dayLabel }}
+    <span class="day-header-main">{{ dayLabel }}</span>
+    @if (dayDateLabel) {
+      <span class="day-date-label">{{ dayDateLabel }}</span>
+    }
     @if (isToday) {
       <span class="today-badge">Today</span>
     }

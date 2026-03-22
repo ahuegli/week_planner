@@ -7,6 +7,7 @@ export interface ShiftPattern {
   startTime: string;      // "08:00"
   endTime: string;        // "17:00"
   daysOfWeek: number[];   // [0, 1, 2, 3, 4] for Mon-Fri
+  commuteMinutes?: number;
   bedtime?: string;       // Optional per-pattern sleep (for rotating shifts)
   wakeTime?: string;      // Optional per-pattern sleep (for rotating shifts)
 }
@@ -36,6 +37,7 @@ export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
       startTime: '08:00',
       endTime: '17:00',
       daysOfWeek: [0, 1, 2, 3, 4], // Mon-Fri by default
+      commuteMinutes: 0,
       bedtime: '23:00',
       wakeTime: '07:00',
     },

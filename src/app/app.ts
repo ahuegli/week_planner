@@ -1,10 +1,11 @@
 import { CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { Component, effect, signal } from '@angular/core';
+import { Component, computed, effect, signal } from '@angular/core';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
 import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
-import { SchedulerSettings } from './core/models/scheduler-settings.model';
+import { SchedulerSettings, WorkoutType as PreferenceWorkoutType } from './core/models/scheduler-settings.model';
+import { DEFAULT_ONBOARDING_DATA, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from './core/models/onboarding-data.model';
 import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
@@ -12,7 +13,7 @@ import { OnboardingComponent } from './features/onboarding/onboarding.component'
 import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
 import { EventDetailsModalComponent } from './shared/components/event-details-modal/event-details-modal.component';
 import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-add-workout-card.component';
-import { QuickAddWorkEventCardComponent } from './features/quick-add-cards/quick-add-work-event-card.component';
+import { QuickAddWorkShiftCardComponent } from './features/quick-add-cards/quick-add-work-event-card.component';
 import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/quick-add-personal-event-card.component';
 
 @Component({
@@ -26,7 +27,7 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
     SchedulerSettingsComponent,
     EventDetailsModalComponent,
     QuickAddWorkoutCardComponent,
-    QuickAddWorkEventCardComponent,
+    QuickAddWorkShiftCardComponent,
     QuickAddPersonalEventCardComponent,
   ],
   templateUrl: './app.html',
@@ -50,20 +51,36 @@ export class App {
 
   // Quick add card visibility
   showWorkoutCard = signal(false);
-  showWorkEventCard = signal(false);
+  showWorkShiftCard = signal(false);
   showPersonalEventCard = signal(false);
 
   // Monthly view state
   currentMonthDate = signal<Date>(new Date());
+  currentWeekOffset = signal(0);
 
   showSettingsDialog = false;
   selectedEvent = signal<CalendarEvent | null>(null);
   showEventModal = signal(false);
   selectedConflictIds = signal<Set<string>>(new Set());
 
+  // Fill dialog state
+  showFillDialog = signal(false);
+
+  // Week-aware event view: events for the currently navigated week (week-specific + repeating)
+  currentWeekEventsByDay = computed(() => {
+    const offset = this.currentWeekOffset();
+    return Array.from({ length: 7 }, (_, day) =>
+      this.planner.events()
+        .filter(e => e.day === day && (e.weekOffset === undefined || e.weekOffset === offset))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    );
+  });
+
   constructor(readonly planner: PlannerService) {
+    this.migrateLegacyWeekOffsets();
+
     effect(() => {
-      if (this.showSettingsDialog || this.showEventModal()) {
+      if (this.showSettingsDialog || this.showEventModal() || this.showFillDialog()) {
         document.body.style.overflow = 'hidden';
       } else {
         document.body.style.overflow = '';
@@ -78,6 +95,24 @@ export class App {
       }
 
       this.selectedConflictIds.set(new Set(proposal.conflictEvents.map((event) => event.id)));
+    });
+  }
+
+  private migrateLegacyWeekOffsets(): void {
+    this.planner.events().forEach((event) => {
+      if (event.weekOffset !== undefined) {
+        return;
+      }
+
+      const isRecurringCustomEvent = event.type === 'custom-event' && event.isRepeatingWeekly;
+      if (isRecurringCustomEvent) {
+        return;
+      }
+
+      this.planner.updateEvent({
+        ...event,
+        weekOffset: 0,
+      });
     });
   }
 
@@ -96,6 +131,7 @@ export class App {
   onDayDrop(payload: { day: number; drop: CdkDragDrop<CalendarEvent[]>; startTime?: number }): void {
     const dragData = payload.drop.item.data as DragData;
     const startTimeMinutes = payload.startTime;
+    const weekOffset = this.currentWeekOffset();
 
     if (isCalendarEvent(dragData)) {
       this.planner.moveEvent(dragData.id, payload.day);
@@ -104,12 +140,20 @@ export class App {
 
     if (dragData.kind === 'custom-shift-template') {
       const shift = dragData.customShift;
-      this.planner.createShiftEvent(shift.label, shift.startTime, shift.endTime, payload.day, shift.commuteMinutes);
+      this.planner.createShiftEvent(
+        shift.label,
+        shift.startTime,
+        shift.endTime,
+        payload.day,
+        shift.commuteMinutes,
+        weekOffset,
+      );
       return;
     }
 
     if (dragData.kind === 'custom-event-template') {
-      this.planner.addCustomEvent(dragData.customEvent, [payload.day]);
+      const customEventWeekOffset = dragData.customEvent.isRepeatingWeekly ? undefined : weekOffset;
+      this.planner.addCustomEvent(dragData.customEvent, [payload.day], customEventWeekOffset);
       return;
     }
 
@@ -134,7 +178,8 @@ export class App {
             dragData.workout.workoutType,
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
-            startTimeMinutes
+            startTimeMinutes,
+            weekOffset,
           );
           
           // Create event on next day
@@ -147,7 +192,8 @@ export class App {
             dragData.workout.workoutType,
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
-            0 // Start at midnight
+            0, // Start at midnight
+            weekOffset,
           );
         } else {
           // Event fits within single day
@@ -159,7 +205,8 @@ export class App {
             dragData.workout.workoutType,
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
-            startTimeMinutes
+            startTimeMinutes,
+            weekOffset,
           );
         }
       } else {
@@ -171,7 +218,9 @@ export class App {
           duration,
           dragData.workout.workoutType,
           dragData.workout.distanceKm,
-          dragData.workout.distanceCountsAsLong
+          dragData.workout.distanceCountsAsLong,
+          undefined,
+          weekOffset,
         );
       }
       
@@ -185,11 +234,24 @@ export class App {
       return;
     }
 
-    this.planner.addManualEvent(payload.day, 'mealprep', 'Meal Prep', dragData.duration);
+    this.planner.addManualEvent(
+      payload.day,
+      'mealprep',
+      'Meal Prep',
+      dragData.duration,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      weekOffset,
+    );
   }
 
   onAddCustomEvent(payload: { customEvent: CustomEvent; days: number[] }): void {
-    this.planner.addCustomEvent(payload.customEvent, payload.days);
+    const customEventWeekOffset = payload.customEvent.isRepeatingWeekly
+      ? undefined
+      : this.currentWeekOffset();
+    this.planner.addCustomEvent(payload.customEvent, payload.days, customEventWeekOffset);
   }
 
   onDeleteCustomEvent(id: string): void {
@@ -315,11 +377,121 @@ export class App {
     this.currentView.set('onboarding');
   }
 
+  previousWeek(): void {
+    this.currentWeekOffset.update((offset) => offset - 1);
+    this.syncMonthToCurrentWeek();
+  }
+
+  nextWeek(): void {
+    this.currentWeekOffset.update((offset) => offset + 1);
+    this.syncMonthToCurrentWeek();
+  }
+
+  goToToday(): void {
+    this.currentWeekOffset.set(0);
+    this.syncMonthToCurrentWeek();
+  }
+
+  suggestWorkouts(): void {
+    const onboarding = this.getOnboardingData();
+    const selectedTypes = this.getPreferredWorkoutTypes(onboarding);
+    const weeklyTarget = Math.max(1, this.settingsTargetOrOnboarding(onboarding));
+
+    // Remove previous suggested workout events from the current week before adding fresh suggestions.
+    this.planner
+      .events()
+      .filter((event) => event.type === 'workout' && event.title.toLowerCase().includes('(suggested)') && (event.weekOffset ?? 0) === this.currentWeekOffset())
+      .forEach((event) => this.planner.removeEvent(event.id));
+
+    const workoutSequence = this.buildWorkoutSequence(selectedTypes, weeklyTarget);
+    const timeSequence = this.buildPreferredTimeSequence(onboarding);
+
+    workoutSequence.forEach((workoutType, index) => {
+      const day = index % 7;
+      const startTime = timeSequence[index % timeSequence.length];
+      const startMinutes = this.getWorkoutStartWithCommuteBuffer(day, this.timeToMinutes(startTime));
+
+      this.planner.addManualEvent(
+        day,
+        'workout',
+        `${this.getWorkoutLabel(workoutType)} (suggested)`,
+        this.getDefaultDuration(workoutType),
+        workoutType,
+        this.getDefaultDistance(workoutType),
+        undefined,
+        startMinutes,
+        this.currentWeekOffset(),
+      );
+    });
+  }
+
+  fillFromPreviousWeek(): void {
+    // Always show the dialog to let user choose what to fill
+    this.showFillDialog.set(true);
+  }
+
+  confirmFillFromPreviousWeek(option: 'work' | 'workouts-events' | 'everything'): void {
+    this.copyEventsFromPreviousWeek(option);
+    this.showFillDialog.set(false);
+  }
+
+  closeFillDialog(): void {
+    this.showFillDialog.set(false);
+  }
+
+  private copyEventsFromPreviousWeek(option: 'work' | 'workouts-events' | 'everything'): void {
+    const targetWeekOffset = this.currentWeekOffset();
+    const sourceWeekOffset = targetWeekOffset - 1;
+
+    const isIncludedType = (event: CalendarEvent): boolean =>
+      (option === 'work' && event.type === 'shift') ||
+      (option === 'workouts-events' &&
+        (event.type === 'workout' || event.type === 'mealprep' || event.type === 'custom-event')) ||
+      option === 'everything';
+
+    const sourceEvents = this.planner
+      .events()
+      .filter((event) => event.weekOffset === sourceWeekOffset)
+      .filter(isIncludedType);
+
+    const targetEvents = this.planner
+      .events()
+      .filter((event) => event.weekOffset === targetWeekOffset)
+      .filter(isIncludedType);
+
+    const signature = (event: CalendarEvent): string =>
+      `${event.type}|${event.day}|${event.startTime}|${event.endTime}|${event.title}`;
+    const existingTargetSignatures = new Set(targetEvents.map(signature));
+
+    sourceEvents.forEach((event) => {
+      const eventSignature = signature(event);
+      if (existingTargetSignatures.has(eventSignature)) {
+        return;
+      }
+
+      this.planner.addCalendarEventDirectly({
+        ...event,
+        id: crypto.randomUUID(),
+        weekOffset: targetWeekOffset,
+      });
+    });
+  }
+
+  getWeekDateLabels(): string[] {
+    const { start } = this.getCurrentWeekDates();
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+    });
+  }
+
   getCurrentWeekLabel(): string {
     const today = new Date();
     const mondayOffset = today.getDay() === 0 ? -6 : 1 - today.getDay();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() + mondayOffset);
+    weekStart.setDate(weekStart.getDate() + this.currentWeekOffset() * 7);
 
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
@@ -345,7 +517,10 @@ export class App {
 
   getTodaysEvents(): CalendarEvent[] {
     const todayIndex = this.getTodayIndex();
-    return this.planner.eventsByDay()[todayIndex] || [];
+    return this.planner
+      .events()
+      .filter((event) => event.day === todayIndex && (event.weekOffset === undefined || event.weekOffset === 0))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   getCurrentTime(): string {
@@ -380,24 +555,46 @@ export class App {
   }
 
   getNextUpcomingEvents(): CalendarEvent[] {
-    const todayIndex = this.getTodayIndex();
-    const eventsByDay = this.planner.eventsByDay();
-    const allUpcoming: CalendarEvent[] = [];
-
-    // Get remaining events from today
     const now = new Date();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todaysEvents = this.getTodaysEvents().filter((event) => event.startTime >= currentTime);
-    allUpcoming.push(...todaysEvents);
+    const upcoming: Array<{ event: CalendarEvent; start: number }> = [];
 
-    // Get events from next 6 days
-    for (let i = 1; i < 7; i++) {
-      const dayIndex = (todayIndex + i) % 7;
-      const dayEvents = eventsByDay[dayIndex] || [];
-      allUpcoming.push(...dayEvents);
+    // Look ahead two weeks and place events on real calendar dates.
+    // This prevents weekday wraparound from pulling past days back into "Next Events".
+    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() + dayOffset);
+      date.setHours(0, 0, 0, 0);
+
+      const jsDay = date.getDay();
+      const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
+      const weekOffset = this.getWeekOffsetForDate(date);
+
+      const dayEvents = this.planner
+        .events()
+        .filter(
+          (event) =>
+            event.day === weekdayIndex &&
+            (event.weekOffset === undefined || event.weekOffset === weekOffset),
+        );
+
+      dayEvents.forEach((event) => {
+        const [hours, minutes] = event.startTime.split(':').map(Number);
+        const eventStart = new Date(date);
+        eventStart.setHours(hours, minutes, 0, 0);
+
+        // "Next Events" should be future events only; current live event is shown in the NOW card.
+        if (eventStart.getTime() <= now.getTime()) {
+          return;
+        }
+
+        upcoming.push({ event, start: eventStart.getTime() });
+      });
     }
 
-    return allUpcoming.slice(0, 6); // Next 6 events
+    return upcoming
+      .sort((a, b) => a.start - b.start)
+      .slice(0, 6)
+      .map((item) => item.event);
   }
 
   getWeeklySnapshot(): {
@@ -407,7 +604,7 @@ export class App {
     unplacedWorkouts: number;
     averagePerDay: number;
   } {
-    const eventsByDay = this.planner.eventsByDay();
+    const eventsByDay = this.currentWeekEventsByDay();
     let totalDuration = 0;
     let workoutCount = 0;
 
@@ -447,7 +644,9 @@ export class App {
     const month = date.getMonth();
 
     // Get first day of month and number of days
-    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday, 1 = Monday, ...
+    // Convert from Sunday-first (0) to Monday-first (0) system
+    let firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday, 1 = Monday, ...
+    firstDay = (firstDay + 6) % 7; // Convert to Monday-first: Sun(0)→6, Mon(1)→0, ..., Sat(6)→5
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     // Create flat array of all days with nulls for empty cells
@@ -500,13 +699,28 @@ export class App {
     this.showWorkoutCard.set(false);
   }
 
-  onWorkEventAdded(payload: { title: string; startTime: string; endTime: string; commute: number; repeat: number[] }): void {
+  onWorkShiftAdded(payload: {
+    title: string;
+    startTime: string;
+    endTime: string;
+    commute: number;
+    bedtime?: string;
+    wakeTime?: string;
+    repeat: number[];
+  }): void {
     // Create a custom work shift and schedule it for the selected days
     const selectedDays = payload.repeat.length > 0 ? payload.repeat : [this.getTodayIndex()];
     selectedDays.forEach((dayIndex) => {
-      this.planner.createShiftEvent(payload.title, payload.startTime, payload.endTime, dayIndex, payload.commute);
+      this.planner.createShiftEvent(
+        payload.title,
+        payload.startTime,
+        payload.endTime,
+        dayIndex,
+        payload.commute,
+        this.currentWeekOffset(),
+      );
     });
-    this.showWorkEventCard.set(false);
+    this.showWorkShiftCard.set(false);
   }
 
   onPersonalEventAdded(payload: {
@@ -528,7 +742,8 @@ export class App {
 
     const selectedDays = payload.repeat.length > 0 ? payload.repeat : [this.getTodayIndex()];
     selectedDays.forEach((dayIndex) => {
-      this.planner.addCustomEvent(customEvent, [dayIndex]);
+      const weekOffset = customEvent.isRepeatingWeekly ? undefined : this.currentWeekOffset();
+      this.planner.addCustomEvent(customEvent, [dayIndex], weekOffset);
     });
     this.showPersonalEventCard.set(false);
   }
@@ -540,7 +755,7 @@ export class App {
     const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay; // Calculate Monday offset
     
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() + mondayOffset);
+    weekStart.setDate(today.getDate() + mondayOffset + this.currentWeekOffset() * 7);
     weekStart.setHours(0, 0, 0, 0);
     
     const weekEnd = new Date(weekStart);
@@ -550,35 +765,163 @@ export class App {
     return { start: weekStart, end: weekEnd };
   }
 
-  /**
-   * Get the weekday index (0=Mon, 6=Sun) for a given calendar date,
-   * relative to the current week.
-   * Returns -1 if the date is not in the current week.
-   */
-  getWeekdayIndexForDate(dateOfMonth: number): number {
-    const currentMonth = this.currentMonthDate();
-    const targetDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
-    const { start: weekStart, end: weekEnd } = this.getCurrentWeekDates();
-    
-    // Check if target date is within current week
-    if (targetDate >= weekStart && targetDate <= weekEnd) {
-      const jsDay = targetDate.getDay(); // 0 = Sunday
-      return jsDay === 0 ? 6 : jsDay - 1; // Convert to our format (0=Mon, 6=Sun)
+  private syncMonthToCurrentWeek(): void {
+    const { start } = this.getCurrentWeekDates();
+    this.currentMonthDate.set(new Date(start.getFullYear(), start.getMonth(), 1));
+  }
+
+  private getOnboardingData(): OnboardingData {
+    try {
+      const raw = localStorage.getItem(ONBOARDING_LOCAL_STORAGE_KEY);
+      return raw ? { ...DEFAULT_ONBOARDING_DATA, ...JSON.parse(raw) } : { ...DEFAULT_ONBOARDING_DATA };
+    } catch {
+      return { ...DEFAULT_ONBOARDING_DATA };
     }
-    
-    return -1;
+  }
+
+  private settingsTargetOrOnboarding(onboarding: OnboardingData): number {
+    return this.planner.settings().weeklyWorkoutsTarget || onboarding.targetWorkoutsPerWeek;
+  }
+
+  private getPreferredWorkoutTypes(onboarding: OnboardingData): PreferenceWorkoutType[] {
+    const settingsTypes = this.planner.settings().workoutTypes;
+    if (settingsTypes?.length) {
+      return settingsTypes;
+    }
+
+    const mapped = onboarding.favoriteWorkouts
+      .map((type) => {
+        if (type === 'strength') return 'strength';
+        if (type === 'cardio') return 'cardio';
+        if (type === 'flexibility') return 'flexibility';
+        if (type === 'recovery') return 'recovery';
+        return null;
+      })
+      .filter((type): type is PreferenceWorkoutType => !!type);
+
+    return mapped.length ? mapped : ['strength', 'cardio'];
+  }
+
+  private buildWorkoutSequence(types: PreferenceWorkoutType[], target: number): WorkoutType[] {
+    const mapType = (type: PreferenceWorkoutType): WorkoutType => {
+      if (type === 'cardio') return 'running';
+      if (type === 'flexibility') return 'yoga';
+      if (type === 'recovery') return 'yoga';
+      return 'strength';
+    };
+
+    const sequence: WorkoutType[] = [];
+    types.forEach((type) => sequence.push(mapType(type)));
+
+    // Hardcoded fallback repetition requested by user.
+    const fallback: WorkoutType[] = ['strength', 'running'];
+    let fallbackIndex = 0;
+
+    while (sequence.length < target) {
+      sequence.push(fallback[fallbackIndex % fallback.length]);
+      fallbackIndex += 1;
+    }
+
+    return sequence.slice(0, target);
+  }
+
+  private buildPreferredTimeSequence(onboarding: OnboardingData): string[] {
+    const preferred = this.planner.settings().preferredWorkoutTimes?.length
+      ? this.planner.settings().preferredWorkoutTimes
+      : onboarding.preferredWorkoutTimes;
+
+    const mapped = preferred.map((slot) => {
+      if (slot === 'early') return '07:00';
+      if (slot === 'evening') return '18:00';
+      return '12:00';
+    });
+
+    return mapped.length ? mapped : ['18:00'];
+  }
+
+  private getWorkoutLabel(type: WorkoutType): string {
+    if (type === 'running') return 'Running';
+    if (type === 'biking') return 'Biking';
+    if (type === 'swimming') return 'Swimming';
+    if (type === 'yoga') return 'Yoga';
+    return 'Strength';
+  }
+
+  private getDefaultDuration(type: WorkoutType): number {
+    if (type === 'running') return 45;
+    if (type === 'biking') return 60;
+    if (type === 'swimming') return 60;
+    if (type === 'yoga') return 40;
+    return 50;
+  }
+
+  private getDefaultDistance(type: WorkoutType): number | undefined {
+    if (type === 'running') return 5;
+    if (type === 'biking') return 20;
+    if (type === 'swimming') return 2;
+    return undefined;
+  }
+
+  private timeToMinutes(value: string): number {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  private getWorkoutStartWithCommuteBuffer(day: number, preferredStart: number): number {
+    const shifts = this.planner
+      .events()
+      .filter(
+        (event) =>
+          event.type === 'shift' &&
+          event.day === day &&
+          (event.weekOffset === undefined || event.weekOffset === this.currentWeekOffset()),
+      );
+
+    if (shifts.length === 0) {
+      return preferredStart;
+    }
+
+    const latestBlockedEnd = shifts.reduce((max, shift) => {
+      const end = this.timeToMinutes(shift.endTime);
+      const commute = shift.commuteMinutes || 0;
+      return Math.max(max, end + commute);
+    }, 0);
+
+    const adjusted = Math.max(preferredStart, latestBlockedEnd);
+    // Snap to next 30-minute interval for cleaner blocks.
+    const snapped = Math.ceil(adjusted / 30) * 30;
+    return Math.min(snapped, 23 * 60 + 30);
+  }
+
+  /** Returns the week offset (relative to today's real week = 0) for any arbitrary date. */
+  private getWeekOffsetForDate(date: Date): number {
+    const jsDay = date.getDay();
+    const dateMonday = new Date(date);
+    dateMonday.setDate(date.getDate() + (jsDay === 0 ? -6 : 1 - jsDay));
+    dateMonday.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    const todayMonday = new Date(today);
+    todayMonday.setDate(today.getDate() + (today.getDay() === 0 ? -6 : 1 - today.getDay()));
+    todayMonday.setHours(0, 0, 0, 0);
+
+    return Math.round((dateMonday.getTime() - todayMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
   }
 
   /**
-   * Get all events for a specific calendar date in the month view
+   * Get all events for a specific calendar date in the month view.
+   * Shows week-specific events (matching weekOffset) and repeating events (weekOffset === undefined).
    */
   getEventsForMonthDay(dateOfMonth: number): CalendarEvent[] {
-    const weekdayIndex = this.getWeekdayIndexForDate(dateOfMonth);
-    if (weekdayIndex === -1) {
-      return [];
-    }
-    
-    return this.planner.eventsByDay()[weekdayIndex] || [];
+    const currentMonth = this.currentMonthDate();
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
+    const jsDay = date.getDay();
+    const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
+    const weekOffset = this.getWeekOffsetForDate(date);
+
+    return this.planner.events()
+      .filter(e => e.day === weekdayIndex && (e.weekOffset === undefined || e.weekOffset === weekOffset))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   /**
@@ -604,5 +947,182 @@ export class App {
       mealpreps: events.filter(e => e.type === 'mealprep').length,
       custom: events.filter(e => e.type === 'custom-event').length,
     };
+  }
+
+  // ===== TODAY PAGE HELPERS =====
+
+  /**
+   * Get today's date in long format (e.g., "Monday, March 22, 2026")
+   */
+  getTodayDateString(): string {
+    const today = new Date();
+    return today.toLocaleString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  /**
+   * Get today's snapshot (workout/event stats for today only)
+   */
+  getTodaySnapshot(): {
+    totalWorkouts: number;
+    totalDuration: number;
+    totalShifts: number;
+    mealPrepEvents: number;
+    averageWorkoutTime: number;
+  } {
+    const todaysEvents = this.getTodaysEvents();
+    let workoutCount = 0;
+    let totalDuration = 0;
+    let shiftCount = 0;
+    let mealPrepCount = 0;
+
+    todaysEvents.forEach((event) => {
+      const [startH, startM] = event.startTime.split(':').map(Number);
+      const [endH, endM] = event.endTime.split(':').map(Number);
+      let duration = endH * 60 + endM - (startH * 60 + startM);
+      if (duration < 0) duration += 24 * 60;
+
+      if (event.type === 'workout') {
+        workoutCount++;
+        totalDuration += duration;
+      } else if (event.type === 'shift') {
+        shiftCount++;
+      } else if (event.type === 'mealprep') {
+        mealPrepCount++;
+      }
+    });
+
+    return {
+      totalWorkouts: workoutCount,
+      totalDuration,
+      totalShifts: shiftCount,
+      mealPrepEvents: mealPrepCount,
+      averageWorkoutTime: workoutCount > 0 ? Math.round(totalDuration / workoutCount) : 0,
+    };
+  }
+
+  /**
+   * Calculate progress percentage for an event (0-100%)
+   * Returns null if event hasn't started or is finished
+   */
+  getEventProgressPercentage(event: CalendarEvent): number | null {
+    const now = new Date();
+    const [startH, startM] = event.startTime.split(':').map(Number);
+    const [endH, endM] = event.endTime.split(':').map(Number);
+
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Event hasn't started
+    if (nowMinutes < startMinutes) {
+      return null;
+    }
+
+    // Event is finished
+    if (nowMinutes >= endMinutes) {
+      return null;
+    }
+
+    // Event is ongoing
+    const totalDuration = endMinutes - startMinutes;
+    const elapsed = nowMinutes - startMinutes;
+    return Math.round((elapsed / totalDuration) * 100);
+  }
+
+  /**
+   * Get the currently active event (occurring right now)
+   */
+  getEventCurrentlyHappening(): CalendarEvent | null {
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todaysEvents = this.getTodaysEvents();
+
+    return (
+      todaysEvents.find((event) => {
+        const [startH, startM] = event.startTime.split(':').map(Number);
+        const [endH, endM] = event.endTime.split(':').map(Number);
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        return startMinutes <= nowMinutes && nowMinutes < endMinutes;
+      }) || null
+    );
+  }
+
+  /**
+   * Get tag label for event type
+   */
+  getEventTypeTag(eventType: string): string {
+    switch (eventType) {
+      case 'workout':
+        return '🏋️ Workout';
+      case 'shift':
+        return '💼 Work';
+      case 'mealprep':
+        return '🍽️ Meal Prep';
+      case 'custom-event':
+        return '📌 Event';
+      default:
+        return '📅 Event';
+    }
+  }
+
+  /**
+   * Get reminders based on today's schedule
+   */
+  getReminders(): string[] {
+    const reminders: string[] = [];
+    const todaysEvents = this.getTodaysEvents();
+    const upcomingEvents = this.getNextUpcomingEvents().slice(0, 3);
+
+    // Reminder for unplaced workouts
+    const unplaced = this.planner.unplacedWorkouts().length;
+    if (unplaced > 0) {
+      reminders.push(`📌 You have ${unplaced} unplaced workout${unplaced > 1 ? 's' : ''} this week`);
+    }
+
+    // Reminder for busy days
+    const workoutCount = todaysEvents.filter(e => e.type === 'workout').length;
+    if (workoutCount > 2) {
+      reminders.push('💪 You have a lot of workouts today - make sure you stay hydrated!');
+    }
+
+    // Reminder for upcoming events
+    if (upcomingEvents.length > 0) {
+      const nextEvent = upcomingEvents[0];
+      reminders.push(`📍 Next up in ${this.getTimeDifference(nextEvent)}: ${nextEvent.title}`);
+    }
+
+    // Reminder about meal prep
+    const mealPrepEvents = todaysEvents.filter(e => e.type === 'mealprep').length;
+    if (mealPrepEvents === 0) {
+      reminders.push('🍽️ No meal prep scheduled today. Consider planning your meals!');
+    }
+
+    // Placeholder for more backend-driven reminders
+    reminders.push('⚡ (Backend reminders coming soon)');
+
+    return reminders;
+  }
+
+  /**
+   * Helper to calculate time difference between now and an event
+   */
+  private getTimeDifference(event: CalendarEvent): string {
+    const now = new Date();
+    const [hours, minutes] = event.startTime.split(':').map(Number);
+    const eventTime = new Date();
+    eventTime.setHours(hours, minutes, 0);
+
+    const diff = eventTime.getTime() - now.getTime();
+    if (diff < 0) return 'Now'; // Already started or passed
+
+    const minutesDiff = Math.floor(diff / (1000 * 60));
+    if (minutesDiff < 60) {
+      return `${minutesDiff}m`;
+    }
+    const hoursDiff = Math.floor(minutesDiff / 60);
+    const remainingMins = minutesDiff % 60;
+    return remainingMins > 0 ? `${hoursDiff}h ${remainingMins}m` : `${hoursDiff}h`;
   }
 }
