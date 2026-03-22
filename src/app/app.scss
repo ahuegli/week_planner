@@ -42,11 +42,29 @@
 
   .header-actions {
     display: flex;
+    align-items: center;
     gap: var(--spacing-md);
 
     button {
       padding: 8px 16px;
       font-size: var(--font-size-small);
+    }
+
+    .user-greeting {
+      font-size: var(--font-size-small);
+      color: var(--color-text-secondary);
+      padding-right: var(--spacing-sm);
+      border-right: 1px solid var(--color-border-light);
+    }
+
+    .logout-btn {
+      color: var(--color-text-secondary);
+      border-color: var(--color-border-medium);
+
+      &:hover {
+        color: var(--color-primary-red-dark);
+        border-color: var(--color-primary-red-dark);
+      }
     }
   }
 }
@@ -623,7 +641,11 @@
   transition: all var(--transition-default);
 
   &.event-card-primary {
-    background: linear-gradient(135deg, var(--color-primary-blue-light-bg), rgba(74, 144, 226, 0.02));
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-blue-light-bg),
+      rgba(74, 144, 226, 0.02)
+    );
     border: 2px solid var(--color-primary-blue);
   }
 
@@ -890,7 +912,11 @@
     }
 
     &.is-today {
-      background: linear-gradient(135deg, var(--color-primary-blue-light-bg), rgba(74, 144, 226, 0.02));
+      background: linear-gradient(
+        135deg,
+        var(--color-primary-blue-light-bg),
+        rgba(74, 144, 226, 0.02)
+      );
       border: 2px solid var(--color-primary-blue);
 
       .day-number {

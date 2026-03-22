@@ -1,0 +1,15 @@
+@if (!isBackendReachable()) {
+  <div class="connection-banner" role="alert" aria-live="polite">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <div class="banner-text">
+        <strong>Connection Error</strong>
+        <span class="error-message">{{ lastError() }}</span>
+      </div>
+      @if (retryCount() > 1) {
+        <span class="retry-count">Retry attempt: {{ retryCount() }}</span>
+      }
+    </div>
+    <button type="button" class="dismiss-button" (click)="dismiss()" aria-label="Dismiss">✕</button>
+  </div>
+}

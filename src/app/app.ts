@@ -1,6 +1,10 @@
 import { CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
+<<<<<<< HEAD
 import { Component, computed, effect, signal } from '@angular/core';
+=======
+import { Component, effect, inject, signal } from '@angular/core';
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
 import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
@@ -8,10 +12,13 @@ import { SchedulerSettings, WorkoutType as PreferenceWorkoutType } from './core/
 import { DEFAULT_ONBOARDING_DATA, OnboardingData, ONBOARDING_LOCAL_STORAGE_KEY } from './core/models/onboarding-data.model';
 import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
+import { AuthService } from './core/services/auth.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
 import { OnboardingComponent } from './features/onboarding/onboarding.component';
 import { SchedulerSettingsComponent } from './features/scheduler-settings/scheduler-settings.component';
+import { LoginComponent } from './features/login/login.component';
 import { EventDetailsModalComponent } from './shared/components/event-details-modal/event-details-modal.component';
+import { ConnectionBannerComponent } from './shared/components/connection-banner/connection-banner.component';
 import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-add-workout-card.component';
 import { QuickAddWorkShiftCardComponent } from './features/quick-add-cards/quick-add-work-event-card.component';
 import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/quick-add-personal-event-card.component';
@@ -25,7 +32,9 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
     CalendarComponent,
     OnboardingComponent,
     SchedulerSettingsComponent,
+    LoginComponent,
     EventDetailsModalComponent,
+    ConnectionBannerComponent,
     QuickAddWorkoutCardComponent,
     QuickAddWorkShiftCardComponent,
     QuickAddPersonalEventCardComponent,
@@ -34,6 +43,9 @@ import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/q
   styleUrl: './app.scss',
 })
 export class App {
+  private readonly authService = inject(AuthService);
+  readonly isAuthenticated = this.authService.isAuthenticated;
+  readonly currentUser = this.authService.user;
   readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   readonly dayDropListIds = this.dayLabels.map((_, index) => `day-${index}`);
   readonly connectedDropListIds = [
@@ -77,7 +89,18 @@ export class App {
   });
 
   constructor(readonly planner: PlannerService) {
+<<<<<<< HEAD
     this.migrateLegacyWeekOffsets();
+=======
+    // Load workouts when user is authenticated
+    effect(() => {
+      if (this.isAuthenticated()) {
+        this.planner.loadWorkouts();
+      } else {
+        this.planner.clearAllData();
+      }
+    });
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
 
     effect(() => {
       if (this.showSettingsDialog || this.showEventModal() || this.showFillDialog()) {
@@ -128,7 +151,15 @@ export class App {
     this.showSettingsDialog = false;
   }
 
-  onDayDrop(payload: { day: number; drop: CdkDragDrop<CalendarEvent[]>; startTime?: number }): void {
+  logout(): void {
+    this.authService.logout();
+  }
+
+  onDayDrop(payload: {
+    day: number;
+    drop: CdkDragDrop<CalendarEvent[]>;
+    startTime?: number;
+  }): void {
     const dragData = payload.drop.item.data as DragData;
     const startTimeMinutes = payload.startTime;
     const weekOffset = this.currentWeekOffset();
@@ -146,7 +177,10 @@ export class App {
         shift.endTime,
         payload.day,
         shift.commuteMinutes,
+<<<<<<< HEAD
         weekOffset,
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
       );
       return;
     }
@@ -159,16 +193,16 @@ export class App {
 
     if (dragData.kind === 'workout-template') {
       const duration = dragData.workout.duration || 60;
-      
+
       // Check if event spans overnight (start day + duration would go into next day)
       if (startTimeMinutes !== undefined) {
         const endTimeMinutes = startTimeMinutes + duration;
-        
+
         if (endTimeMinutes >= 1440) {
           // Event spans overnight - split into two events
           const firstDayDuration = 1440 - startTimeMinutes; // Minutes until midnight
           const secondDayDuration = endTimeMinutes - 1440; // Minutes after midnight
-          
+
           // Create event on current day
           this.planner.addManualEvent(
             payload.day,
@@ -179,9 +213,12 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
+<<<<<<< HEAD
             weekOffset,
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
-          
+
           // Create event on next day
           const nextDay = (payload.day + 1) % 7;
           this.planner.addManualEvent(
@@ -193,7 +230,10 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             0, // Start at midnight
+<<<<<<< HEAD
             weekOffset,
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
         } else {
           // Event fits within single day
@@ -206,7 +246,10 @@ export class App {
             dragData.workout.distanceKm,
             dragData.workout.distanceCountsAsLong,
             startTimeMinutes,
+<<<<<<< HEAD
             weekOffset,
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
           );
         }
       } else {
@@ -219,11 +262,14 @@ export class App {
           dragData.workout.workoutType,
           dragData.workout.distanceKm,
           dragData.workout.distanceCountsAsLong,
+<<<<<<< HEAD
           undefined,
           weekOffset,
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
         );
       }
-      
+
       // Update frequency if this is a saved workout
       if (dragData.workout.frequencyPerWeek && dragData.workout.frequencyPerWeek > 0) {
         this.planner.decreaseWorkoutFrequency(dragData.workout.id);
@@ -280,8 +326,16 @@ export class App {
     this.selectedEvent.set(null);
   }
 
-  onUpdateCommuteForAllShifts(payload: { shiftLabel: string; shiftStartTime: string; commuteMinutes: number }): void {
-    this.planner.updateEventCommuteByShift(payload.shiftLabel, payload.shiftStartTime, payload.commuteMinutes);
+  onUpdateCommuteForAllShifts(payload: {
+    shiftLabel: string;
+    shiftStartTime: string;
+    commuteMinutes: number;
+  }): void {
+    this.planner.updateEventCommuteByShift(
+      payload.shiftLabel,
+      payload.shiftStartTime,
+      payload.commuteMinutes,
+    );
     this.showEventModal.set(false);
     this.selectedEvent.set(null);
   }
@@ -542,7 +596,9 @@ export class App {
         const endMinutes = endH * 60 + endM;
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         return startMinutes <= nowMinutes && nowMinutes < endMinutes;
-      }) || todaysEvents.find((event) => event.startTime > currentTime) || null
+      }) ||
+      todaysEvents.find((event) => event.startTime > currentTime) ||
+      null
     );
   }
 
@@ -651,17 +707,17 @@ export class App {
 
     // Create flat array of all days with nulls for empty cells
     const days: (number | null)[] = [];
-    
+
     // Add empty cells before the 1st of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(null);
     }
-    
+
     // Add all days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
     }
-    
+
     // Add empty cells after the last day to complete the grid (optional, for visual padding)
     // This ensures the grid is always a multiple of 7 (complete weeks)
     while (days.length % 7 !== 0) {
@@ -694,18 +750,37 @@ export class App {
   }
 
   // Quick-add card event handlers
-  onWorkoutAdded(payload: { type: WorkoutType; sessionName: string; duration: number; timeframe: number; distance?: number }): void {
-    this.planner.addWorkout(payload.type, payload.sessionName, payload.duration, payload.timeframe, payload.distance);
+  async onWorkoutAdded(payload: {
+    type: WorkoutType;
+    sessionName: string;
+    duration: number;
+    timeframe: number;
+    distance?: number;
+  }): Promise<void> {
+    await this.planner.addWorkout(
+      payload.type,
+      payload.sessionName,
+      payload.duration,
+      payload.timeframe,
+      payload.distance,
+    );
     this.showWorkoutCard.set(false);
   }
 
+<<<<<<< HEAD
   onWorkShiftAdded(payload: {
+=======
+  onWorkEventAdded(payload: {
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
     title: string;
     startTime: string;
     endTime: string;
     commute: number;
+<<<<<<< HEAD
     bedtime?: string;
     wakeTime?: string;
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
     repeat: number[];
   }): void {
     // Create a custom work shift and schedule it for the selected days
@@ -717,7 +792,10 @@ export class App {
         payload.endTime,
         dayIndex,
         payload.commute,
+<<<<<<< HEAD
         this.currentWeekOffset(),
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
       );
     });
     this.showWorkShiftCard.set(false);
@@ -753,18 +831,19 @@ export class App {
     const today = new Date();
     const jsDay = today.getDay(); // 0 = Sunday
     const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay; // Calculate Monday offset
-    
+
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() + mondayOffset + this.currentWeekOffset() * 7);
     weekStart.setHours(0, 0, 0, 0);
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    
+
     return { start: weekStart, end: weekEnd };
   }
 
+<<<<<<< HEAD
   private syncMonthToCurrentWeek(): void {
     const { start } = this.getCurrentWeekDates();
     this.currentMonthDate.set(new Date(start.getFullYear(), start.getMonth(), 1));
@@ -906,6 +985,25 @@ export class App {
     todayMonday.setHours(0, 0, 0, 0);
 
     return Math.round((dateMonday.getTime() - todayMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+=======
+  /**
+   * Get the weekday index (0=Mon, 6=Sun) for a given calendar date,
+   * relative to the current week.
+   * Returns -1 if the date is not in the current week.
+   */
+  getWeekdayIndexForDate(dateOfMonth: number): number {
+    const currentMonth = this.currentMonthDate();
+    const targetDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
+    const { start: weekStart, end: weekEnd } = this.getCurrentWeekDates();
+
+    // Check if target date is within current week
+    if (targetDate >= weekStart && targetDate <= weekEnd) {
+      const jsDay = targetDate.getDay(); // 0 = Sunday
+      return jsDay === 0 ? 6 : jsDay - 1; // Convert to our format (0=Mon, 6=Sun)
+    }
+
+    return -1;
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
   }
 
   /**
@@ -913,6 +1011,7 @@ export class App {
    * Shows week-specific events (matching weekOffset) and repeating events (weekOffset === undefined).
    */
   getEventsForMonthDay(dateOfMonth: number): CalendarEvent[] {
+<<<<<<< HEAD
     const currentMonth = this.currentMonthDate();
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
     const jsDay = date.getDay();
@@ -922,6 +1021,14 @@ export class App {
     return this.planner.events()
       .filter(e => e.day === weekdayIndex && (e.weekOffset === undefined || e.weekOffset === weekOffset))
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
+=======
+    const weekdayIndex = this.getWeekdayIndexForDate(dateOfMonth);
+    if (weekdayIndex === -1) {
+      return [];
+    }
+
+    return this.planner.eventsByDay()[weekdayIndex] || [];
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
   }
 
   /**
@@ -942,12 +1049,13 @@ export class App {
   } {
     const events = this.getEventsForMonthDay(dateOfMonth);
     return {
-      shifts: events.filter(e => e.type === 'shift').length,
-      workouts: events.filter(e => e.type === 'workout').length,
-      mealpreps: events.filter(e => e.type === 'mealprep').length,
-      custom: events.filter(e => e.type === 'custom-event').length,
+      shifts: events.filter((e) => e.type === 'shift').length,
+      workouts: events.filter((e) => e.type === 'workout').length,
+      mealpreps: events.filter((e) => e.type === 'mealprep').length,
+      custom: events.filter((e) => e.type === 'custom-event').length,
     };
   }
+<<<<<<< HEAD
 
   // ===== TODAY PAGE HELPERS =====
 
@@ -1125,4 +1233,6 @@ export class App {
     const remainingMins = minutesDiff % 60;
     return remainingMins > 0 ? `${hoursDiff}h ${remainingMins}m` : `${hoursDiff}h`;
   }
+=======
+>>>>>>> f73cf72906e3020d715243e02a62dbb37ed79006
 }
