@@ -27,20 +27,28 @@ describe('PlannerService', () => {
       } as never,
       {
         getAll: () => of([]),
-        create: () => of({
-          id: 'workout-1',
-          name: 'Mock Workout',
-          workoutType: 'running',
-          duration: 45,
-          frequencyPerWeek: 1,
-        }),
-        update: () => of({
-          id: 'workout-1',
-          name: 'Mock Workout',
-          workoutType: 'running',
-          duration: 45,
-          frequencyPerWeek: 1,
-        }),
+        create: () =>
+          of({
+            id: 'workout-1',
+            name: 'Mock Workout',
+            workoutType: 'running',
+            duration: 45,
+            frequencyPerWeek: 1,
+          }),
+        update: () =>
+          of({
+            id: 'workout-1',
+            name: 'Mock Workout',
+            workoutType: 'running',
+            duration: 45,
+            frequencyPerWeek: 1,
+          }),
+        delete: () => of(void 0),
+      } as never,
+      {
+        getByWeekOffset: () => of([]),
+        create: () => of({ id: 'event-1' }),
+        update: () => of({ id: 'event-1' }),
         delete: () => of(void 0),
       } as never,
     );

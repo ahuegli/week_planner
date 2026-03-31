@@ -24,7 +24,7 @@
           <button type="button" class="button-primary" (click)="planner.generateSuggestedPlan()">
             ↻ Generate Plan
           </button>
-          <button type="button" class="button-secondary" (click)="openSettingsDialog()">
+          <button type="button" class="button-secondary" (click)="dialogs.openSettings()">
             ⚙️ Settings
           </button>
           <button type="button" class="button-secondary logout-btn" (click)="logout()">
@@ -39,7 +39,7 @@
           type="button"
           class="tab-button"
           [class.active]="currentView() === 'daily'"
-          (click)="showDailyView()"
+          (click)="nav.showDailyView()"
         >
           Today
         </button>
@@ -47,7 +47,7 @@
           type="button"
           class="tab-button"
           [class.active]="currentView() === 'week'"
-          (click)="showWeekView()"
+          (click)="nav.showWeekView()"
         >
           Week
         </button>
@@ -55,7 +55,7 @@
           type="button"
           class="tab-button"
           [class.active]="currentView() === 'month'"
-          (click)="showMonthView()"
+          (click)="nav.showMonthView()"
         >
           Month
         </button>
@@ -63,7 +63,7 @@
           type="button"
           class="tab-button"
           [class.active]="currentView() === 'onboarding'"
-          (click)="showOnboardingView()"
+          (click)="nav.showOnboardingView()"
         >
           Setup
         </button>
@@ -91,7 +91,7 @@
               <button
                 type="button"
                 class="button-icon nav-btn"
-                (click)="goToToday()"
+                (click)="nav.goToToday()"
                 title="Go to today"
               >
                 ⌂
@@ -99,19 +99,19 @@
               <button
                 type="button"
                 class="button-icon nav-btn"
-                (click)="previousWeek()"
+                (click)="nav.previousWeek()"
                 title="Previous week"
               >
                 ←
               </button>
               <div class="week-title-text">
                 <h2>My Week</h2>
-                <p class="subtitle">{{ getCurrentWeekLabel() }}</p>
+                <p class="subtitle">{{ nav.getCurrentWeekLabel() }}</p>
               </div>
               <button
                 type="button"
                 class="button-icon nav-btn"
-                (click)="nextWeek()"
+                (click)="nav.nextWeek()"
                 title="Next week"
               >
                 →
@@ -121,7 +121,7 @@
               <button type="button" class="button-primary" (click)="suggestWorkouts()">
                 Suggest workouts (based on your preferences)
               </button>
-              <button type="button" class="button-secondary" (click)="fillFromPreviousWeek()">
+              <button type="button" class="button-secondary" (click)="dialogs.openFillDialog()">
                 Fill in based on previous week
               </button>
             </div>
@@ -136,7 +136,7 @@
                 <button
                   type="button"
                   class="quick-add-header-btn work-btn"
-                  (click)="openWorkShiftDialog()"
+                  (click)="dialogs.openWorkShiftDialog()"
                 >
                   📅 Add Work Shift
                 </button>
@@ -147,7 +147,7 @@
                 <button
                   type="button"
                   class="quick-add-header-btn workout-btn"
-                  (click)="openWorkoutDialog()"
+                  (click)="dialogs.openWorkoutDialog()"
                 >
                   💪 Add Workout
                 </button>
@@ -164,9 +164,9 @@
                       <div
                         class="saved-workout-card"
                         cdkDrag
-                        (click)="openWorkoutTemplateEditor(workout)"
+                        (click)="dialogs.openWorkoutTemplateEditor(workout)"
                         [cdkDragData]="
-                          createUnplacedWorkoutDragData({
+                          dragDrop.createWorkoutDragData({
                             id: workout.id,
                             workoutType: workout.workoutType,
                             name: workout.name,
@@ -207,7 +207,7 @@
                 <button
                   type="button"
                   class="quick-add-header-btn personal-btn"
-                  (click)="openPersonalEventDialog()"
+                  (click)="dialogs.openPersonalEventDialog()"
                 >
                   📌 Add Personal Event
                 </button>
@@ -218,7 +218,7 @@
           <!-- Calendar Grid -->
           <app-calendar
             [dayLabels]="dayLabels"
-            [dayDateLabels]="getWeekDateLabels()"
+            [dayDateLabels]="nav.getWeekDateLabels()"
             [weekOffset]="currentWeekOffset()"
             [eventsByDay]="currentWeekEventsByDay()"
             [connectedDropListIds]="connectedDropListIds"
@@ -249,7 +249,7 @@
                   <div
                     class="unplaced-item card"
                     cdkDrag
-                    [cdkDragData]="createUnplacedWorkoutDragData(workout.workout)"
+                    [cdkDragData]="dragDrop.createWorkoutDragData(workout.workout)"
                   >
                     <div class="item-header">
                       <strong>{{ workout.workoutName }}</strong>
@@ -277,9 +277,9 @@
       @if (currentView() === 'month') {
         <app-month-view
           [currentMonthDate]="currentMonthDate()"
-          (navigateToToday)="goToToday()"
-          (previousMonthClicked)="previousMonth()"
-          (nextMonthClicked)="nextMonth()"
+          (navigateToToday)="nav.goToToday()"
+          (previousMonthClicked)="nav.previousMonth()"
+          (nextMonthClicked)="nav.nextMonth()"
           (quickAddRequested)="handleMonthQuickAdd($event)"
           (eventSelected)="onEventSelected($event)"
         ></app-month-view>
@@ -287,19 +287,19 @@
 
       <!-- ONBOARDING VIEW -->
       @if (currentView() === 'onboarding') {
-        <app-onboarding (navigateToWeek)="showWeekView()"></app-onboarding>
+        <app-onboarding (navigateToWeek)="nav.showWeekView()"></app-onboarding>
       }
     </section>
 
     <!-- ===================================================================
        SETTINGS DIALOG
        =================================================================== -->
-    @if (showSettingsDialog) {
-      <div class="dialog-overlay" (click)="closeSettingsDialog()">
+    @if (showSettingsDialog()) {
+      <div class="dialog-overlay" (click)="dialogs.closeSettings()">
         <div class="dialog" (click)="$event.stopPropagation()">
           <div class="dialog-header">
             <h2>⚙️ Scheduler Settings</h2>
-            <button type="button" class="button-icon close-btn" (click)="closeSettingsDialog()">
+            <button type="button" class="button-icon close-btn" (click)="dialogs.closeSettings()">
               ✕
             </button>
           </div>
@@ -329,10 +329,10 @@
       <app-quick-add-work-shift-card
         [presetDay]="quickAddTarget()?.day ?? null"
         [presetDayLabel]="quickAddTarget()?.label ?? ''"
-        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? nav.currentWeekOffset()"
         [allowRepeat]="quickAddTarget() === null"
         (eventAdded)="onWorkShiftAdded($event)"
-        (closed)="closeWorkShiftDialog()"
+        (closed)="dialogs.closeWorkShiftDialog()"
       ></app-quick-add-work-shift-card>
     }
 
@@ -340,12 +340,12 @@
       <app-quick-add-workout-card
         [presetDay]="quickAddTarget()?.day ?? null"
         [presetDayLabel]="quickAddTarget()?.label ?? ''"
-        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? nav.currentWeekOffset()"
         [availablePresets]="workoutPresets()"
         (workoutAdded)="onWorkoutAdded($event)"
         (presetUpdated)="onWorkoutPresetUpdated($event)"
         (presetDeleted)="onWorkoutPresetDeleted($event)"
-        (closed)="closeWorkoutDialog()"
+        (closed)="dialogs.closeWorkoutDialog()"
       ></app-quick-add-workout-card>
     }
 
@@ -353,10 +353,10 @@
       <app-quick-add-personal-event-card
         [presetDay]="quickAddTarget()?.day ?? null"
         [presetDayLabel]="quickAddTarget()?.label ?? ''"
-        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? nav.currentWeekOffset()"
         [allowRepeat]="quickAddTarget() === null"
         (eventAdded)="onPersonalEventAdded($event)"
-        (closed)="closePersonalEventDialog()"
+        (closed)="dialogs.closePersonalEventDialog()"
       ></app-quick-add-personal-event-card>
     }
 
@@ -364,15 +364,15 @@
       <app-quick-add-mealprep-card
         [presetDay]="quickAddTarget()?.day ?? null"
         [presetDayLabel]="quickAddTarget()?.label ?? ''"
-        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? currentWeekOffset()"
+        [presetWeekOffset]="quickAddTarget()?.weekOffset ?? nav.currentWeekOffset()"
         (mealPrepAdded)="onMealPrepAdded($event)"
-        (closed)="closeMealPrepDialog()"
+        (closed)="dialogs.closeMealPrepDialog()"
       ></app-quick-add-mealprep-card>
     }
 
     <app-workout-template-editor
       [workout]="selectedWorkoutTemplate()"
-      (closed)="closeWorkoutTemplateEditor()"
+      (closed)="dialogs.closeWorkoutTemplateEditor()"
       (saved)="onWorkoutTemplateSaved($event)"
       (deleted)="onWorkoutTemplateDeleted($event)"
     ></app-workout-template-editor>
@@ -451,11 +451,11 @@
        FILL FROM PREVIOUS WEEK DIALOG
        =================================================================== -->
     @if (showFillDialog()) {
-      <div class="dialog-overlay" (click)="closeFillDialog()">
+      <div class="dialog-overlay" (click)="dialogs.closeFillDialog()">
         <div class="dialog" (click)="$event.stopPropagation()">
           <div class="dialog-header">
             <h2>Fill Week From Previous Week</h2>
-            <button type="button" class="button-icon close-btn" (click)="closeFillDialog()">
+            <button type="button" class="button-icon close-btn" (click)="dialogs.closeFillDialog()">
               ✕
             </button>
           </div>
@@ -489,7 +489,7 @@
           </div>
 
           <div class="dialog-footer">
-            <button type="button" class="button-secondary" (click)="closeFillDialog()">
+            <button type="button" class="button-secondary" (click)="dialogs.closeFillDialog()">
               Cancel
             </button>
           </div>

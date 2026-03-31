@@ -1,15 +1,18 @@
 import { CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { CalendarEvent } from './core/models/calendar-event.model';
 import { CustomEvent } from './core/models/custom-event.model';
-import { DragData, WorkoutTemplateDragData, isCalendarEvent } from './core/models/drag-data.model';
 import { SchedulerSettings } from './core/models/scheduler-settings.model';
-import { Workout, WorkoutType } from './core/models/workout.model';
+import { WorkoutType } from './core/models/workout.model';
 import { PlannerService } from './core/services/planner.service';
 import { AuthService } from './core/services/auth.service';
 import { WorkoutSchedulerService } from './core/services/workout-scheduler.service';
+import { WorkoutPresetService } from './core/services/workout-preset.service';
+import { WeekNavigationService } from './core/services/week-navigation.service';
+import { DialogStateService, QuickAddTargetContext } from './core/services/dialog-state.service';
+import { DragDropService } from './core/services/drag-drop.service';
 import { CalendarComponent } from './features/calendar/calendar.component';
 import { DailyViewComponent } from './features/daily-view/daily-view.component';
 import { MonthViewComponent, QuickAddRequest } from './features/month-view/month-view.component';
@@ -26,14 +29,6 @@ import { QuickAddWorkoutCardComponent } from './features/quick-add-cards/quick-a
 import { QuickAddWorkShiftCardComponent } from './features/quick-add-cards/quick-add-work-event-card.component';
 import { QuickAddPersonalEventCardComponent } from './features/quick-add-cards/quick-add-personal-event-card.component';
 import { QuickAddMealPrepCardComponent } from './features/quick-add-cards/quick-add-mealprep-card.component';
-import { WorkoutPreset } from './core/models/workout-preset.model';
-
-interface QuickAddTargetContext {
-  day: number;
-  weekOffset: number;
-  label: string;
-  date: Date;
-}
 
 type WorkoutQuickAddPayload =
   | {
@@ -81,8 +76,6 @@ interface MealPrepQuickAddPayload {
   title: string;
 }
 
-const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
-
 @Component({
   selector: 'app-root',
   imports: [
@@ -108,9 +101,15 @@ const WORKOUT_PRESETS_STORAGE_KEY = 'week-planner-workout-presets';
 })
 export class App implements OnInit {
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly workoutScheduler = inject(WorkoutSchedulerService);
+
+  readonly planner = inject(PlannerService);
+  readonly nav = inject(WeekNavigationService);
+  readonly dialogs = inject(DialogStateService);
+  readonly presets = inject(WorkoutPresetService);
+  readonly dragDrop = inject(DragDropService);
+
   readonly isAuthenticated = this.authService.isAuthenticated;
   readonly currentUser = this.authService.user;
   readonly dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -125,97 +124,42 @@ export class App implements OnInit {
     'saved-workouts-palette',
   ];
 
-  // View state for tab navigation (initialized from query params in ngOnInit)
-  currentView = signal<'daily' | 'week' | 'month' | 'onboarding'>('daily');
-  
-  private readonly validViews = ['daily', 'week', 'month', 'onboarding'] as const;
+  // Expose navigation signals for template (delegated to nav service)
+  readonly currentView = this.nav.currentView;
+  readonly currentWeekOffset = this.nav.currentWeekOffset;
+  readonly currentMonthDate = this.nav.currentMonthDate;
 
-  // Quick add card visibility
-  showWorkoutCard = signal(false);
-  showWorkShiftCard = signal(false);
-  showPersonalEventCard = signal(false);
-  showMealPrepCard = signal(false);
-  quickAddTarget = signal<QuickAddTargetContext | null>(null);
-  workoutPresets = signal<WorkoutPreset[]>(this.loadWorkoutPresets());
-  selectedWorkoutTemplate = signal<Workout | null>(null);
+  // Expose dialog signals for template (delegated to dialog service)
+  readonly showWorkoutCard = this.dialogs.showWorkoutCard;
+  readonly showWorkShiftCard = this.dialogs.showWorkShiftCard;
+  readonly showPersonalEventCard = this.dialogs.showPersonalEventCard;
+  readonly showMealPrepCard = this.dialogs.showMealPrepCard;
+  readonly quickAddTarget = this.dialogs.quickAddTarget;
+  readonly showSettingsDialog = this.dialogs.showSettingsDialog;
+  readonly selectedEvent = this.dialogs.selectedEvent;
+  readonly showEventModal = this.dialogs.showEventModal;
+  readonly selectedWorkoutTemplate = this.dialogs.selectedWorkoutTemplate;
+  readonly showFillDialog = this.dialogs.showFillDialog;
 
-  // Monthly view state
-  currentMonthDate = signal<Date>(new Date());
-  currentWeekOffset = signal(0);
+  // Expose preset signal for template
+  readonly workoutPresets = this.presets.presets;
 
-  showSettingsDialog = false;
-  selectedEvent = signal<CalendarEvent | null>(null);
-  showEventModal = signal(false);
-  selectedConflictIds = signal<Set<string>>(new Set());
-
-  // Fill dialog state
-  showFillDialog = signal(false);
-
-  // Calculate the date range for the current week view
-  currentWeekStart = computed(() => {
-    const offset = this.currentWeekOffset();
-    const weekStart = this.planner.getWeekStartDate();
-    weekStart.setDate(weekStart.getDate() + offset * 7);
-    return weekStart;
-  });
-  
-  currentWeekEnd = computed(() => {
-    const start = this.currentWeekStart();
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return end;
-  });
-
-  // Format the week date range for display
-  currentWeekLabel = computed(() => {
-    const start = this.currentWeekStart();
-    const end = this.currentWeekEnd();
-    const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return `${startStr} - ${endStr}`;
-  });
-
-  // Get the date string for a specific day in the current week
-  getDayDate(dayIndex: number): string {
-    const weekStart = this.currentWeekStart();
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + dayIndex);
-    return this.planner.formatDate(date);
-  }
-  
-  // Get formatted date for display in day headers
-  getDayDateDisplay(dayIndex: number): string {
-    const weekStart = this.currentWeekStart();
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + dayIndex);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
+  readonly selectedConflictIds = signal<Set<string>>(new Set());
 
   // Week-aware event view: events for the currently navigated week (by date or repeating)
   currentWeekEventsByDay = computed(() => {
-    const weekStart = this.currentWeekStart();
-    const startDateStr = this.planner.formatDate(weekStart);
-    const endDate = new Date(weekStart);
-    endDate.setDate(weekStart.getDate() + 6);
-    const endDateStr = this.planner.formatDate(endDate);
-    
+    const weekStart = this.nav.currentWeekStart();
+
     return Array.from({ length: 7 }, (_, day) => {
-      const dayDateStr = this.getDayDate(day);
+      const dayDateStr = this.nav.getDayDate(day);
       return this.planner
         .events()
         .filter((e) => {
-          // Event matches this day
           if (e.day !== day) return false;
-          
-          // Repeating events show on all weeks
           if (e.isRepeatingWeekly) return true;
-          
-          // Events with specific dates must match
           if (e.date) {
             return e.date === dayDateStr;
           }
-          
-          // Legacy: events without date - show if they have matching weekOffset or no weekOffset
           const offset = this.currentWeekOffset();
           return e.weekOffset === undefined || e.weekOffset === offset;
         })
@@ -223,7 +167,7 @@ export class App implements OnInit {
     });
   });
 
-  constructor(readonly planner: PlannerService) {
+  constructor() {
     this.migrateLegacyWeekOffsets();
 
     // Load workouts and calendar events when user is authenticated
@@ -235,7 +179,7 @@ export class App implements OnInit {
         this.planner.clearAllData();
       }
     });
-    
+
     // Reload events when week changes
     effect(() => {
       const offset = this.currentWeekOffset();
@@ -245,29 +189,11 @@ export class App implements OnInit {
     });
 
     effect(() => {
-      if (
-        this.showSettingsDialog ||
-        this.showEventModal() ||
-        this.showFillDialog() ||
-        this.showWorkoutCard() ||
-        this.showWorkShiftCard() ||
-        this.showPersonalEventCard() ||
-        this.showMealPrepCard() ||
-        this.selectedWorkoutTemplate()
-      ) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = '';
-      }
-    });
-
-    effect(() => {
       const proposal = this.planner.optimizationProposal();
       if (!proposal) {
         this.selectedConflictIds.set(new Set());
         return;
       }
-
       this.selectedConflictIds.set(new Set(proposal.conflictEvents.map((event) => event.id)));
     });
   }
@@ -291,44 +217,8 @@ export class App implements OnInit {
   }
 
   ngOnInit(): void {
-    // Initialize state from query parameters
     this.route.queryParams.subscribe((params) => {
-      // Read view parameter
-      const viewParam = params['view'];
-      if (viewParam && this.validViews.includes(viewParam)) {
-        this.currentView.set(viewParam as typeof this.validViews[number]);
-      }
-      
-      // Read week offset parameter
-      const weekParam = params['week'];
-      if (weekParam !== undefined) {
-        const weekOffset = parseInt(weekParam, 10);
-        if (!isNaN(weekOffset)) {
-          this.currentWeekOffset.set(weekOffset);
-          this.syncMonthToCurrentWeek();
-        }
-      }
-    });
-  }
-
-  private updateQueryParams(): void {
-    const queryParams: Record<string, string | number | null> = {
-      view: this.currentView(),
-    };
-    
-    // Only include week param if not 0 (current week)
-    const weekOffset = this.currentWeekOffset();
-    if (weekOffset !== 0) {
-      queryParams['week'] = weekOffset;
-    } else {
-      queryParams['week'] = null; // Remove from URL
-    }
-    
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams,
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
+      this.nav.initFromQueryParams(params);
     });
   }
 
@@ -336,78 +226,25 @@ export class App implements OnInit {
     this.planner.updateSettings(patch);
   }
 
-  openSettingsDialog(): void {
-    this.showSettingsDialog = true;
-  }
-
-  closeSettingsDialog(): void {
-    this.showSettingsDialog = false;
-  }
-
-  openWorkShiftDialog(target: QuickAddTargetContext | null = null): void {
-    this.setActiveQuickAddDialog('work', target);
-  }
-
-  closeWorkShiftDialog(): void {
-    this.showWorkShiftCard.set(false);
-    this.clearQuickAddTargetIfIdle();
-  }
-
-  openWorkoutDialog(target: QuickAddTargetContext | null = null): void {
-    this.setActiveQuickAddDialog('workout', target);
-  }
-
-  closeWorkoutDialog(): void {
-    this.showWorkoutCard.set(false);
-    this.clearQuickAddTargetIfIdle();
-  }
-
-  openPersonalEventDialog(target: QuickAddTargetContext | null = null): void {
-    this.setActiveQuickAddDialog('personal', target);
-  }
-
-  closePersonalEventDialog(): void {
-    this.showPersonalEventCard.set(false);
-    this.clearQuickAddTargetIfIdle();
-  }
-
-  openMealPrepDialog(target: QuickAddTargetContext | null = null): void {
-    this.setActiveQuickAddDialog('mealprep', target);
-  }
-
-  closeMealPrepDialog(): void {
-    this.showMealPrepCard.set(false);
-    this.clearQuickAddTargetIfIdle();
-  }
-
   handleMonthQuickAdd(request: QuickAddRequest): void {
-    // The MonthViewComponent closes its own modal, so we just open the quick-add dialog
     switch (request.kind) {
       case 'work':
-        this.openWorkShiftDialog(request.context);
+        this.dialogs.openWorkShiftDialog(request.context);
         break;
       case 'workout':
-        this.openWorkoutDialog(request.context);
+        this.dialogs.openWorkoutDialog(request.context);
         break;
       case 'personal':
-        this.openPersonalEventDialog(request.context);
+        this.dialogs.openPersonalEventDialog(request.context);
         break;
       case 'mealprep':
-        this.openMealPrepDialog(request.context);
+        this.dialogs.openMealPrepDialog(request.context);
         break;
     }
   }
 
-  openWorkoutTemplateEditor(workout: Workout): void {
-    this.selectedWorkoutTemplate.set(workout);
-  }
-
-  closeWorkoutTemplateEditor(): void {
-    this.selectedWorkoutTemplate.set(null);
-  }
-
   async onWorkoutTemplateSaved(payload: WorkoutSavePayload): Promise<void> {
-    const selectedWorkout = this.selectedWorkoutTemplate();
+    const selectedWorkout = this.dialogs.selectedWorkoutTemplate();
     if (!selectedWorkout) return;
 
     await this.planner.updateWorkout(payload.workoutId, {
@@ -421,7 +258,7 @@ export class App implements OnInit {
     });
 
     if (payload.addAsPreset) {
-      this.saveWorkoutPreset({
+      this.presets.save({
         name: payload.draft.name.trim(),
         workoutType: payload.draft.workoutType,
         duration: payload.draft.duration,
@@ -430,20 +267,20 @@ export class App implements OnInit {
       });
     }
 
-    this.closeWorkoutTemplateEditor();
+    this.dialogs.closeWorkoutTemplateEditor();
   }
 
   async onWorkoutTemplateDeleted(workoutId: string): Promise<void> {
     await this.planner.removeWorkout(workoutId);
-    this.closeWorkoutTemplateEditor();
+    this.dialogs.closeWorkoutTemplateEditor();
   }
 
   async deleteWorkoutTemplate(workoutId: string, event?: Event): Promise<void> {
     event?.stopPropagation();
     await this.planner.removeWorkout(workoutId);
 
-    if (this.selectedWorkoutTemplate()?.id === workoutId) {
-      this.closeWorkoutTemplateEditor();
+    if (this.dialogs.selectedWorkoutTemplate()?.id === workoutId) {
+      this.dialogs.closeWorkoutTemplateEditor();
     }
   }
 
@@ -456,132 +293,16 @@ export class App implements OnInit {
     drop: CdkDragDrop<CalendarEvent[]>;
     startTime?: number;
   }): void {
-    const dragData = payload.drop.item.data as DragData;
-    const startTimeMinutes = payload.startTime;
-    const weekOffset = this.currentWeekOffset();
-
-    if (isCalendarEvent(dragData)) {
-      this.planner.moveEvent(dragData.id, payload.day);
-      return;
-    }
-
-    if (dragData.kind === 'custom-shift-template') {
-      const shift = dragData.customShift;
-      this.planner.createShiftEvent(
-        shift.label,
-        shift.startTime,
-        shift.endTime,
-        payload.day,
-        shift.commuteMinutes,
-        weekOffset,
-      );
-      return;
-    }
-
-    if (dragData.kind === 'custom-event-template') {
-      const customEventWeekOffset = dragData.customEvent.isRepeatingWeekly ? undefined : weekOffset;
-      this.planner.addCustomEvent(dragData.customEvent, [payload.day], customEventWeekOffset);
-      return;
-    }
-
-    if (dragData.kind === 'workout-template') {
-      const duration = dragData.workout.duration || 60;
-
-      // Check if event spans overnight (start day + duration would go into next day)
-      if (startTimeMinutes !== undefined) {
-        const endTimeMinutes = startTimeMinutes + duration;
-
-        if (endTimeMinutes >= 1440) {
-          // Event spans overnight - split into two events
-          const firstDayDuration = 1440 - startTimeMinutes; // Minutes until midnight
-          const secondDayDuration = endTimeMinutes - 1440; // Minutes after midnight
-
-          // Create event on current day
-          this.planner.addManualEvent(
-            payload.day,
-            'workout',
-            dragData.workout.name,
-            firstDayDuration,
-            dragData.workout.workoutType,
-            dragData.workout.distanceKm,
-            dragData.workout.distanceCountsAsLong,
-            startTimeMinutes,
-            weekOffset,
-            dragData.workout.notes,
-          );
-
-          // Create event on next day
-          const nextDay = (payload.day + 1) % 7;
-          this.planner.addManualEvent(
-            nextDay,
-            'workout',
-            dragData.workout.name,
-            secondDayDuration,
-            dragData.workout.workoutType,
-            dragData.workout.distanceKm,
-            dragData.workout.distanceCountsAsLong,
-            0, // Start at midnight
-            weekOffset,
-            dragData.workout.notes,
-          );
-        } else {
-          // Event fits within single day
-          this.planner.addManualEvent(
-            payload.day,
-            'workout',
-            dragData.workout.name,
-            duration,
-            dragData.workout.workoutType,
-            dragData.workout.distanceKm,
-            dragData.workout.distanceCountsAsLong,
-            startTimeMinutes,
-            weekOffset,
-            dragData.workout.notes,
-          );
-        }
-      } else {
-        // No start time provided, use default
-        this.planner.addManualEvent(
-          payload.day,
-          'workout',
-          dragData.workout.name,
-          duration,
-          dragData.workout.workoutType,
-          dragData.workout.distanceKm,
-          dragData.workout.distanceCountsAsLong,
-          undefined,
-          weekOffset,
-          dragData.workout.notes,
-        );
-      }
-
-      // Update frequency if this is a saved workout
-      if (dragData.workout.frequencyPerWeek && dragData.workout.frequencyPerWeek > 0) {
-        this.planner.decreaseWorkoutFrequency(dragData.workout.id);
-      } else {
-        // Otherwise, remove from unplaced workouts
-        this.planner.removeFirstUnplacedWorkout(dragData.workout.id);
-      }
-      return;
-    }
-
-    this.planner.addManualEvent(
-      payload.day,
-      'mealprep',
-      'Meal Prep',
-      dragData.duration,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      weekOffset,
-    );
+    this.dragDrop.handleDayDrop({
+      ...payload,
+      weekOffset: this.nav.currentWeekOffset(),
+    });
   }
 
   onAddCustomEvent(payload: { customEvent: CustomEvent; days: number[] }): void {
     const customEventWeekOffset = payload.customEvent.isRepeatingWeekly
       ? undefined
-      : this.currentWeekOffset();
+      : this.nav.currentWeekOffset();
     this.planner.addCustomEvent(payload.customEvent, payload.days, customEventWeekOffset);
   }
 
@@ -590,25 +311,25 @@ export class App implements OnInit {
   }
 
   onEventSelected(event: CalendarEvent): void {
-    this.selectedEvent.set(event);
-    this.showEventModal.set(true);
+    this.dialogs.selectedEvent.set(event);
+    this.dialogs.showEventModal.set(true);
   }
 
   onEventModalClose(): void {
-    this.showEventModal.set(false);
-    this.selectedEvent.set(null);
+    this.dialogs.showEventModal.set(false);
+    this.dialogs.selectedEvent.set(null);
   }
 
   onEventUpdated(event: CalendarEvent): void {
     this.planner.updateEvent(event);
-    this.showEventModal.set(false);
-    this.selectedEvent.set(null);
+    this.dialogs.showEventModal.set(false);
+    this.dialogs.selectedEvent.set(null);
   }
 
   onUpdateCommuteForDay(payload: { eventId: string; commuteMinutes: number }): void {
     this.planner.updateEventCommute(payload.eventId, payload.commuteMinutes);
-    this.showEventModal.set(false);
-    this.selectedEvent.set(null);
+    this.dialogs.showEventModal.set(false);
+    this.dialogs.selectedEvent.set(null);
   }
 
   onUpdateCommuteForAllShifts(payload: {
@@ -621,23 +342,8 @@ export class App implements OnInit {
       payload.shiftStartTime,
       payload.commuteMinutes,
     );
-    this.showEventModal.set(false);
-    this.selectedEvent.set(null);
-  }
-
-  createUnplacedWorkoutDragData(workout: {
-    workoutType: WorkoutType;
-    name: string;
-    duration: number;
-    frequencyPerWeek: number;
-    distanceKm?: number;
-    distanceCountsAsLong?: boolean;
-    id: string;
-  }): WorkoutTemplateDragData {
-    return {
-      kind: 'workout-template',
-      workout,
-    };
+    this.dialogs.showEventModal.set(false);
+    this.dialogs.selectedEvent.set(null);
   }
 
   toggleConflictSelection(eventId: string, checked: boolean): void {
@@ -699,48 +405,6 @@ export class App implements OnInit {
     return 'Primarily helps as part of a combined reschedule';
   }
 
-  // View switching methods
-  showDailyView(): void {
-    this.currentView.set('daily');
-    this.updateQueryParams();
-  }
-
-  showWeekView(): void {
-    this.currentView.set('week');
-    this.updateQueryParams();
-  }
-
-  showMonthView(): void {
-    this.currentView.set('month');
-    this.updateQueryParams();
-  }
-
-  showOnboardingView(): void {
-    this.currentView.set('onboarding');
-    this.updateQueryParams();
-  }
-
-  previousWeek(): void {
-    this.currentWeekOffset.update((offset) => offset - 1);
-    this.syncMonthToCurrentWeek();
-    this.updateQueryParams();
-    // Events will be loaded by the effect watching currentWeekOffset
-  }
-
-  nextWeek(): void {
-    this.currentWeekOffset.update((offset) => offset + 1);
-    this.syncMonthToCurrentWeek();
-    this.updateQueryParams();
-    // Events will be loaded by the effect watching currentWeekOffset
-  }
-
-  goToToday(): void {
-    this.currentWeekOffset.set(0);
-    this.syncMonthToCurrentWeek();
-    this.updateQueryParams();
-    // Events will be loaded by the effect watching currentWeekOffset
-  }
-
   suggestWorkouts(): void {
     // Remove previous suggested workout events from the current week before adding fresh suggestions.
     this.planner
@@ -749,11 +413,13 @@ export class App implements OnInit {
         (event) =>
           event.type === 'workout' &&
           event.title.toLowerCase().includes('(suggested)') &&
-          (event.weekOffset ?? 0) === this.currentWeekOffset(),
+          (event.weekOffset ?? 0) === this.nav.currentWeekOffset(),
       )
       .forEach((event) => this.planner.removeEvent(event.id));
 
-    const suggestions = this.workoutScheduler.generateSuggestedWorkouts(this.currentWeekOffset());
+    const suggestions = this.workoutScheduler.generateSuggestedWorkouts(
+      this.nav.currentWeekOffset(),
+    );
 
     suggestions.forEach((suggestion) => {
       this.planner.addManualEvent(
@@ -765,27 +431,18 @@ export class App implements OnInit {
         suggestion.distance,
         undefined,
         suggestion.startMinutes,
-        this.currentWeekOffset(),
+        this.nav.currentWeekOffset(),
       );
     });
   }
 
-  fillFromPreviousWeek(): void {
-    // Always show the dialog to let user choose what to fill
-    this.showFillDialog.set(true);
-  }
-
   confirmFillFromPreviousWeek(option: 'work' | 'workouts-events' | 'everything'): void {
     this.copyEventsFromPreviousWeek(option);
-    this.showFillDialog.set(false);
-  }
-
-  closeFillDialog(): void {
-    this.showFillDialog.set(false);
+    this.dialogs.closeFillDialog();
   }
 
   private copyEventsFromPreviousWeek(option: 'work' | 'workouts-events' | 'everything'): void {
-    const targetWeekOffset = this.currentWeekOffset();
+    const targetWeekOffset = this.nav.currentWeekOffset();
     const sourceWeekOffset = targetWeekOffset - 1;
 
     const isIncludedType = (event: CalendarEvent): boolean =>
@@ -822,36 +479,12 @@ export class App implements OnInit {
     });
   }
 
-  getWeekDateLabels(): string[] {
-    const { start } = this.getCurrentWeekDates();
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + index);
-      return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
-    });
+  getCurrentWeekLabel(): string {
+    return this.nav.getCurrentWeekLabel();
   }
 
-  getCurrentWeekLabel(): string {
-    const today = new Date();
-    const mondayOffset = today.getDay() === 0 ? -6 : 1 - today.getDay();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() + mondayOffset);
-    weekStart.setDate(weekStart.getDate() + this.currentWeekOffset() * 7);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-
-    const startMonth = weekStart.toLocaleString('default', { month: 'short' });
-    const endMonth = weekEnd.toLocaleString('default', { month: 'short' });
-    const startDay = weekStart.getDate();
-    const endDay = weekEnd.getDate();
-    const year = weekEnd.getFullYear();
-
-    if (weekStart.getMonth() === weekEnd.getMonth()) {
-      return `${startMonth} ${startDay} - ${endDay}, ${year}`;
-    }
-
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+  getWeekDateLabels(): string[] {
+    return this.nav.getWeekDateLabels();
   }
 
   // Daily view helpers
@@ -895,22 +528,10 @@ export class App implements OnInit {
     };
   }
 
-  previousMonth(): void {
-    const current = this.currentMonthDate();
-    const prev = new Date(current.getFullYear(), current.getMonth() - 1, 1);
-    this.currentMonthDate.set(prev);
-  }
-
-  nextMonth(): void {
-    const current = this.currentMonthDate();
-    const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
-    this.currentMonthDate.set(next);
-  }
-
   // Quick-add card event handlers
   async onWorkoutAdded(payload: WorkoutQuickAddPayload): Promise<void> {
     if (payload.kind === 'preset-planned') {
-      const preset = this.workoutPresets().find((item) => item.id === payload.presetId);
+      const preset = this.presets.getById(payload.presetId);
       if (!preset) {
         return;
       }
@@ -927,7 +548,7 @@ export class App implements OnInit {
         payload.weekOffset,
         payload.notes || preset.notes,
       );
-      this.closeWorkoutDialog();
+      this.dialogs.closeWorkoutDialog();
       return;
     }
 
@@ -946,7 +567,7 @@ export class App implements OnInit {
       );
 
       if (payload.saveAsPreset) {
-        this.saveWorkoutPreset({
+        this.presets.save({
           name: payload.sessionName,
           workoutType: payload.type,
           duration: payload.duration,
@@ -955,12 +576,12 @@ export class App implements OnInit {
         });
       }
 
-      this.closeWorkoutDialog();
+      this.dialogs.closeWorkoutDialog();
       return;
     }
 
     if (payload.kind === 'preset') {
-      const preset = this.workoutPresets().find((item) => item.id === payload.presetId);
+      const preset = this.presets.getById(payload.presetId);
       if (!preset) {
         return;
       }
@@ -973,7 +594,7 @@ export class App implements OnInit {
         preset.distanceKm,
         payload.notes || preset.notes,
       );
-      this.closeWorkoutDialog();
+      this.dialogs.closeWorkoutDialog();
       return;
     }
 
@@ -987,7 +608,7 @@ export class App implements OnInit {
     );
 
     if (payload.saveAsPreset) {
-      this.saveWorkoutPreset({
+      this.presets.save({
         name: payload.sessionName,
         workoutType: payload.type,
         duration: payload.duration,
@@ -996,7 +617,7 @@ export class App implements OnInit {
       });
     }
 
-    this.closeWorkoutDialog();
+    this.dialogs.closeWorkoutDialog();
   }
 
   onWorkoutPresetUpdated(payload: {
@@ -1007,25 +628,11 @@ export class App implements OnInit {
     distanceKm?: number;
     notes?: string;
   }): void {
-    const nextPresets = this.workoutPresets().map((preset) =>
-      preset.id === payload.id
-        ? {
-            ...preset,
-            name: payload.name,
-            workoutType: payload.workoutType,
-            duration: payload.duration,
-            distanceKm: payload.distanceKm,
-            notes: payload.notes,
-          }
-        : preset,
-    );
-
-    this.persistWorkoutPresets(nextPresets);
+    this.presets.update(payload);
   }
 
   onWorkoutPresetDeleted(presetId: string): void {
-    const nextPresets = this.workoutPresets().filter((preset) => preset.id !== presetId);
-    this.persistWorkoutPresets(nextPresets);
+    this.presets.delete(presetId);
   }
 
   onWorkShiftAdded(payload: {
@@ -1050,7 +657,7 @@ export class App implements OnInit {
         payload.weekOffset,
       );
     });
-    this.closeWorkShiftDialog();
+    this.dialogs.closeWorkShiftDialog();
   }
 
   onPersonalEventAdded(payload: {
@@ -1076,7 +683,7 @@ export class App implements OnInit {
       const weekOffset = customEvent.isRepeatingWeekly ? undefined : payload.weekOffset;
       this.planner.addCustomEvent(customEvent, [dayIndex], weekOffset);
     });
-    this.closePersonalEventDialog();
+    this.dialogs.closePersonalEventDialog();
   }
 
   onMealPrepAdded(payload: MealPrepQuickAddPayload): void {
@@ -1091,193 +698,15 @@ export class App implements OnInit {
       this.timeToMinutes(payload.startTime),
       payload.weekOffset,
     );
-    this.closeMealPrepDialog();
+    this.dialogs.closeMealPrepDialog();
   }
 
-  // Month view event mapping
   getCurrentWeekDates(): { start: Date; end: Date } {
-    const today = new Date();
-    const jsDay = today.getDay(); // 0 = Sunday
-    const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay; // Calculate Monday offset
-
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() + mondayOffset + this.currentWeekOffset() * 7);
-    weekStart.setHours(0, 0, 0, 0);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-
-    return { start: weekStart, end: weekEnd };
-  }
-
-  private syncMonthToCurrentWeek(): void {
-    const { start } = this.getCurrentWeekDates();
-    this.currentMonthDate.set(new Date(start.getFullYear(), start.getMonth(), 1));
+    return this.nav.getCurrentWeekDates();
   }
 
   private timeToMinutes(value: string): number {
     const [hours, minutes] = value.split(':').map(Number);
     return hours * 60 + minutes;
-  }
-
-  /** Returns the week offset (relative to today's real week = 0) for any arbitrary date. */
-  private getWeekOffsetForDate(date: Date): number {
-    const jsDay = date.getDay();
-    const dateMonday = new Date(date);
-    dateMonday.setDate(date.getDate() + (jsDay === 0 ? -6 : 1 - jsDay));
-    dateMonday.setHours(0, 0, 0, 0);
-
-    const today = new Date();
-    const todayMonday = new Date(today);
-    todayMonday.setDate(today.getDate() + (today.getDay() === 0 ? -6 : 1 - today.getDay()));
-    todayMonday.setHours(0, 0, 0, 0);
-
-    return Math.round((dateMonday.getTime() - todayMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
-  }
-
-  /**
-   * Get reminders based on today's schedule
-   * Used by the daily view component for backwards compatibility
-   */
-  private getTodaysEvents(): CalendarEvent[] {
-    const today = new Date();
-    const todayIndex = this.getTodayIndex();
-    const todayDateStr = this.planner.formatDate(today);
-    
-    return this.planner
-      .events()
-      .filter((event) => {
-        if (event.day !== todayIndex) return false;
-        if (event.isRepeatingWeekly) return true;
-        if (event.date) {
-          return event.date === todayDateStr;
-        }
-        return event.weekOffset === undefined || event.weekOffset === 0;
-      })
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }
-  
-  private getNextUpcomingEvents(): CalendarEvent[] {
-    const now = new Date();
-    const upcoming: Array<{ event: CalendarEvent; start: number }> = [];
-
-    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
-      const date = new Date(now);
-      date.setDate(now.getDate() + dayOffset);
-      date.setHours(0, 0, 0, 0);
-
-      const jsDay = date.getDay();
-      const weekdayIndex = jsDay === 0 ? 6 : jsDay - 1;
-      const dateStr = this.planner.formatDate(date);
-
-      const dayEvents = this.planner
-        .events()
-        .filter((event) => {
-          if (event.day !== weekdayIndex) return false;
-          if (event.isRepeatingWeekly) return true;
-          if (event.date) {
-            return event.date === dateStr;
-          }
-          const weekOffset = this.getWeekOffsetForDate(date);
-          return event.weekOffset === undefined || event.weekOffset === weekOffset;
-        });
-
-      dayEvents.forEach((event) => {
-        const [hours, minutes] = event.startTime.split(':').map(Number);
-        const eventStart = new Date(date);
-        eventStart.setHours(hours, minutes, 0, 0);
-
-        if (eventStart.getTime() <= now.getTime()) {
-          return;
-        }
-
-        upcoming.push({ event, start: eventStart.getTime() });
-      });
-    }
-
-    return upcoming
-      .sort((a, b) => a.start - b.start)
-      .slice(0, 6)
-      .map((item) => item.event);
-  }
-
-  private setActiveQuickAddDialog(
-    kind: 'work' | 'workout' | 'personal' | 'mealprep',
-    target: QuickAddTargetContext | null,
-  ): void {
-    this.showWorkShiftCard.set(kind === 'work');
-    this.showWorkoutCard.set(kind === 'workout');
-    this.showPersonalEventCard.set(kind === 'personal');
-    this.showMealPrepCard.set(kind === 'mealprep');
-    this.quickAddTarget.set(target);
-  }
-
-  private clearQuickAddTargetIfIdle(): void {
-    if (
-      !this.showWorkShiftCard() &&
-      !this.showWorkoutCard() &&
-      !this.showPersonalEventCard() &&
-      !this.showMealPrepCard()
-    ) {
-      this.quickAddTarget.set(null);
-    }
-  }
-
-  private getQuickAddTargetForMonthDay(dateOfMonth: number): QuickAddTargetContext {
-    const currentMonth = this.currentMonthDate();
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateOfMonth);
-    const jsDay = date.getDay();
-
-    return {
-      day: jsDay === 0 ? 6 : jsDay - 1,
-      weekOffset: this.getWeekOffsetForDate(date),
-      label: date.toLocaleString('default', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      }),
-      date,
-    };
-  }
-
-  private loadWorkoutPresets(): WorkoutPreset[] {
-    try {
-      const raw = localStorage.getItem(WORKOUT_PRESETS_STORAGE_KEY);
-      if (!raw) {
-        return [];
-      }
-
-      const parsed = JSON.parse(raw) as WorkoutPreset[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private saveWorkoutPreset(preset: Omit<WorkoutPreset, 'id'>): void {
-    const nextPresets = [
-      ...this.workoutPresets(),
-      {
-        id: crypto.randomUUID(),
-        name: preset.name.trim(),
-        workoutType: preset.workoutType,
-        duration: preset.duration,
-        distanceKm: preset.distanceKm,
-        notes: preset.notes,
-      },
-    ];
-
-    this.persistWorkoutPresets(nextPresets);
-  }
-
-  private persistWorkoutPresets(nextPresets: WorkoutPreset[]): void {
-    this.workoutPresets.set(nextPresets);
-
-    try {
-      localStorage.setItem(WORKOUT_PRESETS_STORAGE_KEY, JSON.stringify(nextPresets));
-    } catch {
-      // Ignore storage failures and keep the in-memory presets available for the session.
-    }
   }
 }
