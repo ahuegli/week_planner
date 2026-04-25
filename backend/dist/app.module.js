@@ -22,6 +22,8 @@ const planned_session_module_1 = require("./planned-session/planned-session.modu
 const weekly_progress_module_1 = require("./weekly-progress/weekly-progress.module");
 const cycle_profile_module_1 = require("./cycle-profile/cycle-profile.module");
 const note_module_1 = require("./note/note.module");
+const energy_check_in_module_1 = require("./energy-check-in/energy-check-in.module");
+const symptom_log_module_1 = require("./symptom-log/symptom-log.module");
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 const databaseImports = USE_DATABASE
     ? [
@@ -47,6 +49,8 @@ const databaseImports = USE_DATABASE
         weekly_progress_module_1.WeeklyProgressModule,
         cycle_profile_module_1.CycleProfileModule,
         note_module_1.NoteModule,
+        energy_check_in_module_1.EnergyCheckInModule,
+        symptom_log_module_1.SymptomLogModule,
     ]
     : [mock_data_module_1.MockDataModule];
 let AppModule = class AppModule {

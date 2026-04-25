@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CycleProfile } from './cycle-profile.entity';
 import { UpdateCycleProfileDto } from './cycle-profile.dto';
+import { SchedulerSettingsService } from '../scheduler-settings/scheduler-settings.service';
 
 @Injectable()
 export class CycleProfileService {
   constructor(
     @InjectRepository(CycleProfile)
     private readonly cycleRepository: Repository<CycleProfile>,
+    private readonly schedulerSettingsService: SchedulerSettingsService,
   ) {}
 
   async getByUser(userId: string): Promise<CycleProfile> {
@@ -105,5 +107,52 @@ export class CycleProfileService {
       averageCycleLength: cycleLength,
       mode: profile.mode,
     };
+  }
+
+  async computePhasesForWeek(
+    userId: string,
+    weekStartDate: string,
+  ): Promise<{
+    phasesByDay: Array<'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown'>;
+    confidence: number;
+    mode: string;
+    trackingEnabled: boolean;
+  }> {
+    const profile = await this.getByUser(userId);
+    const settings = await this.schedulerSettingsService.findByUser(userId);
+    const trackingEnabled = settings.cycleTrackingEnabled;
+
+    const unknown = Array(7).fill('unknown') as Array<'unknown'>;
+
+    if (!trackingEnabled || profile.mode !== 'natural' || !profile.lastPeriodStart || profile.currentPhaseOverride) {
+      return { phasesByDay: unknown, confidence: 0, mode: profile.mode, trackingEnabled };
+    }
+
+    const weekStart = new Date(`${weekStartDate}T00:00:00Z`);
+    const periodStart = new Date(`${profile.lastPeriodStart}T00:00:00Z`);
+    const cycleLength = Math.max(21, profile.averageCycleLength || 28);
+    const lutealStart = cycleLength - 13;
+    const ovulationStart = Math.max(6, lutealStart - 3);
+
+    const phasesByDay = Array.from({ length: 7 }, (_, i) => {
+      const diffDays = Math.max(
+        0,
+        Math.floor((weekStart.getTime() + i * 24 * 60 * 60 * 1000 - periodStart.getTime()) / (24 * 60 * 60 * 1000)),
+      );
+      const cycleDay = (diffDays % cycleLength) + 1;
+
+      if (cycleDay <= 5) return 'menstrual' as const;
+      if (cycleDay >= lutealStart) return 'luteal' as const;
+      if (cycleDay >= ovulationStart && cycleDay < lutealStart) return 'ovulation' as const;
+      return 'follicular' as const;
+    });
+
+    let confidence = 1.0;
+    if (profile.variability === 'medium') confidence *= 0.75;
+    if (profile.variability === 'high') confidence *= 0.5;
+    if ((profile.recentCycleLengths ?? []).length < 3) confidence *= 0.7;
+    confidence = Math.min(1.0, Math.max(0.0, confidence));
+
+    return { phasesByDay, confidence, mode: profile.mode, trackingEnabled };
   }
 }

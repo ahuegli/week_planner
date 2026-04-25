@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
@@ -72,6 +72,9 @@ export class SettingsPageComponent {
   protected readonly fridgeMateConnected = signal(false);
 
   protected readonly cycleTrackingEnabled = cycleTrackingEnabled;
+  protected readonly cycleAwareSchedulingEnabled = computed(
+    () => this.dataStore.schedulerSettings()?.cycleTrackingEnabled ?? false,
+  );
   protected readonly cycleStatus = signal<'regular' | 'irregular' | 'hormonal' | 'menopause'>('regular');
   protected readonly cycleLastPeriod = signal('');
   protected readonly cycleLength = signal(28);
@@ -136,6 +139,16 @@ export class SettingsPageComponent {
 
   protected setMealPrepSessions(value: string): void {
     this.mealPrepPerWeek.set(value);
+  }
+
+  protected async toggleCycleAwareScheduling(): Promise<void> {
+    const oldValue = this.dataStore.schedulerSettings()?.cycleTrackingEnabled ?? false;
+    const newValue = !oldValue;
+    await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: newValue });
+    const plan = this.dataStore.currentPlan();
+    if (plan && confirm('Cycle tracking changed — reschedule this week to apply?')) {
+      await this.dataStore.rescheduleConflicts(plan.id);
+    }
   }
 
   protected async saveSettings(): Promise<void> {

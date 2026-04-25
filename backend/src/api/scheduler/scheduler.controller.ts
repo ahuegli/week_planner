@@ -32,12 +32,14 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_WEEK_CONTEXT,
   SchedulerSettings as SchedulerSettingsModel,
+  WeekContext,
   Workout,
   WorkoutType,
 } from '../../shared/models';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { TrainingPlanService } from '../../training-plan/training-plan.service';
 import { SchedulerSettingsService } from '../../scheduler-settings/scheduler-settings.service';
+import { CycleProfileService } from '../../cycle-profile/cycle-profile.service';
 import { CalendarEvent } from '../../calendar-event/calendar-event.entity';
 import { PlannedSession } from '../../planned-session/planned-session.entity';
 import { SchedulerSettings } from '../../scheduler-settings/scheduler-settings.entity';
@@ -53,6 +55,7 @@ export class SchedulerController {
     private readonly scoringEngine: ScoringEngineService,
     private readonly trainingPlanService: TrainingPlanService,
     private readonly schedulerSettingsService: SchedulerSettingsService,
+    private readonly cycleProfileService: CycleProfileService,
     private readonly dataSource: DataSource,
     @InjectRepository(CalendarEvent)
     private readonly calendarEventRepository: Repository<CalendarEvent>,
@@ -74,12 +77,23 @@ export class SchedulerController {
       });
     }
 
+    let weekContext: WeekContext = dto.weekContext ?? { ...DEFAULT_WEEK_CONTEXT };
+    if (!weekContext.cyclePhasesByDay && range) {
+      const cycleData = await this.cycleProfileService.computePhasesForWeek(userId, range.startDate);
+      weekContext = {
+        ...weekContext,
+        cyclePhasesByDay: cycleData.phasesByDay,
+        cycleConfidence: cycleData.confidence,
+        cycleTrackingEnabled: cycleData.trackingEnabled,
+      };
+    }
+
     const input: GenerationInput = {
       existingEvents: dto.existingEvents,
       workouts: dto.workouts,
       mealPrep: dto.mealPrep,
       settings: dto.settings,
-      weekContext: dto.weekContext,
+      weekContext,
     };
 
     const result = this.scheduleGenerator.generate(input);
@@ -397,9 +411,13 @@ export class SchedulerController {
           ),
         ];
 
+        const cycleData = await this.cycleProfileService.computePhasesForWeek(userId, week.startDate);
         const weekContext = {
           ...DEFAULT_WEEK_CONTEXT,
           previousWeekEndedWithWorkout: previousWeekEndWorkouts.length > 0,
+          cyclePhasesByDay: cycleData.phasesByDay,
+          cycleConfidence: cycleData.confidence,
+          cycleTrackingEnabled: cycleData.trackingEnabled,
         };
 
         const generationInput: GenerationInput = {

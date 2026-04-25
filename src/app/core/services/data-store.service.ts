@@ -1,11 +1,14 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { CalendarEvent as UiCalendarEvent } from '../../mock-data';
 import {
   CalendarEvent,
+  CreateEnergyCheckInPayload,
   CreateNotePayload,
+  CreateSymptomLogPayload,
   CycleCurrentPhase,
   CycleProfile,
+  EnergyCheckIn,
   IHaveTimeSuggestion,
   MealprepSettings,
   Note,
@@ -17,19 +20,23 @@ import {
   SessionCarryForwardResult,
   SchedulerSettings,
   SkipSessionResponse,
+  SymptomLog,
   TrainingPlan,
   UpdateNotePayload,
   WeeklyProgress,
   Workout,
 } from '../models/app-data.models';
 import { CalendarEventApiService } from './calendar-event-api.service';
+import { EnergyCheckInApiService } from './energy-check-in-api.service';
 import { NoteApiService } from './note-api.service';
+import { SymptomLogApiService } from './symptom-log-api.service';
 import { WorkoutApiService } from './workout-api.service';
 import { SettingsApiService } from './settings-api.service';
 import { PlanApiService } from './plan-api.service';
 import { CycleApiService } from './cycle-api.service';
 import { SchedulerApiService } from './scheduler-api.service';
 import { cycleTrackingEnabled } from '../../shared/state/cycle-ui.state';
+import { CycleStatus } from '../../features/onboarding/onboarding.models';
 import { UiFeedbackService } from '../../shared/ui-feedback.service';
 import { getWorkoutDescription } from '../utils/workout-descriptions';
 
@@ -46,16 +53,35 @@ export class DataStoreService {
   readonly cycleProfile = signal<CycleProfile | null>(null);
   readonly currentPhase = signal<CycleCurrentPhase | null>(null);
   readonly notes = signal<Note[]>([]);
+  readonly energyCheckIns = signal<EnergyCheckIn[]>([]);
+  readonly symptomLogs = signal<SymptomLog[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly showCoachAdjustmentPrompt = signal(false);
   readonly recentSkippedKeyCount = signal(0);
 
+  readonly cycleStatusForDisplay = computed<CycleStatus | null>(() => {
+    const profile = this.cycleProfile();
+    if (!profile) return null;
+    switch (profile.mode) {
+      case 'natural':
+        return profile.variability === 'high' ? 'irregular' : 'regular';
+      case 'hormonal_contraception':
+        return 'hormonal';
+      case 'perimenopause':
+        return 'menopause';
+      case 'manual':
+        return 'regular';
+    }
+  });
+
   private readonly hasLoaded = signal(false);
 
   constructor(
     private readonly calendarEventApi: CalendarEventApiService,
+    private readonly energyCheckInApi: EnergyCheckInApiService,
     private readonly noteApi: NoteApiService,
+    private readonly symptomLogApi: SymptomLogApiService,
     private readonly workoutApi: WorkoutApiService,
     private readonly settingsApi: SettingsApiService,
     private readonly planApi: PlanApiService,
@@ -562,6 +588,13 @@ export class DataStoreService {
       shiftsDeleted,
       reschedule,
     };
+  }
+
+  async rescheduleConflicts(planId: string): Promise<void> {
+    const result = await firstValueFrom(
+      this.schedulerApi.rescheduleConflicts(planId)
+    );
+    await this.loadPlan();
   }
 
   async deletePlan(planId: string): Promise<void> {
@@ -1076,6 +1109,60 @@ export class DataStoreService {
       console.error('[DataStore] Failed to delete note', error);
       this.notes.set(snapshot);
       this.error.set('Could not delete note.');
+    }
+  }
+
+  async loadEnergyCheckIns(startDate?: string, endDate?: string): Promise<void> {
+    try {
+      const items = await firstValueFrom(this.energyCheckInApi.list(startDate, endDate));
+      this.energyCheckIns.set(items);
+    } catch (error) {
+      console.error('[DataStore] Failed to load energy check-ins', error);
+    }
+  }
+
+  async saveEnergyCheckIn(dto: CreateEnergyCheckInPayload): Promise<EnergyCheckIn | null> {
+    const existing = this.energyCheckIns().find((e) => e.date === dto.date && e.source === dto.source);
+    try {
+      let saved: EnergyCheckIn;
+      if (existing) {
+        saved = await firstValueFrom(this.energyCheckInApi.update(existing.id, { level: dto.level }));
+        this.energyCheckIns.update((list) => list.map((e) => (e.id === existing.id ? saved : e)));
+      } else {
+        saved = await firstValueFrom(this.energyCheckInApi.create(dto));
+        this.energyCheckIns.update((list) => [...list, saved]);
+      }
+      return saved;
+    } catch (error) {
+      console.error('[DataStore] Failed to save energy check-in', error);
+      return null;
+    }
+  }
+
+  async loadSymptomLogs(startDate?: string, endDate?: string): Promise<void> {
+    try {
+      const items = await firstValueFrom(this.symptomLogApi.list(startDate, endDate));
+      this.symptomLogs.set(items);
+    } catch (error) {
+      console.error('[DataStore] Failed to load symptom logs', error);
+    }
+  }
+
+  async saveSymptomLog(dto: CreateSymptomLogPayload): Promise<SymptomLog | null> {
+    const existing = this.symptomLogs().find((s) => s.date === dto.date);
+    try {
+      let saved: SymptomLog;
+      if (existing) {
+        saved = await firstValueFrom(this.symptomLogApi.update(existing.id, dto));
+        this.symptomLogs.update((list) => list.map((s) => (s.id === existing.id ? saved : s)));
+      } else {
+        saved = await firstValueFrom(this.symptomLogApi.create(dto));
+        this.symptomLogs.update((list) => [...list, saved]);
+      }
+      return saved;
+    } catch (error) {
+      console.error('[DataStore] Failed to save symptom log', error);
+      return null;
     }
   }
 

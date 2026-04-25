@@ -41,47 +41,57 @@ interface PhaseSegment {
           <p class="section-sub">Set up cycle tracking in Settings to get started.</p>
           <a routerLink="/settings" class="btn-secondary setup-link">Go to Settings</a>
         </article>
-      } @else if (!cycleProfile()!.lastPeriodStart) {
-        <article class="section-card card">
-          <h2 class="section-title">You're almost ready</h2>
-          <p class="section-sub">Log your period start date to begin tracking.</p>
-          <button type="button" class="btn-secondary period-btn" (click)="periodStartedToday()">Log period start as today</button>
-          <a routerLink="/settings" class="text-link">Or set a specific date in Settings</a>
-        </article>
       } @else {
-        <article class="phase-card card">
-          <div class="phase-ring-wrap" aria-label="Cycle phase ring">
-            <svg viewBox="0 0 180 180" width="180" height="180" class="phase-ring-svg" role="img" aria-label="Cycle phases">
-              <circle cx="90" cy="90" r="68" class="phase-track" />
-
-              @for (segment of phaseSegments(); track segment.key) {
-                <path
-                  [attr.d]="arcPathForDays(segment.startDay, segment.endDay)"
-                  [attr.stroke]="segment.color"
-                  class="phase-arc"
-                  [attr.aria-label]="segment.label"
-                />
-              }
-
-              @if (isIrregular()) {
-                <path [attr.d]="uncertaintyArcPath()" class="uncertainty-arc" />
-              }
-
-              <circle [attr.cx]="markerX()" [attr.cy]="markerY()" r="5" class="phase-marker-dot" />
+        @if (showsPhaseBanner()) {
+          <div class="mode-banner" role="note">
+            <svg class="banner-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
+            <p class="banner-text">{{ bannerMessage() }}</p>
+          </div>
+        }
+        @if (showsPhaseRing()) {
+          <article class="phase-card card">
+            <div class="phase-ring-wrap" aria-label="Cycle phase ring">
+              <svg viewBox="0 0 180 180" width="180" height="180" class="phase-ring-svg" role="img" aria-label="Cycle phases">
+                <circle cx="90" cy="90" r="68" class="phase-track" />
 
-            <div class="phase-center">
-              <p class="phase-day">Day {{ currentDay() }}</p>
-              <p class="phase-name-text">{{ currentPhaseLabel() }}</p>
+                @for (segment of phaseSegments(); track segment.key) {
+                  <path
+                    [attr.d]="arcPathForDays(segment.startDay, segment.endDay)"
+                    [attr.stroke]="segment.color"
+                    class="phase-arc"
+                    [attr.aria-label]="segment.label"
+                  />
+                }
+
+                @if (isIrregular()) {
+                  <path [attr.d]="uncertaintyArcPath()" class="uncertainty-arc" />
+                }
+
+                <circle [attr.cx]="markerX()" [attr.cy]="markerY()" r="5" class="phase-marker-dot" />
+              </svg>
+
+              <div class="phase-center">
+                <p class="phase-day">Day {{ currentDay() }}</p>
+                <p class="phase-name-text">{{ currentPhaseLabel() }}</p>
+              </div>
             </div>
-          </div>
 
-          <div class="phase-legend">
-            @for (segment of phaseSegments(); track segment.key) {
-              <span class="phase-legend-item"><span class="pl-dot" [style.background]="segment.color"></span>{{ segment.label }}</span>
-            }
-          </div>
-        </article>
+            <div class="phase-legend">
+              @for (segment of phaseSegments(); track segment.key) {
+                <span class="phase-legend-item"><span class="pl-dot" [style.background]="segment.color"></span>{{ segment.label }}</span>
+              }
+            </div>
+          </article>
+        } @else if (!showsPhaseBanner()) {
+          <article class="section-card card">
+            <h2 class="section-title">You're almost ready</h2>
+            <p class="section-sub">Log your period start date to begin tracking.</p>
+            <button type="button" class="btn-secondary period-btn" (click)="periodStartedToday()">Log period start as today</button>
+            <a routerLink="/settings" class="text-link">Or set a specific date in Settings</a>
+          </article>
+        }
       }
 
       <article class="section-card card">
@@ -169,6 +179,9 @@ interface PhaseSegment {
     .period-row { display: flex; gap: 10px; }
     .period-btn { flex: 1; }
     .text-link { background: transparent; border: none; color: var(--color-text-secondary); font-size: 13px; text-decoration: underline; text-decoration-color: rgba(0,0,0,0.2); cursor: pointer; text-align: left; padding: 0; }
+    .mode-banner { display: flex; align-items: flex-start; gap: 10px; background: var(--color-bg-secondary, #F0EDE8); border-left: 4px solid var(--color-primary, #2d4d7a); border-radius: 8px; padding: 12px; }
+    .banner-icon { flex-shrink: 0; color: var(--color-primary, #2d4d7a); margin-top: 1px; }
+    .banner-text { font-size: 14px; color: var(--color-text); margin: 0; line-height: 1.5; }
     .bottom-spacer { height: 80px; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -183,6 +196,32 @@ export class CyclePageComponent {
   protected readonly cycleTrackingEnabled = cycleTrackingEnabled;
   protected readonly cycleProfile = computed(() => this.dataStore.cycleProfile());
   protected readonly currentPhase = computed(() => this.dataStore.currentPhase());
+
+  protected readonly showsPhaseRing = computed(() => {
+    const profile = this.cycleProfile();
+    if (!profile) return false;
+    if (!this.cycleTrackingEnabled()) return false;
+    return profile.mode === 'natural' && !!profile.lastPeriodStart;
+  });
+
+  protected readonly showsPhaseBanner = computed(() => {
+    const profile = this.cycleProfile();
+    if (!profile) return false;
+    if (!this.cycleTrackingEnabled()) return false;
+    return profile.mode === 'hormonal_contraception' || profile.mode === 'perimenopause';
+  });
+
+  protected readonly bannerMessage = computed(() => {
+    const profile = this.cycleProfile();
+    if (!profile) return '';
+    if (profile.mode === 'hormonal_contraception') {
+      return "You're on hormonal contraception, so phase-based predictions don't apply. We'll use your energy and symptom logs to adapt your training.";
+    }
+    if (profile.mode === 'perimenopause') {
+      return "Your cycle is likely irregular — we're using your logged energy and symptoms instead of phase predictions to adapt your training.";
+    }
+    return '';
+  });
 
   protected readonly cycleLength = computed(() => this.currentPhase()?.cycleLengthDays ?? 28);
   protected readonly currentDay = computed(() => this.currentPhase()?.day ?? 1);
@@ -245,8 +284,27 @@ export class CyclePageComponent {
     }
   }
 
-  protected saveCheckin(): void {
-    console.log('Saved cycle check-in:', this.energyLevel(), this.selectedSymptoms(), this.otherSymptom());
+  protected async saveCheckin(): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    const energyLevel = this.energyLevel();
+    const symptoms = this.selectedSymptoms();
+    const otherSymptom = this.otherSymptom().trim();
+
+    if (energyLevel) {
+      await this.dataStore.saveEnergyCheckIn({
+        date: today,
+        level: energyLevel,
+        source: 'daily_checkin',
+      });
+    }
+
+    if (symptoms.length > 0 || otherSymptom) {
+      await this.dataStore.saveSymptomLog({
+        date: today,
+        symptoms,
+        otherSymptom: otherSymptom || null,
+      });
+    }
   }
 
   protected async periodStartedToday(): Promise<void> {

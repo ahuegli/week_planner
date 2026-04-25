@@ -343,6 +343,16 @@
           </div>
         </div>
 
+        <div class="setting-block">
+          <div class="setting-row">
+            <div>
+              <p class="block-title">Cycle-aware scheduling</p>
+              <p class="subtle-text">Adjust workout placement based on your cycle phase</p>
+            </div>
+            <button type="button" class="switch" [class.on]="cycleAwareSchedulingEnabled()" (click)="toggleCycleAwareScheduling()"><span></span></button>
+          </div>
+        </div>
+
         @if (cycleTrackingEnabled()) {
           <div class="radio-list">
             <label><input type="radio" name="cycle-status" value="regular" [checked]="cycleStatus() === 'regular'" (change)="cycleStatus.set('regular')" /> I have regular cycles</label>

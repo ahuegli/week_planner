@@ -7,7 +7,7 @@ import { OnboardingStepSportComponent } from '../features/onboarding/onboarding-
 import { OnboardingStepSummaryComponent } from '../features/onboarding/onboarding-step-summary.component';
 import { OnboardingStepWelcomeComponent } from '../features/onboarding/onboarding-step-welcome.component';
 import { OnboardingStepWorkComponent } from '../features/onboarding/onboarding-step-work.component';
-import { DEFAULT_ONBOARDING_DATA, GoalMode, OnboardingData } from '../features/onboarding/onboarding.models';
+import { CycleStatus, DEFAULT_ONBOARDING_DATA, GoalMode, OnboardingData } from '../features/onboarding/onboarding.models';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
 import { DataStoreService } from '../core/services/data-store.service';
 import { PlanMode } from '../core/models/app-data.models';
@@ -122,6 +122,17 @@ export class OnboardingPageComponent {
     await this.dataStore.generatePlanTemplate(createdPlan.id);
     await this.dataStore.scheduleEntirePlan(createdPlan.id);
 
+    await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
+    if (data.cycleEnabled) {
+      const cycleBackendData = this.mapCycleStatusToBackendMode(data.cycleStatus);
+      await this.dataStore.updateCycleProfile({
+        mode: cycleBackendData.mode,
+        variability: cycleBackendData.variability,
+        averageCycleLength: data.cycleLength,
+        lastPeriodStart: data.lastPeriodDate || null,
+      });
+    }
+
     this.sharedCycleTrackingEnabled.set(data.cycleEnabled);
     this.loading.set(false);
 
@@ -130,6 +141,18 @@ export class OnboardingPageComponent {
     }
 
     await this.router.navigateByUrl('/plan');
+  }
+
+  private mapCycleStatusToBackendMode(status: CycleStatus): {
+    mode: 'natural' | 'hormonal_contraception' | 'perimenopause' | 'manual';
+    variability: 'low' | 'medium' | 'high';
+  } {
+    switch (status) {
+      case 'regular': return { mode: 'natural', variability: 'low' };
+      case 'irregular': return { mode: 'natural', variability: 'high' };
+      case 'hormonal': return { mode: 'hormonal_contraception', variability: 'low' };
+      case 'menopause': return { mode: 'perimenopause', variability: 'high' };
+    }
   }
 
   private resolvePlanMode(goal: GoalMode): PlanMode {

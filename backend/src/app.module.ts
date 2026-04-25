@@ -13,6 +13,8 @@ import { PlannedSessionModule } from './planned-session/planned-session.module';
 import { WeeklyProgressModule } from './weekly-progress/weekly-progress.module';
 import { CycleProfileModule } from './cycle-profile/cycle-profile.module';
 import { NoteModule } from './note/note.module';
+import { EnergyCheckInModule } from './energy-check-in/energy-check-in.module';
+import { SymptomLogModule } from './symptom-log/symptom-log.module';
 
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 
@@ -40,6 +42,8 @@ const databaseImports = USE_DATABASE
       WeeklyProgressModule,
       CycleProfileModule,
       NoteModule,
+      EnergyCheckInModule,
+      SymptomLogModule,
     ]
   : [MockDataModule];
 

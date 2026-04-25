@@ -49,6 +49,7 @@ export interface SchedulerSettings {
   enduranceWeight: number;
   strengthWeight: number;
   yogaWeight: number;
+  cycleTrackingEnabled: boolean;
 }
 
 export interface MealprepSettings {
@@ -310,3 +311,41 @@ export interface CreateNotePayload {
 }
 
 export type UpdateNotePayload = Partial<CreateNotePayload> & { completed?: boolean };
+
+export type EnergyLevel = 'low' | 'normal' | 'high';
+
+export interface EnergyCheckIn {
+  id: string;
+  userId: string;
+  date: string;
+  level: EnergyLevel;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEnergyCheckInPayload {
+  date: string;
+  level: EnergyLevel;
+  source: string;
+}
+
+export type UpdateEnergyCheckInPayload = Partial<CreateEnergyCheckInPayload>;
+
+export interface SymptomLog {
+  id: string;
+  userId: string;
+  date: string;
+  symptoms: string[];
+  otherSymptom: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSymptomLogPayload {
+  date: string;
+  symptoms: string[];
+  otherSymptom?: string | null;
+}
+
+export type UpdateSymptomLogPayload = Partial<CreateSymptomLogPayload>;

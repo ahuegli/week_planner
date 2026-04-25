@@ -54,6 +54,7 @@ export class ScoringEngineService {
     total -= this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
     total += this.spreadBonus(day, type, ctx.alreadyPlaced, ctx.weekContext, ctx.shifts);
     total += this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
+    total += this.cyclePhaseAdjustment(day, type, ctx);
 
     return total;
   }
@@ -463,5 +464,56 @@ export class ScoringEngineService {
   private toMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  private cyclePhaseAdjustment(
+    day: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout') return 0;
+    if (!ctx.weekContext.cycleTrackingEnabled) return 0;
+
+    const phasesByDay = ctx.weekContext.cyclePhasesByDay;
+    const confidence = ctx.weekContext.cycleConfidence ?? 0;
+    if (!phasesByDay || phasesByDay.length !== 7 || confidence === 0) return 0;
+
+    const phase = phasesByDay[day];
+    if (phase === 'unknown') return 0;
+
+    const sessionType = ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '';
+    const workoutType = ctx.candidateWorkout?.workoutType;
+
+    // Classify the candidate as endurance vs strength, hard vs not
+    const isEndurance = workoutType === 'running' || workoutType === 'biking' || workoutType === 'swimming';
+    const isStrength = workoutType === 'strength';
+    const isHardEndurance = isEndurance && (
+      sessionType.includes('intervals') ||
+      sessionType.includes('tempo') ||
+      sessionType.includes('hill') ||
+      sessionType.includes('long_run') ||
+      (ctx.candidateWorkout?.isLongEndurance === true)
+    );
+    const isHardStrength = isStrength && (sessionType === 'strength' || sessionType === 'hiit');
+    const isExplosive = sessionType.includes('hiit') || sessionType.includes('plyo');
+
+    // Penalty matrix from research-backed methodology
+    let raw = 0;
+
+    if (phase === 'luteal') {
+      if (isHardEndurance) raw = -0.6;
+      else if (isHardStrength) raw = -0.3;
+    } else if (phase === 'menstrual') {
+      if (isHardEndurance) raw = -0.5;
+      else if (isHardStrength) raw = -0.2;
+    } else if (phase === 'follicular') {
+      if (isHardEndurance) raw = +0.2;
+      else if (isHardStrength) raw = +0.2;
+    } else if (phase === 'ovulation') {
+      if (isExplosive) raw = -0.1; // injury caution flag, soft penalty
+      else if (isHardEndurance) raw = +0.1;
+    }
+
+    return raw * confidence;
   }
 }
