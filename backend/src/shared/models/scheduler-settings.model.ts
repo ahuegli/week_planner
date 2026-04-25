@@ -9,6 +9,10 @@ export interface SchedulerSettings {
   commuteMinutes: number;
   autoPlaceEarliestTime: string;
   autoPlaceLatestTime: string;
+  preferredWorkoutTimes: string[];
+  enduranceWeight: number;
+  strengthWeight: number;
+  yogaWeight: number;
   enduranceThresholds: {
     running: EnduranceThreshold;
     biking: EnduranceThreshold;
@@ -22,6 +26,10 @@ export const DEFAULT_SETTINGS: SchedulerSettings = {
   commuteMinutes: 0,
   autoPlaceEarliestTime: '06:00',
   autoPlaceLatestTime: '22:00',
+  preferredWorkoutTimes: [],
+  enduranceWeight: 45,
+  strengthWeight: 30,
+  yogaWeight: 25,
   enduranceThresholds: {
     running: { durationMin: 60, distanceKm: 15 },
     biking: { durationMin: 90, distanceKm: 40 },

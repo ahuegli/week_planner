@@ -7,6 +7,7 @@ export declare class Workout {
     duration: number;
     frequencyPerWeek: number;
     distanceKm: number;
+    distanceCountsAsLong?: boolean | null;
     userId: string;
     user: User;
 }

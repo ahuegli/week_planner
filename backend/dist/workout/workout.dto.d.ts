@@ -5,6 +5,7 @@ export declare class CreateWorkoutDto {
     duration: number;
     frequencyPerWeek: number;
     distanceKm?: number;
+    distanceCountsAsLong?: boolean;
 }
 export declare class UpdateWorkoutDto {
     name?: string;
@@ -12,4 +13,5 @@ export declare class UpdateWorkoutDto {
     duration?: number;
     frequencyPerWeek?: number;
     distanceKm?: number;
+    distanceCountsAsLong?: boolean;
 }

@@ -1,0 +1,54 @@
+<section class="login-page">
+  <div class="login-card card">
+    <header class="login-header">
+      <h1 class="login-title">Week Planner</h1>
+      <p class="login-subtitle">Sign in to your account</p>
+    </header>
+
+    <form class="login-form" (submit)="$event.preventDefault(); submit()">
+      @if (isRegisterMode()) {
+        <label class="form-label" for="name">Name</label>
+        <input
+          id="name"
+          class="form-input"
+          type="text"
+          autocomplete="name"
+          [value]="name()"
+          (input)="name.set($any($event.target).value)"
+        />
+      }
+
+      <label class="form-label" for="email">Email</label>
+      <input
+        id="email"
+        class="form-input"
+        type="email"
+        autocomplete="email"
+        [value]="email()"
+        (input)="email.set($any($event.target).value)"
+      />
+
+      <label class="form-label" for="password">Password</label>
+      <input
+        id="password"
+        class="form-input"
+        type="password"
+        autocomplete="current-password"
+        [value]="password()"
+        (input)="password.set($any($event.target).value)"
+      />
+
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        {{ isRegisterMode() ? 'Create Account' : 'Sign In' }}
+      </button>
+    </form>
+
+    <button type="button" class="toggle-link" (click)="toggleMode()">
+      {{ isRegisterMode() ? 'Already have an account? Sign in' : "Don't have an account? Register" }}
+    </button>
+
+    @if (errorMessage()) {
+      <p class="error-message">{{ errorMessage() }}</p>
+    }
+  </div>
+</section>

@@ -35,6 +35,10 @@ __decorate([
     __metadata("design:type", Number)
 ], CalendarEvent.prototype, "day", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], CalendarEvent.prototype, "date", void 0);
+__decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], CalendarEvent.prototype, "startTime", void 0);
@@ -58,6 +62,22 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], CalendarEvent.prototype, "isPersonal", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], CalendarEvent.prototype, "isRepeatingWeekly", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], CalendarEvent.prototype, "isManuallyPlaced", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CalendarEvent.prototype, "commuteMinutes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], CalendarEvent.prototype, "priority", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)

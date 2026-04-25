@@ -1,0 +1,47 @@
+<!-- Trigger buttons -->
+<div class="iht-wrapper">
+  <div class="iht-row">
+    <button class="iht-button" (click)="open()" type="button">I have time</button>
+    <button class="iht-button" (click)="askCoach()" type="button">Ask my coach</button>
+  </div>
+</div>
+
+<!-- Sheet overlay -->
+@if (isOpen()) {
+  <div class="sheet-overlay" (click)="close()" role="presentation" aria-hidden="true"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+
+    @if (suggestion(); as item) {
+      <h2 class="sheet-title" id="sheet-title">Suggested for right now</h2>
+
+      @if (hasSuggestion()) {
+        <p class="sheet-session-title">{{ item.sessionType }}</p>
+        <p class="sheet-meta">
+          {{ item.duration }} min
+          @if (item.intensity) {
+            · {{ item.intensity.charAt(0).toUpperCase() + item.intensity.slice(1) }}
+          }
+        </p>
+      }
+
+      <p class="sheet-sub">{{ item.message }}</p>
+
+      @if (item.description) {
+        <p class="sheet-description">{{ item.description }}</p>
+      }
+
+      <div class="sheet-actions">
+        @if (item.ctaLabel) {
+          <button class="btn-primary sheet-accept" (click)="accept()" type="button" [disabled]="isApplying()">
+            {{ isApplying() ? 'Working...' : item.ctaLabel }}
+          </button>
+        }
+        <button class="sheet-dismiss-text" (click)="close()" type="button">Not now</button>
+      </div>
+    } @else {
+      <h2 class="sheet-title" id="sheet-title">Suggested for right now</h2>
+      <p class="sheet-sub">Checking your plan...</p>
+    }
+  </div>
+}

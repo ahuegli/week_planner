@@ -24,6 +24,27 @@ export class SchedulerSettings {
   @Column({ default: 25 })
   yogaWeight: number;
 
+  @Column({ default: '06:00' })
+  autoPlaceEarliestTime: string;
+
+  @Column({ default: '22:00' })
+  autoPlaceLatestTime: string;
+
+  @Column({ type: 'simple-json', nullable: true })
+  preferredWorkoutTimes: string[] | null;
+
+  @Column({ type: 'float', default: 15 })
+  runningDistanceThreshold: number;
+
+  @Column({ type: 'float', default: 40 })
+  bikingDistanceThreshold: number;
+
+  @Column({ type: 'float', default: 3 })
+  swimmingDistanceThreshold: number;
+
+  @Column({ default: 1 })
+  enduranceRestDays: number;
+
   @Column({ unique: true })
   userId: string;
 

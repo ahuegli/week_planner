@@ -1,0 +1,149 @@
+.plan-page {
+  padding: 20px 16px 0;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.header-settings {
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  margin-top: 4px;
+  border-radius: 6px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.plan-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.action-link {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.action-link:hover {
+  color: var(--color-text);
+}
+
+.action-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-link-danger {
+  color: #9f3b2a;
+  align-self: flex-start;
+}
+
+.action-link-danger:hover {
+  color: #7e2f22;
+}
+
+.plan-created-message {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  line-height: 1.4;
+}
+
+.schedule-all-btn {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.schedule-all-btn:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.schedule-all-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.schedule-all-summary {
+  margin-top: -6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.toggle-btn {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 6px;
+  text-align: left;
+  align-self: flex-start;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.plan-cta-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.back-to-plan {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.back-to-plan:hover {
+  color: var(--color-text);
+}
+
+.bottom-spacer {
+  height: 100px;
+  flex-shrink: 0;
+}

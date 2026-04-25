@@ -1,0 +1,87 @@
+<section class="plan-page">
+  <header class="plan-header">
+    <h1 class="page-title">My Plan</h1>
+    <a routerLink="/settings" class="header-settings" aria-label="Open settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </a>
+  </header>
+
+  @if (hasPlan()) {
+    <app-plan-header [plan]="plan()!" />
+
+    <div class="plan-actions-row">
+      <button type="button" class="action-link" (click)="changeGoal()">
+        Want to change your goal?
+      </button>
+      <button type="button" class="action-link" (click)="openQuickPlanSwitch()">
+        Set a new training goal
+      </button>
+      <button type="button" class="action-link" [disabled]="isRegenerating()" (click)="regeneratePlanSessions()">
+        {{ isRegenerating() ? 'Regenerating sessions...' : 'Regenerate weekly sessions' }}
+      </button>
+    </div>
+
+    <button type="button" class="action-link action-link-danger" [disabled]="isDeleting()" (click)="deletePlan()">
+      {{ isDeleting() ? 'Deleting plan...' : 'Delete plan' }}
+    </button>
+
+    @if (currentWeek()) {
+      <app-current-week-card
+        [week]="currentWeek()!"
+        [planMode]="plan()!.mode"
+        [sportType]="plan()!.sportType ?? null"
+        [collapseToken]="currentWeekCollapseToken()"
+        (sessionToggleRequested)="onCurrentWeekSessionToggle()"
+        (scheduleRequested)="scheduleRemainingSessions()"
+        (completeRequested)="markSessionDone($event.sessionId, $event.energyRating)"
+        (skipRequested)="skipSession($event)"
+      />
+    }
+
+    @if (hasScheduledSessions()) {
+      <button type="button" class="schedule-all-btn" [disabled]="isSchedulingAllWeeks()" (click)="scheduleEntirePlan()">
+        {{ isSchedulingAllWeeks() ? `Scheduling ${plan()!.totalWeeks} weeks...` : 'Reschedule around my shifts' }}
+      </button>
+
+      @if (scheduleAllSummary()) {
+        <p class="schedule-all-summary">{{ scheduleAllSummary() }}</p>
+      }
+    }
+
+    @if (showPlanCreatedHint()) {
+      <p class="plan-created-message">
+        Plan created! Your workouts can now be scheduled across the full plan around your recurring shifts.
+      </p>
+    }
+
+    <app-plan-week-timeline
+      [plan]="plan()!"
+      [weeks]="allWeeks()"
+      [expandedWeekNumber]="expandedTimelineWeekNumber()"
+      (weekToggleRequested)="onTimelineWeekToggle($event)"
+    />
+
+    <div class="bottom-spacer"></div>
+
+  } @else {
+    @if (showCreatePlanCta()) {
+      <div class="plan-cta-wrap">
+        <app-create-plan-cta
+          [hasSavedSettings]="hasSavedSettings()"
+          (quickSwitchRequested)="openQuickPlanSwitch()"
+        />
+      </div>
+    }
+    <div class="bottom-spacer"></div>
+  }
+
+  <app-quick-plan-switch
+    [open]="quickSwitchOpen()"
+    [currentPlan]="plan()"
+    (closeRequested)="closeQuickPlanSwitch()"
+    (switched)="onQuickPlanSwitched()"
+  />
+</section>

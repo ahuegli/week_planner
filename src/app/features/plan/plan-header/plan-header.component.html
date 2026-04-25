@@ -1,0 +1,31 @@
+<article class="plan-header-card">
+  <div class="top-row">
+    <span class="mode-badge">{{ modeBadgeLabel() }}</span>
+    <p class="sport-type">{{ sportTypeLabel() }}</p>
+  </div>
+
+  <p class="goal-row">
+    {{ goalDateLabel() }}
+    @if (plan().goalDistance) {
+      <span> · {{ plan().goalDistance }}</span>
+    }
+    @if (plan().goalTime) {
+      <span> · Target {{ plan().goalTime }}</span>
+    }
+  </p>
+
+  <div class="progress-section">
+    <p class="week-phase-label">Week {{ plan().currentWeek }} of {{ plan().totalWeeks }} · {{ currentPhaseLabel() }}</p>
+
+    <div class="progress-bar-wrap" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-segments">
+        @for (seg of phaseSegments(); track seg.name) {
+          <div class="progress-segment" [style.width.%]="seg.width" [style.background]="seg.color"></div>
+        }
+      </div>
+      <div class="progress-marker" [style.left.%]="markerPercent()"></div>
+    </div>
+
+    <p class="countdown">{{ weeksRemaining() }} weeks remaining</p>
+  </div>
+</article>

@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -19,7 +20,15 @@ export class CalendarEventController {
   constructor(private readonly calendarEventService: CalendarEventService) {}
 
   @Get()
-  async findAll(@Request() req) {
+  async findAll(
+    @Request() req,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    if (startDate && endDate) {
+      return this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate);
+    }
+
     return this.calendarEventService.findAllByUser(req.user.userId);
   }
 

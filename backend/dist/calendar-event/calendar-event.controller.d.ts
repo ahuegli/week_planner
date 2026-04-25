@@ -3,7 +3,7 @@ import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event
 export declare class CalendarEventController {
     private readonly calendarEventService;
     constructor(calendarEventService: CalendarEventService);
-    findAll(req: any): Promise<import("./calendar-event.entity").CalendarEvent[]>;
+    findAll(req: any, startDate?: string, endDate?: string): Promise<import("./calendar-event.entity").CalendarEvent[]>;
     findOne(req: any, id: string): Promise<import("./calendar-event.entity").CalendarEvent>;
     create(req: any, dto: CreateCalendarEventDto): Promise<import("./calendar-event.entity").CalendarEvent>;
     createMany(req: any, dtos: CreateCalendarEventDto[]): Promise<import("./calendar-event.entity").CalendarEvent[]>;

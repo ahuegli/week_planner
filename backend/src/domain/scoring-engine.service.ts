@@ -17,6 +17,8 @@ export interface ScoringContext {
   candidateWorkout?: {
     workoutType?: WorkoutType;
     isLongEndurance?: boolean;
+    durationMinutes?: number;
+    sessionType?: string;
     type: 'workout' | 'mealprep';
   };
   totalWorkoutsNeeded?: number;
@@ -40,25 +42,96 @@ export class ScoringEngineService {
   ): number {
     let total = 0;
 
-    total += this.offDayBonus(day, type, ctx.shifts);
+    total += this.offDayBonus(day, type, ctx.shifts, ctx.alreadyPlaced);
     total -= this.fatiguePenalty(day, ctx.weekContext.exhaustionByDay);
     total += this.mealPrepSpacingBonus(day, type, ctx.alreadyPlaced);
-    total += this.timeOfDayBonus(startMin, type);
+    total += this.timeOfDayBonus(day, startMin, type, ctx.shifts, ctx.settings);
     total += this.shiftAwareTimePreference(day, startMin, endMin, type, ctx);
+    total += this.longSessionFreeDayBonus(day, startMin, endMin, type, ctx);
     total -= this.eventDayPenalty(day, type, ctx.alreadyPlaced);
     total += this.diversityComboBonus(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
     total -= this.stackingPenalty(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
     total -= this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
+    total += this.spreadBonus(day, type, ctx.alreadyPlaced, ctx.weekContext, ctx.shifts);
     total += this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
 
     return total;
   }
 
-  private offDayBonus(day: number, type: CalendarEventType, shifts: CalendarEvent[]): number {
+  private offDayBonus(
+    day: number,
+    type: CalendarEventType,
+    shifts: CalendarEvent[],
+    alreadyPlaced: CalendarEvent[],
+  ): number {
     if (type !== 'workout') {
       return 0;
     }
+
+    const dayShifts = shifts.filter((shift) => shift.day === day);
+    if (dayShifts.length === 0) {
+      const hasOtherEvents = alreadyPlaced.some(
+        (event) => event.day === day && event.type !== 'shift',
+      );
+      return hasOtherEvents ? 0 : 0.6;
+    }
+
+    const hasFreeTimeWindows = dayShifts.some((shift) => {
+      const shiftStart = this.toMinutes(shift.startTime);
+      const shiftEnd = this.toMinutes(shift.endTime);
+      return shiftStart > 0 || shiftEnd < 24 * 60;
+    });
+
+    if (hasFreeTimeWindows) {
+      return 0.1;
+    }
+
     return 0;
+  }
+
+  private spreadBonus(
+    day: number,
+    type: CalendarEventType,
+    alreadyPlaced: CalendarEvent[],
+    weekContext: WeekContext,
+    shifts: CalendarEvent[],
+  ): number {
+    if (type !== 'workout') {
+      return 0;
+    }
+
+    const inWeekWorkouts = alreadyPlaced.filter(
+      (event) => event.type === 'workout' && event.day >= 0 && event.day <= 6,
+    );
+
+    const hasPrevInWeek = day > 0 && inWeekWorkouts.some((event) => event.day === day - 1);
+    const hasPrevAcrossWeekBoundary = day === 0 && (weekContext.previousWeekEndedWithWorkout ?? false);
+    const hasPrev = hasPrevInWeek || hasPrevAcrossWeekBoundary;
+    const hasNext = day < 6 && inWeekWorkouts.some((event) => event.day === day + 1);
+
+    let bonus = 0;
+
+    if (hasPrev && hasNext) {
+      bonus -= 0.3;
+    } else if (!(hasPrev || hasNext)) {
+      bonus += 0.2;
+    }
+
+    // Avoid stacking workouts on shift days when shift-free days are unused.
+    // A "shift day" is any day that has at least one shift event.
+    const shiftDayNumbers = new Set(shifts.map((s) => s.day));
+    const dayHasShift = shiftDayNumbers.has(day);
+    if (dayHasShift) {
+      const allWeekDays = [0, 1, 2, 3, 4, 5, 6];
+      const freeDays = allWeekDays.filter((d) => !shiftDayNumbers.has(d));
+      const shiftDayWorkouts = inWeekWorkouts.filter((event) => shiftDayNumbers.has(event.day)).length;
+      const freeDayWorkouts = inWeekWorkouts.filter((event) => freeDays.includes(event.day)).length;
+      if (shiftDayWorkouts + 1 >= 3 && freeDayWorkouts === 0 && freeDays.length > 0) {
+        bonus -= 0.4;
+      }
+    }
+
+    return bonus;
   }
 
   private fatiguePenalty(day: number, exhaustionByDay: number[]): number {
@@ -87,10 +160,30 @@ export class ScoringEngineService {
     return 0;
   }
 
-  private timeOfDayBonus(startMin: number, type: CalendarEventType): number {
+  private timeOfDayBonus(
+    day: number,
+    startMin: number,
+    type: CalendarEventType,
+    shifts: CalendarEvent[],
+    settings: SchedulerSettings,
+  ): number {
     if (type === 'workout') {
-      if (startMin >= 7 * 60 && startMin <= 9 * 60) return 0.2;
-      if (startMin >= 17 * 60 && startMin <= 19 * 60) return 0.2;
+      const preferred = settings.preferredWorkoutTimes ?? [];
+
+      // If no preference set or 'Flexible' selected, fall back to a mild morning default.
+      if (preferred.length === 0 || preferred.some((p) => p.toLowerCase() === 'flexible')) {
+        return startMin >= 7 * 60 && startMin <= 10 * 60 ? 0.2 : 0;
+      }
+
+      // Check each preferred window in priority order.
+      for (const pref of preferred) {
+        const normalized = pref.toLowerCase();
+        if (normalized.includes('late evening') && startMin >= 19 * 60 && startMin < 21 * 60) return 0.2;
+        if (normalized.includes('early morning') && startMin >= 5 * 60 && startMin < 7 * 60) return 0.2;
+        if (normalized.includes('morning') && !normalized.includes('early') && startMin >= 7 * 60 && startMin < 9 * 60) return 0.2;
+        if (normalized.includes('afternoon') && startMin >= 12 * 60 && startMin < 14 * 60) return 0.2;
+        if (normalized.includes('evening') && !normalized.includes('late') && startMin >= 17 * 60 && startMin < 19 * 60) return 0.2;
+      }
       return 0;
     }
 
@@ -262,7 +355,7 @@ export class ScoringEngineService {
 
       if (hasUsableAfterWorkWindow) {
         if (isAfterWorkCandidate) {
-          score += 0.45;
+          score += 0.35;
         } else if (isBeforeWorkCandidate) {
           score -= 0.35;
         }
@@ -270,6 +363,101 @@ export class ScoringEngineService {
     }
 
     return score;
+  }
+
+  private longSessionFreeDayBonus(
+    day: number,
+    startMin: number,
+    endMin: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout' || !this.isLongOrIntensiveCandidate(ctx.candidateWorkout)) {
+      return 0;
+    }
+
+    let bonus = 0;
+    const dayHasShift = ctx.shifts.some((shift) => shift.day === day);
+    if (!dayHasShift) {
+      bonus += 0.5;
+    }
+
+    const contiguousWindowMinutes = this.calculateContiguousWindowMinutes(
+      day,
+      startMin,
+      endMin,
+      ctx,
+    );
+    if (contiguousWindowMinutes >= 180) {
+      bonus += 0.2;
+    }
+
+    return bonus;
+  }
+
+  private isLongOrIntensiveCandidate(
+    candidateWorkout?: {
+      workoutType?: WorkoutType;
+      isLongEndurance?: boolean;
+      durationMinutes?: number;
+      sessionType?: string;
+      type: 'workout' | 'mealprep';
+    },
+  ): boolean {
+    if (!candidateWorkout || candidateWorkout.type !== 'workout') {
+      return false;
+    }
+
+    const duration = candidateWorkout.durationMinutes ?? 0;
+    const sessionType = candidateWorkout.sessionType?.toLowerCase() ?? '';
+    const workoutType = candidateWorkout.workoutType;
+    const isBikeOrSwimLongish =
+      (workoutType === 'biking' || workoutType === 'swimming') && duration >= 45;
+
+    return (
+      duration >= 60 ||
+      candidateWorkout.isLongEndurance === true ||
+      sessionType.includes('long') ||
+      isBikeOrSwimLongish
+    );
+  }
+
+  private calculateContiguousWindowMinutes(
+    day: number,
+    startMin: number,
+    endMin: number,
+    ctx: ScoringContext,
+  ): number {
+    const earliestMin = this.toMinutes(ctx.settings.autoPlaceEarliestTime);
+    const latestMin = this.toMinutes(ctx.settings.autoPlaceLatestTime);
+    const timelineStart = Number.isNaN(earliestMin) ? 6 * 60 : earliestMin;
+    const timelineEnd = Number.isNaN(latestMin) || latestMin <= timelineStart ? 22 * 60 : latestMin;
+
+    const occupiedForDay = [...ctx.alreadyPlaced, ...ctx.shifts]
+      .filter((event) => event.day === day)
+      .map((event) => ({
+        start: this.toMinutes(event.startTime),
+        end: this.toMinutes(event.endTime),
+      }))
+      .filter((interval) => !Number.isNaN(interval.start) && !Number.isNaN(interval.end))
+      .sort((a, b) => a.start - b.start);
+
+    let windowStart = timelineStart;
+    let windowEnd = timelineEnd;
+
+    for (const interval of occupiedForDay) {
+      if (interval.end <= startMin) {
+        windowStart = Math.max(windowStart, interval.end);
+        continue;
+      }
+
+      if (interval.start >= endMin) {
+        windowEnd = Math.min(windowEnd, interval.start);
+        break;
+      }
+    }
+
+    return Math.max(0, windowEnd - windowStart);
   }
 
   private toMinutes(time: string): number {

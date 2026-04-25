@@ -21,6 +21,9 @@ export class CalendarEvent {
   @Column()
   day: number;
 
+  @Column({ nullable: true })
+  date?: string;
+
   @Column()
   startTime: string;
 
@@ -38,6 +41,18 @@ export class CalendarEvent {
 
   @Column({ default: false })
   isPersonal: boolean;
+
+  @Column({ default: false })
+  isRepeatingWeekly: boolean;
+
+  @Column({ default: false })
+  isManuallyPlaced: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  commuteMinutes?: number;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  priority?: string;
 
   @Column()
   userId: string;

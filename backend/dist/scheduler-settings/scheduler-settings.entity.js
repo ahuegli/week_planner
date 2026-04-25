@@ -44,6 +44,34 @@ __decorate([
     __metadata("design:type", Number)
 ], SchedulerSettings.prototype, "yogaWeight", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: '06:00' }),
+    __metadata("design:type", String)
+], SchedulerSettings.prototype, "autoPlaceEarliestTime", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: '22:00' }),
+    __metadata("design:type", String)
+], SchedulerSettings.prototype, "autoPlaceLatestTime", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'simple-json', nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "preferredWorkoutTimes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', default: 15 }),
+    __metadata("design:type", Number)
+], SchedulerSettings.prototype, "runningDistanceThreshold", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', default: 40 }),
+    __metadata("design:type", Number)
+], SchedulerSettings.prototype, "bikingDistanceThreshold", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', default: 3 }),
+    __metadata("design:type", Number)
+], SchedulerSettings.prototype, "swimmingDistanceThreshold", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 1 }),
+    __metadata("design:type", Number)
+], SchedulerSettings.prototype, "enduranceRestDays", void 0);
+__decorate([
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], SchedulerSettings.prototype, "userId", void 0);

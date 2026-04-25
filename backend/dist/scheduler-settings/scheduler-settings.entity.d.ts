@@ -7,6 +7,13 @@ export declare class SchedulerSettings {
     enduranceWeight: number;
     strengthWeight: number;
     yogaWeight: number;
+    autoPlaceEarliestTime: string;
+    autoPlaceLatestTime: string;
+    preferredWorkoutTimes: string[] | null;
+    runningDistanceThreshold: number;
+    bikingDistanceThreshold: number;
+    swimmingDistanceThreshold: number;
+    enduranceRestDays: number;
     userId: string;
     user: User;
 }

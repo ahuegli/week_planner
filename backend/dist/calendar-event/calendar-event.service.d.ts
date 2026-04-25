@@ -5,6 +5,7 @@ export declare class CalendarEventService {
     private readonly eventRepository;
     constructor(eventRepository: Repository<CalendarEvent>);
     findAllByUser(userId: string): Promise<CalendarEvent[]>;
+    findByDateRange(userId: string, startDate: string, endDate: string): Promise<CalendarEvent[]>;
     findOne(id: string, userId: string): Promise<CalendarEvent>;
     create(userId: string, dto: CreateCalendarEventDto): Promise<CalendarEvent>;
     createMany(userId: string, dtos: CreateCalendarEventDto[]): Promise<CalendarEvent[]>;
@@ -12,4 +13,6 @@ export declare class CalendarEventService {
     remove(id: string, userId: string): Promise<void>;
     removeAllByUser(userId: string): Promise<void>;
     replaceAll(userId: string, dtos: CreateCalendarEventDto[]): Promise<CalendarEvent[]>;
+    private toDateString;
+    private shiftOccurrenceKey;
 }

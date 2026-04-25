@@ -1,0 +1,74 @@
+<section class="onboarding-page">
+  <header class="onboarding-header">
+    @if (currentStep() > 1) {
+      <button type="button" class="back-btn" (click)="backStep()" aria-label="Go back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+    } @else {
+      <span class="back-placeholder"></span>
+    }
+
+    <div class="dots" aria-label="Onboarding progress">
+      @for (dot of [1,2,3,4,5,6,7]; track dot) {
+        <span class="dot" [class.active]="dot === currentStep()"></span>
+      }
+    </div>
+
+    <button type="button" class="restart-btn" (click)="restart()">Reset</button>
+  </header>
+
+  <main class="step-shell">
+    @switch (currentStep()) {
+      @case (1) {
+        <app-onboarding-step-welcome (started)="nextStep()" />
+      }
+      @case (2) {
+        <app-onboarding-step-goal
+          [goal]="onboardingData().goal"
+          (goalChange)="setGoal($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (3) {
+        <app-onboarding-step-sport
+          [goal]="onboardingData().goal"
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (4) {
+        <app-onboarding-step-availability
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (5) {
+        <app-onboarding-step-work
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (6) {
+        <app-onboarding-step-cycle
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (skip)="skipCycleStep()"
+          (next)="nextStep()"
+        />
+      }
+      @case (7) {
+        <app-onboarding-step-summary
+          [data]="onboardingData()"
+          [loading]="loading()"
+          (editStep)="goToStep($event)"
+          (generate)="generatePlan()"
+        />
+      }
+    }
+  </main>
+</section>

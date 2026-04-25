@@ -1,0 +1,63 @@
+@if (open() && event(); as activeEvent) {
+  <div class="modal-overlay" (click)="close()" role="presentation" aria-hidden="true"></div>
+
+  <section
+    class="modal-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Workout delete options"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-handle" aria-hidden="true"></div>
+
+    <header class="modal-header">
+      <div>
+        <p class="modal-kicker">Workout Session</p>
+        <h2 class="modal-title">What would you like to do with this session?</h2>
+      </div>
+
+      <button type="button" class="modal-close" (click)="close()" aria-label="Close session options">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="session-card">
+      <div class="session-head">
+        <h3 class="session-title">{{ activeEvent.title }}</h3>
+        <span class="priority-badge" [class.priority-key]="activeEvent.priority === 'key'">{{ priorityLabel() }}</span>
+      </div>
+
+      <div class="session-meta">
+        <span>{{ dayLabel() }}</span>
+        <span>{{ timeLabel() }}</span>
+        <span>{{ durationLabel() }}</span>
+      </div>
+    </div>
+
+    <div class="option-list">
+      @if (findingBestTime()) {
+        <p class="loading-copy">Finding the best time...</p>
+      }
+
+      <button type="button" class="option-card" [disabled]="findingBestTime()" (click)="reschedule()">
+        <span class="option-title">Reschedule this session</span>
+        <span class="option-subtitle">Find another time this week</span>
+      </button>
+
+      <button type="button" class="option-card option-card-skip" [disabled]="findingBestTime()" (click)="skip()">
+        <span class="option-title">Skip this session</span>
+        <span class="option-subtitle">Mark as skipped — your plan adjusts automatically</span>
+      </button>
+
+      <button type="button" class="option-card option-card-danger" [disabled]="findingBestTime()" (click)="remove()">
+        <span class="option-title">Remove from my plan</span>
+        <span class="option-subtitle">Delete this session permanently</span>
+      </button>
+    </div>
+
+    <button type="button" class="keep-link" (click)="close()">Keep this session</button>
+  </section>
+}

@@ -26,6 +26,9 @@ export class Workout {
   @Column({ type: 'float', nullable: true })
   distanceKm: number;
 
+  @Column({ type: 'boolean', nullable: true, default: null })
+  distanceCountsAsLong?: boolean | null;
+
   @Column()
   userId: string;
 

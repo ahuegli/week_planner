@@ -43,6 +43,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Workout.prototype, "distanceKm", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', nullable: true, default: null }),
+    __metadata("design:type", Object)
+], Workout.prototype, "distanceCountsAsLong", void 0);
+__decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], Workout.prototype, "userId", void 0);

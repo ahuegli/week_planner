@@ -1,0 +1,115 @@
+<button type="button" class="fab" aria-label="Quick add event" (click)="openSheet()">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 5v14" />
+    <path d="M5 12h14" />
+  </svg>
+</button>
+
+@if (isOpen()) {
+  <div class="sheet-overlay" (click)="closeSheet()" role="presentation" aria-hidden="true"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Quick add options">
+    <div class="sheet-handle" aria-hidden="true"></div>
+
+    @if (!activeType()) {
+      <button type="button" class="sheet-option" (click)="choose('shift')">
+        <span class="dot dot-shift"></span>
+        <span>Add Work Shift</span>
+      </button>
+      <button type="button" class="sheet-option" (click)="choose('workout')">
+        <span class="dot dot-workout"></span>
+        <span>Add Workout</span>
+      </button>
+      <button type="button" class="sheet-option" (click)="choose('personal')">
+        <span class="dot dot-personal"></span>
+        <span>Add Personal Event</span>
+      </button>
+      <button type="button" class="sheet-option" (click)="choose('mealprep')">
+        <span class="dot dot-mealprep"></span>
+        <span>Add Meal Prep</span>
+      </button>
+    } @else {
+      <div class="sheet-form">
+        <div class="day-selector">
+          <div class="day-selector-head">
+            <label class="form-label">Day</label>
+            @if (activeType() !== 'shift' && selectedDatePreview()) {
+              <span class="day-preview">{{ selectedDatePreview() }}</span>
+            }
+          </div>
+          <div class="day-pills" [attr.aria-label]="activeType() === 'shift' ? 'Select one or more days' : 'Select a day'">
+            @for (choice of dayChoices(); track choice.date) {
+              <button
+                type="button"
+                class="day-pill"
+                [class.is-selected]="selectedDays().includes(choice.index)"
+                [attr.aria-pressed]="selectedDays().includes(choice.index)"
+                (click)="toggleDay(choice.index)"
+              >
+                <span>{{ choice.shortLabel }}</span>
+                <span class="day-pill-date">{{ choice.dayNumber }}</span>
+              </button>
+            }
+          </div>
+          @if (activeType() === 'shift') {
+            <p class="day-help">Select one or more days</p>
+          }
+        </div>
+
+        <label class="form-label">Title</label>
+        <input class="form-input" type="text" [value]="title()" (input)="title.set($any($event.target).value)" />
+
+        <div class="form-grid">
+          <div>
+            <label class="form-label">Start time</label>
+            <input class="form-input" type="time" [value]="startTime()" (input)="startTime.set($any($event.target).value)" />
+          </div>
+          <div>
+            <label class="form-label">End time</label>
+            <input class="form-input" type="time" [value]="endTime()" (input)="endTime.set($any($event.target).value)" />
+          </div>
+        </div>
+
+        @if (activeType() === 'shift') {
+          <label class="repeat-toggle">
+            <input type="checkbox" [checked]="repeatsWeekly()" (change)="repeatsWeekly.set($any($event.target).checked)" />
+            <span>Repeats every week</span>
+          </label>
+
+          <label class="form-label">Commute (minutes)</label>
+          <input class="form-input" type="number" min="0" [value]="commuteMinutes()" (input)="commuteMinutes.set(+$any($event.target).value || 0)" />
+        }
+
+        @if (activeType() === 'workout') {
+          <label class="form-label">Workout type</label>
+          <select class="form-input" [value]="workoutType()" (change)="workoutType.set($any($event.target).value)">
+            <option value="running">Running</option>
+            <option value="biking">Biking</option>
+            <option value="strength">Strength</option>
+            <option value="yoga">Yoga</option>
+            <option value="swimming">Swimming</option>
+          </select>
+
+          <label class="form-label">Duration (minutes)</label>
+          <input class="form-input" type="number" min="15" [value]="workoutDuration()" (input)="workoutDuration.set(+$any($event.target).value || 45)" />
+
+          <label class="form-label">Intensity</label>
+          <select class="form-input" [value]="workoutIntensity()" (change)="workoutIntensity.set($any($event.target).value)">
+            <option value="easy">Easy</option>
+            <option value="moderate">Moderate</option>
+            <option value="hard">Hard</option>
+          </select>
+        }
+
+        @if (activeType() === 'mealprep') {
+          <label class="form-label">Duration (minutes)</label>
+          <input class="form-input" type="number" min="30" [value]="mealprepDuration()" (input)="mealprepDuration.set(+$any($event.target).value || 90)" />
+        }
+
+        <div class="form-actions">
+          <button type="button" class="sheet-option" (click)="activeType.set(null)">Back</button>
+          <button type="button" class="sheet-option sheet-option-primary" [disabled]="!canSubmit()" (click)="submit()">Add event</button>
+        </div>
+      </div>
+    }
+  </div>
+}

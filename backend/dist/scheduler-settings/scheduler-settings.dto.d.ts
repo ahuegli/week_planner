@@ -5,4 +5,11 @@ export declare class UpdateSchedulerSettingsDto {
     enduranceWeight?: number;
     strengthWeight?: number;
     yogaWeight?: number;
+    autoPlaceEarliestTime?: string;
+    autoPlaceLatestTime?: string;
+    preferredWorkoutTimes?: string[];
+    runningDistanceThreshold?: number;
+    bikingDistanceThreshold?: number;
+    swimmingDistanceThreshold?: number;
+    enduranceRestDays?: number;
 }

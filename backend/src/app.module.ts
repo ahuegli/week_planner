@@ -6,8 +6,13 @@ import { WorkoutModule } from './workout/workout.module';
 import { CalendarEventModule } from './calendar-event/calendar-event.module';
 import { MealPrepModule } from './mealprep/mealprep.module';
 import { SchedulerSettingsModule } from './scheduler-settings/scheduler-settings.module';
-import { SchedulerModule } from './scheduler/scheduler.module';
+import { SchedulerModule } from './api/scheduler/scheduler.module';
 import { MockDataModule } from './mock-data/mock-data.module';
+import { TrainingPlanModule } from './training-plan/training-plan.module';
+import { PlannedSessionModule } from './planned-session/planned-session.module';
+import { WeeklyProgressModule } from './weekly-progress/weekly-progress.module';
+import { CycleProfileModule } from './cycle-profile/cycle-profile.module';
+import { NoteModule } from './note/note.module';
 
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 
@@ -29,6 +34,11 @@ const databaseImports = USE_DATABASE
       CalendarEventModule,
       MealPrepModule,
       SchedulerSettingsModule,
+      TrainingPlanModule,
+      PlannedSessionModule,
+      WeeklyProgressModule,
+      CycleProfileModule,
+      NoteModule,
     ]
   : [MockDataModule];
 

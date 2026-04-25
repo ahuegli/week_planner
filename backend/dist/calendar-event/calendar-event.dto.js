@@ -29,6 +29,11 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateCalendarEventDto.prototype, "day", void 0);
 __decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "date", void 0);
+__decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateCalendarEventDto.prototype, "startTime", void 0);
@@ -56,6 +61,26 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateCalendarEventDto.prototype, "isPersonal", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateCalendarEventDto.prototype, "isRepeatingWeekly", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateCalendarEventDto.prototype, "isManuallyPlaced", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateCalendarEventDto.prototype, "commuteMinutes", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "priority", void 0);
 class UpdateCalendarEventDto {
 }
 exports.UpdateCalendarEventDto = UpdateCalendarEventDto;
@@ -76,6 +101,11 @@ __decorate([
     (0, class_validator_1.Max)(6),
     __metadata("design:type", Number)
 ], UpdateCalendarEventDto.prototype, "day", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "date", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
@@ -106,4 +136,24 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdateCalendarEventDto.prototype, "isPersonal", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateCalendarEventDto.prototype, "isRepeatingWeekly", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateCalendarEventDto.prototype, "isManuallyPlaced", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateCalendarEventDto.prototype, "commuteMinutes", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "priority", void 0);
 //# sourceMappingURL=calendar-event.dto.js.map

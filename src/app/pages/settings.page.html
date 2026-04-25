@@ -1,0 +1,409 @@
+<section class="settings-page">
+  <header class="settings-header">
+    <div>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Customize your schedule</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="logout-btn" (click)="logout()">Logout</button>
+      <button type="button" class="btn-primary save-btn" (click)="saveSettings()" [disabled]="saveStatus() === 'saving'">
+        {{ saveStatus() === 'saving' ? 'Saving...' : 'Save' }}
+      </button>
+      @if (saveStatus() === 'saved') {
+        <span class="saved-badge">Saved</span>
+      }
+    </div>
+  </header>
+
+  @if (shiftUpdateMessage()) {
+    <p class="page-subtitle">{{ shiftUpdateMessage() }}</p>
+  }
+
+  <a class="restart-link" routerLink="/onboarding">Restart onboarding</a>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('general')">
+      <h2>General</h2>
+      <span class="chevron" [class.open]="isOpen('general')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('general')) {
+      <div class="accordion-content">
+        <div class="setting-row">
+          <span>Dark mode</span>
+          <button type="button" class="switch" [class.on]="darkMode()" (click)="toggleSignal(darkMode)"><span></span></button>
+        </div>
+
+        <div class="setting-block">
+          <p class="block-title">Notification preferences</p>
+          <div class="setting-row"><span>Workout reminders</span><button type="button" class="switch" [class.on]="workoutReminders()" (click)="toggleSignal(workoutReminders)"><span></span></button></div>
+          <div class="setting-row"><span>Check-in prompts</span><button type="button" class="switch" [class.on]="checkinPrompts()" (click)="toggleSignal(checkinPrompts)"><span></span></button></div>
+          <div class="setting-row"><span>Weekly summary</span><button type="button" class="switch" [class.on]="weeklySummary()" (click)="toggleSignal(weeklySummary)"><span></span></button></div>
+        </div>
+
+        <div class="setting-block">
+          <div class="setting-row">
+            <span>Check-in reminder timing</span>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" (click)="adjustSignal(checkInHours, -1, 1, 4)">-</button>
+              <span>{{ checkInHours() }}h</span>
+              <button type="button" class="stepper-btn" (click)="adjustSignal(checkInHours, 1, 1, 4)">+</button>
+            </div>
+          </div>
+          <p class="info-text">We'll ask if you completed your workout this many hours before your usual bedtime</p>
+        </div>
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('training')">
+      <h2>Training Plan</h2>
+      <span class="chevron" [class.open]="isOpen('training')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('training')) {
+      <div class="accordion-content">
+        @if (hasPlan()) {
+          <button type="button" class="plan-preview-card" (click)="navigateToPlan()">
+            <div class="plan-preview-top">
+              <span class="mode-badge">RACE</span>
+              <span class="plan-sport">Half Marathon</span>
+            </div>
+            <p class="plan-goal-details">July 12, 2026 · Target 1:45:00</p>
+            <p class="plan-progress-text">Week 8 of 12 · Build Phase</p>
+            <div class="plan-progress-bar"><div class="plan-progress-fill" style="width: 66.6%"></div></div>
+          </button>
+
+          <button type="button" class="btn-secondary small-btn" (click)="editPlan()">Edit plan</button>
+          <button type="button" class="new-plan-btn" (click)="startNewPlan()">Start a new plan</button>
+          <p class="info-text">Switch to a different goal after completing your current plan</p>
+        } @else {
+          <button type="button" class="btn-secondary small-btn" (click)="createPlan()">Create new plan</button>
+        }
+
+        <div class="setting-row">
+          <span>Available training days</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" (click)="adjustSignal(availableTrainingDays, -1, 2, 7)">-</button>
+            <span>{{ availableTrainingDays() }}</span>
+            <button type="button" class="stepper-btn" (click)="adjustSignal(availableTrainingDays, 1, 2, 7)">+</button>
+          </div>
+        </div>
+
+        <div class="setting-block">
+          <p class="block-title">Preferred workout times</p>
+          <div class="chip-wrap">
+            @for (time of timeOptions; track time) {
+              <button type="button" class="chip" [class.selected]="preferredTimes().includes(time)" (click)="togglePreferredTime(time)">{{ time }}</button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('work')">
+      <h2>Work Schedule & Sleep</h2>
+      <span class="chevron" [class.open]="isOpen('work')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('work')) {
+      <div class="accordion-content">
+        <label class="field-label">Shift pattern</label>
+        <select class="input" [value]="shiftPattern()" (change)="shiftPattern.set($any($event.target).value)">
+          <option value="fixed">Fixed days</option>
+          <option value="rotating">Rotating shifts</option>
+          <option value="irregular">Irregular / manual</option>
+        </select>
+
+        @if (shiftPattern() === 'fixed' || shiftPattern() === 'rotating') {
+          <label class="field-label">Shift name</label>
+          <input class="input" type="text" [value]="defaultShiftName()" (input)="defaultShiftName.set($any($event.target).value)" />
+
+          <div class="grid-two">
+            <div>
+              <label class="field-label">Start time</label>
+              <input class="input" type="time" [value]="defaultShiftStart()" (input)="defaultShiftStart.set($any($event.target).value)" />
+            </div>
+            <div>
+              <label class="field-label">End time</label>
+              <input class="input" type="time" [value]="defaultShiftEnd()" (input)="defaultShiftEnd.set($any($event.target).value)" />
+            </div>
+          </div>
+
+          <div class="day-toggle-row">
+            @for (day of ['Mo','Tu','We','Th','Fr','Sa','Su']; track day) {
+              <button type="button" class="day-chip" [class.selected]="shiftDays().includes(day)" (click)="toggleShiftDay(day)">{{ day }}</button>
+            }
+          </div>
+        }
+
+        <div class="setting-row">
+          <span>Commute time</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" (click)="adjustSignal(commuteMinutes, -5, 0, 120)">-</button>
+            <span>{{ commuteMinutes() }} min</span>
+            <button type="button" class="stepper-btn" (click)="adjustSignal(commuteMinutes, 5, 0, 120)">+</button>
+          </div>
+        </div>
+
+        <div class="grid-two">
+          <div>
+            <label class="field-label">Bedtime</label>
+            <input class="input" type="time" [value]="bedtime()" (input)="bedtime.set($any($event.target).value)" />
+          </div>
+          <div>
+            <label class="field-label">Wake time</label>
+            <input class="input" type="time" [value]="wakeTime()" (input)="wakeTime.set($any($event.target).value)" />
+          </div>
+        </div>
+
+        <p class="info-text">Your sleep schedule helps us time check-in reminders and avoid scheduling workouts during rest</p>
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('workout')">
+      <h2>Workout Preferences</h2>
+      <span class="chevron" [class.open]="isOpen('workout')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('workout')) {
+      <div class="accordion-content">
+        <div class="setting-block">
+          <p class="block-title">Active workout types</p>
+          @for (type of ['Running','Cycling','Swimming','Strength','Yoga / Pilates','Bouldering','Other']; track type) {
+            <div class="setting-row">
+              <span>{{ type }}</span>
+              <button type="button" class="switch" [class.on]="workoutTypes()[type]" (click)="toggleWorkoutType(type)"><span></span></button>
+            </div>
+          }
+          @if (workoutTypes()['Other']) {
+            <input class="input" type="text" [value]="otherWorkoutType()" placeholder="e.g., Bouldering, Boxing, Dance, Rowing..." (input)="otherWorkoutType.set($any($event.target).value)" />
+            <p class="info-text">We'll categorize this into your training plan automatically</p>
+          }
+        </div>
+
+        <div class="setting-row">
+          <span>Sessions per week target</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" (click)="adjustSignal(sessionsPerWeekTarget, -1, 2, 10)">-</button>
+            <span>{{ sessionsPerWeekTarget() }}</span>
+            <button type="button" class="stepper-btn" (click)="adjustSignal(sessionsPerWeekTarget, 1, 2, 10)">+</button>
+          </div>
+        </div>
+
+        <div class="setting-block">
+          <p class="block-title">Scheduling priority</p>
+          <div class="priority-list">
+            @for (item of schedulePriority; track item; let idx = $index) {
+              <div class="priority-row">
+                <span class="drag-handle">⋮⋮</span>
+                <span>{{ item }}</span>
+                <span class="priority-badge">{{ idx + 1 }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('recovery')">
+      <h2>Recovery & Thresholds</h2>
+      <span class="chevron" [class.open]="isOpen('recovery')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('recovery')) {
+      <div class="accordion-content">
+        <div class="setting-row">
+          <span>Rest days per week</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" (click)="adjustSignal(restDaysPerWeek, -1, 1, 3)">-</button>
+            <span>{{ restDaysPerWeek() }}</span>
+            <button type="button" class="stepper-btn" (click)="adjustSignal(restDaysPerWeek, 1, 1, 3)">+</button>
+          </div>
+        </div>
+
+        <label class="field-label">Minimum rest between workouts</label>
+        <select class="input" [value]="minRestGap()" (change)="minRestGap.set($any($event.target).value)">
+          @for (option of thresholdRestOptions; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+
+        @if (workoutTypes()['Running']) {
+          <div class="threshold-card">
+            <p class="threshold-title">Running</p>
+            <div class="setting-row"><span>Duration threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(runningThresholdMinutes, -15, 30, 180)">-</button><span>{{ runningThresholdMinutes() }} min</span><button type="button" class="stepper-btn" (click)="adjustSignal(runningThresholdMinutes, 15, 30, 180)">+</button></div></div>
+            <div class="setting-row"><span>Distance threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(runningThresholdDistance, -1, 1, 100)">-</button><span>{{ runningThresholdDistance() }} km</span><button type="button" class="stepper-btn" (click)="adjustSignal(runningThresholdDistance, 1, 1, 100)">+</button></div></div>
+          </div>
+        }
+
+        @if (workoutTypes()['Cycling']) {
+          <div class="threshold-card">
+            <p class="threshold-title">Cycling</p>
+            <div class="setting-row"><span>Duration threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(cyclingThresholdMinutes, -15, 30, 180)">-</button><span>{{ cyclingThresholdMinutes() }} min</span><button type="button" class="stepper-btn" (click)="adjustSignal(cyclingThresholdMinutes, 15, 30, 180)">+</button></div></div>
+            <div class="setting-row"><span>Distance threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(cyclingThresholdDistance, -1, 1, 100)">-</button><span>{{ cyclingThresholdDistance() }} km</span><button type="button" class="stepper-btn" (click)="adjustSignal(cyclingThresholdDistance, 1, 1, 100)">+</button></div></div>
+          </div>
+        }
+
+        @if (workoutTypes()['Swimming']) {
+          <div class="threshold-card">
+            <p class="threshold-title">Swimming</p>
+            <div class="setting-row"><span>Duration threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(swimmingThresholdMinutes, -15, 30, 180)">-</button><span>{{ swimmingThresholdMinutes() }} min</span><button type="button" class="stepper-btn" (click)="adjustSignal(swimmingThresholdMinutes, 15, 30, 180)">+</button></div></div>
+            <div class="setting-row"><span>Distance threshold</span><div class="stepper"><button type="button" class="stepper-btn" (click)="adjustSignal(swimmingThresholdDistance, -1, 1, 100)">-</button><span>{{ swimmingThresholdDistance() }} km</span><button type="button" class="stepper-btn" (click)="adjustSignal(swimmingThresholdDistance, 1, 1, 100)">+</button></div></div>
+          </div>
+        }
+
+        <p class="info-text">Sessions exceeding these thresholds are treated as intensive and require a rest day after</p>
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('mealprep')">
+      <h2>Meal Prep</h2>
+      <span class="chevron" [class.open]="isOpen('mealprep')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('mealprep')) {
+      <div class="accordion-content">
+        <div class="setting-block">
+          <p class="block-title">Sessions per week</p>
+          <div class="segment-row">
+            @for (option of mealPrepSegments; track option) {
+              <button type="button" class="segment" [class.selected]="mealPrepPerWeek() === option" (click)="setMealPrepSessions(option)">{{ option }}</button>
+            }
+          </div>
+        </div>
+
+        <label class="field-label">Session duration</label>
+        <select class="input" [value]="mealPrepDuration()" (change)="mealPrepDuration.set($any($event.target).value)">
+          <option>30 min</option>
+          <option>45 min</option>
+          <option>1 hour</option>
+          <option>1.5 hours</option>
+          <option>2 hours</option>
+        </select>
+
+        <div class="setting-row"><span>Prefer weekends</span><button type="button" class="switch" [class.on]="mealPrepWeekends()" (click)="toggleSignal(mealPrepWeekends)"><span></span></button></div>
+        <div class="setting-row"><span>FridgeMate integration</span><button type="button" class="switch" [class.on]="fridgeMateConnected()" (click)="toggleSignal(fridgeMateConnected)"><span></span></button></div>
+
+        @if (fridgeMateConnected()) {
+          <p class="connected-text"><span class="green-dot"></span> Connected to FridgeMate</p>
+          <p class="info-text">Meal prep needs will be synced from your meal plan</p>
+        } @else {
+          <p class="info-text">Connect FridgeMate to sync meal prep scheduling</p>
+        }
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('cycle')">
+      <h2>Cycle Tracking</h2>
+      <span class="chevron" [class.open]="isOpen('cycle')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('cycle')) {
+      <div class="accordion-content">
+        <div class="setting-block">
+          <div class="setting-row">
+            <div>
+              <p class="block-title">Optimize training around your menstrual cycle</p>
+              <p class="subtle-text">We'll adjust workout intensity and recovery based on your cycle phase</p>
+            </div>
+            <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="toggleSignal(cycleTrackingEnabled)"><span></span></button>
+          </div>
+        </div>
+
+        @if (cycleTrackingEnabled()) {
+          <div class="radio-list">
+            <label><input type="radio" name="cycle-status" value="regular" [checked]="cycleStatus() === 'regular'" (change)="cycleStatus.set('regular')" /> I have regular cycles</label>
+            <label><input type="radio" name="cycle-status" value="irregular" [checked]="cycleStatus() === 'irregular'" (change)="cycleStatus.set('irregular')" /> My cycles are irregular</label>
+            <label><input type="radio" name="cycle-status" value="hormonal" [checked]="cycleStatus() === 'hormonal'" (change)="cycleStatus.set('hormonal')" /> I'm on hormonal contraception</label>
+            <label><input type="radio" name="cycle-status" value="menopause" [checked]="cycleStatus() === 'menopause'" (change)="cycleStatus.set('menopause')" /> I'm in perimenopause / menopause</label>
+          </div>
+
+          @if (cycleStatus() === 'regular' || cycleStatus() === 'irregular') {
+            <label class="field-label">Last period start date</label>
+            <input class="input" type="date" [value]="cycleLastPeriod()" (input)="cycleLastPeriod.set($any($event.target).value)" />
+
+            @if (cycleStatus() === 'regular') {
+              <div class="setting-row">
+                <span>Average cycle length</span>
+                <div class="stepper">
+                  <button type="button" class="stepper-btn" (click)="adjustSignal(cycleLength, -1, 21, 40)">-</button>
+                  <span>{{ cycleLength() }} days</span>
+                  <button type="button" class="stepper-btn" (click)="adjustSignal(cycleLength, 1, 21, 40)">+</button>
+                </div>
+              </div>
+            }
+          }
+
+          @if (cycleStatus() === 'hormonal') {
+            <p class="info-text">Hormonal contraception suppresses the natural cycle pattern. We'll use a simplified model focused on your energy levels rather than cycle phases.</p>
+          }
+
+          @if (cycleStatus() === 'menopause') {
+            <p class="info-text">We'll focus on recovery optimization, bone health through weight-bearing exercise, and higher protein targets rather than cycle-based adjustments.</p>
+          }
+
+          <button type="button" class="text-link" (click)="openCoachCycleAdjustment()">Need help with irregular cycles? Talk to your coach</button>
+        }
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSection('account')">
+      <h2>Account</h2>
+      <span class="chevron" [class.open]="isOpen('account')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('account')) {
+      <div class="accordion-content">
+        <div class="setting-block">
+          <p class="field-label">Email</p>
+          <p class="readonly-value">{{ accountEmail() }}</p>
+        </div>
+
+        <label class="field-label">Name</label>
+        <input class="input" type="text" [value]="accountName()" (input)="accountName.set($any($event.target).value)" />
+
+        <button type="button" class="delete-btn" (click)="deleteAccount()">Delete account</button>
+      </div>
+    }
+  </article>
+
+  <div class="bottom-spacer"></div>
+</section>

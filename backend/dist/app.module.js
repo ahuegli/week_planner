@@ -15,8 +15,13 @@ const workout_module_1 = require("./workout/workout.module");
 const calendar_event_module_1 = require("./calendar-event/calendar-event.module");
 const mealprep_module_1 = require("./mealprep/mealprep.module");
 const scheduler_settings_module_1 = require("./scheduler-settings/scheduler-settings.module");
-const scheduler_module_1 = require("./scheduler/scheduler.module");
+const scheduler_module_1 = require("./api/scheduler/scheduler.module");
 const mock_data_module_1 = require("./mock-data/mock-data.module");
+const training_plan_module_1 = require("./training-plan/training-plan.module");
+const planned_session_module_1 = require("./planned-session/planned-session.module");
+const weekly_progress_module_1 = require("./weekly-progress/weekly-progress.module");
+const cycle_profile_module_1 = require("./cycle-profile/cycle-profile.module");
+const note_module_1 = require("./note/note.module");
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 const databaseImports = USE_DATABASE
     ? [
@@ -36,6 +41,11 @@ const databaseImports = USE_DATABASE
         calendar_event_module_1.CalendarEventModule,
         mealprep_module_1.MealPrepModule,
         scheduler_settings_module_1.SchedulerSettingsModule,
+        training_plan_module_1.TrainingPlanModule,
+        planned_session_module_1.PlannedSessionModule,
+        weekly_progress_module_1.WeeklyProgressModule,
+        cycle_profile_module_1.CycleProfileModule,
+        note_module_1.NoteModule,
     ]
     : [mock_data_module_1.MockDataModule];
 let AppModule = class AppModule {

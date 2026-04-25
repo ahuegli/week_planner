@@ -28,6 +28,13 @@ export class SchedulerSettingsService {
       enduranceWeight: 45,
       strengthWeight: 30,
       yogaWeight: 25,
+      autoPlaceEarliestTime: '06:00',
+      autoPlaceLatestTime: '22:00',
+      preferredWorkoutTimes: [],
+      runningDistanceThreshold: 15,
+      bikingDistanceThreshold: 40,
+      swimmingDistanceThreshold: 3,
+      enduranceRestDays: 1,
     });
     return this.settingsRepository.save(settings);
   }

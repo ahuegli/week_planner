@@ -40,6 +40,11 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateWorkoutDto.prototype, "distanceKm", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateWorkoutDto.prototype, "distanceCountsAsLong", void 0);
 class UpdateWorkoutDto {
 }
 exports.UpdateWorkoutDto = UpdateWorkoutDto;
@@ -73,4 +78,9 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], UpdateWorkoutDto.prototype, "distanceKm", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateWorkoutDto.prototype, "distanceCountsAsLong", void 0);
 //# sourceMappingURL=workout.dto.js.map

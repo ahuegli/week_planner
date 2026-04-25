@@ -15,6 +15,8 @@ const workout_entity_1 = require("../workout/workout.entity");
 const calendar_event_entity_1 = require("../calendar-event/calendar-event.entity");
 const mealprep_entity_1 = require("../mealprep/mealprep.entity");
 const scheduler_settings_entity_1 = require("../scheduler-settings/scheduler-settings.entity");
+const training_plan_entity_1 = require("../training-plan/training-plan.entity");
+const cycle_profile_entity_1 = require("../cycle-profile/cycle-profile.entity");
 let User = class User {
 };
 exports.User = User;
@@ -58,6 +60,14 @@ __decorate([
     (0, typeorm_1.OneToOne)(() => scheduler_settings_entity_1.SchedulerSettings, (settings) => settings.user),
     __metadata("design:type", scheduler_settings_entity_1.SchedulerSettings)
 ], User.prototype, "schedulerSettings", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => training_plan_entity_1.TrainingPlan, (plan) => plan.user),
+    __metadata("design:type", Array)
+], User.prototype, "trainingPlans", void 0);
+__decorate([
+    (0, typeorm_1.OneToOne)(() => cycle_profile_entity_1.CycleProfile, (cycleProfile) => cycleProfile.user),
+    __metadata("design:type", cycle_profile_entity_1.CycleProfile)
+], User.prototype, "cycleProfile", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

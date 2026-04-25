@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue)",
+      "Bash(npm run *)",
+      "Bash(./node_modules/.bin/eslint \"src/note/**/*.ts\")",
+      "Bash(npx eslint *)",
+      "Bash(node query-notes-schema.js)",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"me@test.com\",\"password\":\"test1234\"}')",
+      "Bash(curl -s -X PUT http://localhost:3000/api/v1/notes/8c91f966-7c0d-4d4b-ac9e-cbdbbf72420b -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDdlYjJiMC0xMjFhLTQ3MmMtYTcwYS1kZWRlNWY0NTIzNjciLCJlbWFpbCI6Im1lQHRlc3QuY29tIiwiaWF0IjoxNzc3MDU4MzA2LCJleHAiOjE3Nzc2NjMxMDZ9.ceny1uAjx54AIiaDzM48nL-fsakMiE7lAVUGh6f9Mko' -d '{\"title\":\"Updated\",\"body\":\"New body\"}')",
+      "Bash(curl -s -X PUT http://localhost:3000/api/v1/notes/8c91f966-7c0d-4d4b-ac9e-cbdbbf72420b/complete -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDdlYjJiMC0xMjFhLTQ3MmMtYTcwYS1kZWRlNWY0NTIzNjciLCJlbWFpbCI6Im1lQHRlc3QuY29tIiwiaWF0IjoxNzc3MDU4MzA2LCJleHAiOjE3Nzc2NjMxMDZ9.ceny1uAjx54AIiaDzM48nL-fsakMiE7lAVUGh6f9Mko' -d '{\"completed\":true}')",
+      "Bash(curl -s -X PUT http://localhost:3000/api/v1/notes/8c91f966-7c0d-4d4b-ac9e-cbdbbf72420b/complete -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDdlYjJiMC0xMjFhLTQ3MmMtYTcwYS1kZWRlNWY0NTIzNjciLCJlbWFpbCI6Im1lQHRlc3QuY29tIiwiaWF0IjoxNzc3MDU4MzA2LCJleHAiOjE3Nzc2NjMxMDZ9.ceny1uAjx54AIiaDzM48nL-fsakMiE7lAVUGh6f9Mko' -d '{\"completed\":false}')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/v1/notes/8c91f966-7c0d-4d4b-ac9e-cbdbbf72420b -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDdlYjJiMC0xMjFhLTQ3MmMtYTcwYS1kZWRlNWY0NTIzNjciLCJlbWFpbCI6Im1lQHRlc3QuY29tIiwiaWF0IjoxNzc3MDU4MzA2LCJleHAiOjE3Nzc2NjMxMDZ9.ceny1uAjx54AIiaDzM48nL-fsakMiE7lAVUGh6f9Mko')",
+      "Bash(curl -s -X GET http://localhost:3000/api/v1/notes/8c91f966-7c0d-4d4b-ac9e-cbdbbf72420b -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMDdlYjJiMC0xMjFhLTQ3MmMtYTcwYS1kZWRlNWY0NTIzNjciLCJlbWFpbCI6Im1lQHRlc3QuY29tIiwiaWF0IjoxNzc3MDU4MzA2LCJleHAiOjE3Nzc2NjMxMDZ9.ceny1uAjx54AIiaDzM48nL-fsakMiE7lAVUGh6f9Mko')",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\" /FO TABLE /V)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000\")",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n%{errormsg}\" http://localhost:3000/api/v1/plans)",
+      "Bash(curl -s http://localhost:3000/api/v1/plans)",
+      "Bash(git diff *)",
+      "Read(//tmp/**)",
+      "Bash(cygpath -w /tmp/wp_diff.txt)"
+    ]
+  }
+}

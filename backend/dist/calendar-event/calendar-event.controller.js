@@ -21,7 +21,10 @@ let CalendarEventController = class CalendarEventController {
     constructor(calendarEventService) {
         this.calendarEventService = calendarEventService;
     }
-    async findAll(req) {
+    async findAll(req, startDate, endDate) {
+        if (startDate && endDate) {
+            return this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate);
+        }
         return this.calendarEventService.findAllByUser(req.user.userId);
     }
     async findOne(req, id) {
@@ -48,8 +51,10 @@ exports.CalendarEventController = CalendarEventController;
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('startDate')),
+    __param(2, (0, common_1.Query)('endDate')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], CalendarEventController.prototype, "findAll", null);
 __decorate([
