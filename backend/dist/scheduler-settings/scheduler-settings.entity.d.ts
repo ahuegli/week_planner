@@ -14,6 +14,7 @@ export declare class SchedulerSettings {
     bikingDistanceThreshold: number;
     swimmingDistanceThreshold: number;
     enduranceRestDays: number;
+    cycleTrackingEnabled: boolean;
     userId: string;
     user: User;
 }

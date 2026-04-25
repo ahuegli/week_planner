@@ -44,6 +44,7 @@ let SchedulerSettingsService = class SchedulerSettingsService {
             bikingDistanceThreshold: 40,
             swimmingDistanceThreshold: 3,
             enduranceRestDays: 1,
+            cycleTrackingEnabled: false,
         });
         return this.settingsRepository.save(settings);
     }

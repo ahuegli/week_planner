@@ -34,6 +34,7 @@ const databaseImports = USE_DATABASE
             database: process.env.DB_NAME || 'myapp',
             autoLoadEntities: true,
             synchronize: true,
+            ssl: { rejectUnauthorized: false },
         }),
         auth_module_1.AuthModule,
         user_module_1.UserModule,

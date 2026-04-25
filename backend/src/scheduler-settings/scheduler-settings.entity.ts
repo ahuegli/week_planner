@@ -45,6 +45,9 @@ export class SchedulerSettings {
   @Column({ default: 1 })
   enduranceRestDays: number;
 
+  @Column({ default: false })
+  cycleTrackingEnabled: boolean;
+
   @Column({ unique: true })
   userId: string;
 

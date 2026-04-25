@@ -99,4 +99,9 @@ __decorate([
     (0, class_validator_1.Max)(7),
     __metadata("design:type", Number)
 ], UpdateSchedulerSettingsDto.prototype, "enduranceRestDays", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateSchedulerSettingsDto.prototype, "cycleTrackingEnabled", void 0);
 //# sourceMappingURL=scheduler-settings.dto.js.map

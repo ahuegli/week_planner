@@ -12,4 +12,5 @@ export declare class UpdateSchedulerSettingsDto {
     bikingDistanceThreshold?: number;
     swimmingDistanceThreshold?: number;
     enduranceRestDays?: number;
+    cycleTrackingEnabled?: boolean;
 }

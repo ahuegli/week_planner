@@ -72,6 +72,10 @@ __decorate([
     __metadata("design:type", Number)
 ], SchedulerSettings.prototype, "enduranceRestDays", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], SchedulerSettings.prototype, "cycleTrackingEnabled", void 0);
+__decorate([
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], SchedulerSettings.prototype, "userId", void 0);

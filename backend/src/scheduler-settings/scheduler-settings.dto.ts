@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, IsArray, Min, Max } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, IsArray, Min, Max } from 'class-validator';
 
 export class UpdateSchedulerSettingsDto {
   @IsOptional()
@@ -72,4 +72,8 @@ export class UpdateSchedulerSettingsDto {
   @Min(0)
   @Max(7)
   enduranceRestDays?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  cycleTrackingEnabled?: boolean;
 }

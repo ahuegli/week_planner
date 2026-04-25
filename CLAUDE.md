@@ -21,7 +21,14 @@ Guidance for Claude Code working in this repository.
 6. **Cascade delete risk:** deleting a `TrainingPlan` cascades to `PlanWeek` → `PlannedSession`. Don't delete plans during routine operations.
 7. **Read the file before editing it.** Don't trust documentation — the codebase is the source of truth.
 8. **Ask before destructive DB operations** (table drops, mass deletes, schema changes beyond synchronize's auto-sync).
-
+9. **Strict spec scope.** When working from docs/wp2_spec.md or any 
+   spec, only edit files explicitly listed in the current Part. Never 
+   invoke /simplify, /refactor, or other broad-cleanup commands. If you 
+   notice unrelated issues, list them in your response and ask before 
+   touching anything outside the current scope.
+10. **Plan mode is read-only.** When asked to "produce a plan" or 
+    "in plan mode," produce only the plan. Do not execute commands, 
+    modify files, or invoke slash commands.
 ## How to work on a task
 
 - Start by reading `docs/current_spec.md` if it exists. That's the active work.
