@@ -241,7 +241,10 @@ export class WorkoutPageComponent {
   }
 
   protected askCoach(): void {
-    console.log('[WorkoutPage] Ask coach tapped');
+    const title = this.event()?.title;
+    const context = title ? encodeURIComponent(title) : undefined;
+    const url = context ? `/coach?workout=${context}` : '/coach';
+    void this.router.navigateByUrl(url);
   }
 
   protected goToPostWorkout(): void {

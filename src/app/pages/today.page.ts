@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   MOCK_DID_YOU_KNOW,
   MOCK_REMINDER,
@@ -42,6 +42,7 @@ function timeToMinutes(time: string): number {
 })
 export class TodayPageComponent {
   private readonly dataStore = inject(DataStoreService);
+  private readonly router = inject(Router);
   private readonly today = signal(new Date());
   protected readonly selectedDate = signal(new Date());
   protected readonly expandedEventId = signal<string | null>(null);
@@ -172,7 +173,7 @@ export class TodayPageComponent {
   }
 
   protected openCoachAdjustmentPrompt(): void {
-    console.log('[WeekPlanner] Coach adjustment prompt tapped');
+    void this.router.navigate(['/coach']);
   }
 
   private toDateString(date: Date): string {

@@ -22,18 +22,15 @@ export class CreatePlanCtaComponent {
     }
 
     if (mode === 'race') {
-      console.log('Start onboarding with goal: race');
       void this.router.navigate(['/onboarding'], { queryParams: { goal: 'race' } });
       return;
     }
 
     if (mode === 'general_fitness') {
-      console.log('Start onboarding with goal: fitness');
       void this.router.navigate(['/onboarding'], { queryParams: { goal: 'fitness' } });
       return;
     }
 
-    console.log('Start onboarding with goal: weight_loss');
     void this.router.navigate(['/onboarding'], { queryParams: { goal: 'weight_loss' } });
   }
 }

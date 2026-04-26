@@ -9,6 +9,5 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 })
 export class ShareMonthComponent {
   protected shareSchedule(): void {
-    console.log('Share triggered');
   }
 }

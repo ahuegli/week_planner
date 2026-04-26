@@ -147,7 +147,6 @@ export class EventDetailModalComponent {
     }
 
     const changes = this.diffEvent(activeEvent, updatedEvent);
-    console.log(`Update event: ${activeEvent.id} with ${JSON.stringify(changes)}`);
     this.saveRequested.emit(updatedEvent);
   }
 

@@ -314,7 +314,6 @@ export class CyclePageComponent {
   }
 
   protected periodNotYet(): void {
-    console.log('Period not yet');
   }
 
   protected arcPathForDays(startDay: number, endDay: number): string {

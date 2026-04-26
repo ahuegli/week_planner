@@ -7,6 +7,26 @@
   gap: 16px;
 }
 
+.plan-coach-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
+.coach-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f59e0b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+
+  svg { flex-shrink: 0; }
+
+  &:hover { text-decoration: underline; }
+}
+
 .plan-header {
   display: flex;
   align-items: flex-start;

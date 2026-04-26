@@ -387,26 +387,7 @@ export class WeekPageComponent {
       : null;
 
     if (event.type === 'workout' && event.status === 'completed' && linkedSession) {
-      console.log('[WeekPage] Mark as done tapped', {
-        eventId: event.id,
-        linkedSessionId: linkedSession.id,
-        apiCall: `PUT /api/v1/sessions/${linkedSession.id}/complete`,
-        completedBefore: this.completedWorkouts(),
-        totalBefore: this.plannedWorkouts(),
-      });
-
       const updated = await this.dataStore.completeSession(linkedSession.id, event.energyRating ?? 'moderate');
-
-      console.log('[WeekPage] Mark as done response', updated);
-      console.log('[WeekPage] Completion signals after update', {
-        completedAfter: this.completedWorkouts(),
-        totalAfter: this.plannedWorkouts(),
-        displayedWeekSessions: this.displayedWeekSessions().map((session) => ({
-          id: session.id,
-          status: session.status,
-          linkedCalendarEventId: session.linkedCalendarEventId,
-        })),
-      });
       return;
     }
 

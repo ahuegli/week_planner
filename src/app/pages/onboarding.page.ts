@@ -94,7 +94,6 @@ export class OnboardingPageComponent {
       },
     };
 
-    console.log(`Generate plan with settings: ${JSON.stringify(summary)}`);
     this.loading.set(true);
 
     const data = this.onboardingData();

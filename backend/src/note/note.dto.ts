@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
 
 export class CreateNoteDto {
   @IsString()
@@ -57,6 +57,10 @@ export class UpdateNoteDto {
   @IsOptional()
   @IsBoolean()
   completed?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  linkedCalendarEventId?: string | null;
 }
 
 export class ToggleCompleteDto {

@@ -136,7 +136,7 @@ export class IHaveTimeComponent {
   }
 
   protected askCoach(): void {
-    console.log('[WeekPlanner] Ask my coach tapped — chatbot not yet connected');
+    void this.router.navigate(['/coach']);
   }
 
   private addMinutes(startTime: string, durationMinutes: number): string {

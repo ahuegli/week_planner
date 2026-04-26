@@ -273,31 +273,25 @@ export class SettingsPageComponent {
   }
 
   protected editPlan(): void {
-    console.log('Edit plan — should pre-fill with current data');
     void this.router.navigate(['/onboarding']);
   }
 
   protected startNewPlan(): void {
-    console.log('Create new plan — fresh start');
     void this.router.navigate(['/onboarding']);
   }
 
   protected createPlan(): void {
-    console.log('Create new plan — fresh start');
     void this.router.navigate(['/onboarding']);
   }
 
   protected navigateToPlan(): void {
-    console.log('Navigate to Plan tab');
     void this.router.navigate(['/plan']);
   }
 
   protected openCoachCycleAdjustment(): void {
-    console.log('Open coach for cycle adjustment');
   }
 
   protected deleteAccount(): void {
-    console.log('Delete account requested');
   }
 
   private async loadSettings(): Promise<void> {

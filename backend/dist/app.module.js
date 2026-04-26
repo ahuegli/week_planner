@@ -26,6 +26,7 @@ const energy_check_in_module_1 = require("./energy-check-in/energy-check-in.modu
 const symptom_log_module_1 = require("./symptom-log/symptom-log.module");
 const workout_log_module_1 = require("./workout-log/workout-log.module");
 const stats_module_1 = require("./stats/stats.module");
+const ai_module_1 = require("./ai/ai.module");
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 const databaseImports = USE_DATABASE
     ? [
@@ -37,7 +38,7 @@ const databaseImports = USE_DATABASE
             password: process.env.DB_PASSWORD || 'password',
             database: process.env.DB_NAME || 'myapp',
             autoLoadEntities: true,
-            synchronize: true,
+            synchronize: process.env.NODE_ENV !== 'production',
             ssl: { rejectUnauthorized: false },
         }),
         auth_module_1.AuthModule,
@@ -55,6 +56,7 @@ const databaseImports = USE_DATABASE
         symptom_log_module_1.SymptomLogModule,
         workout_log_module_1.WorkoutLogModule,
         stats_module_1.StatsModule,
+        ai_module_1.AiModule,
     ]
     : [mock_data_module_1.MockDataModule];
 let AppModule = class AppModule {

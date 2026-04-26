@@ -22,7 +22,9 @@
       "Read(//tmp/**)",
       "Bash(cygpath -w /tmp/wp_diff.txt)",
       "Bash(USE_DATABASE=true npm run start:dev)",
-      "Bash(echo \"PID: $!\")"
+      "Bash(echo \"PID: $!\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

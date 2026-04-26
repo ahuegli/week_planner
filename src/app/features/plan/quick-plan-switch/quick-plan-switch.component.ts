@@ -187,30 +187,20 @@ export class QuickPlanSwitchComponent {
 
     try {
       if (oldPlan) {
-        console.log('Step 1: Deleting old plan...');
         await firstValueFrom(this.planApi.deletePlan(oldPlan.id));
-        console.log('Step 1: ✓ Old plan deleted successfully');
       }
 
-      console.log('Step 2: Creating new plan...');
       const payload = this.buildPlanPayload();
       const created = await this.dataStore.createPlan(payload);
       if (!created) {
         throw new Error('Could not create new plan');
       }
-      console.log('Step 2: ✓ New plan created successfully', created);
 
-      console.log('Step 3: Generating template...');
       await this.dataStore.generatePlanTemplate(created.id);
-      console.log('Step 3: ✓ Template generated successfully');
 
-      console.log('Step 4: Scheduling all weeks...');
       await this.dataStore.scheduleEntirePlan(created.id);
-      console.log('Step 4: ✓ All weeks scheduled successfully');
 
-      console.log('Step 5: Loading all data...');
       await this.dataStore.loadAll();
-      console.log('Step 5: ✓ Data loaded successfully');
 
       this.switched.emit();
       this.closeRequested.emit();

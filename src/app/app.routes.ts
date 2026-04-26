@@ -57,6 +57,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/workout/workout.page').then((m) => m.WorkoutPageComponent),
   },
   {
+    path: 'coach',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/coach/coach.page').then((m) => m.CoachPageComponent),
+  },
+  {
     path: '**',
     redirectTo: 'login',
   },
