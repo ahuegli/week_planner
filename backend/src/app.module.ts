@@ -18,6 +18,7 @@ import { SymptomLogModule } from './symptom-log/symptom-log.module';
 import { WorkoutLogModule } from './workout-log/workout-log.module';
 import { StatsModule } from './stats/stats.module';
 import { AiModule } from './ai/ai.module';
+import { CalendarShareModule } from './calendar-share/calendar-share.module';
 
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 
@@ -50,6 +51,7 @@ const databaseImports = USE_DATABASE
       WorkoutLogModule,
       StatsModule,
       AiModule,
+      CalendarShareModule,
     ]
   : [MockDataModule];
 
