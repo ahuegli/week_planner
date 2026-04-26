@@ -20,7 +20,9 @@
       "Bash(curl -s http://localhost:3000/api/v1/plans)",
       "Bash(git diff *)",
       "Read(//tmp/**)",
-      "Bash(cygpath -w /tmp/wp_diff.txt)"
+      "Bash(cygpath -w /tmp/wp_diff.txt)",
+      "Bash(USE_DATABASE=true npm run start:dev)",
+      "Bash(echo \"PID: $!\")"
     ]
   }
 }

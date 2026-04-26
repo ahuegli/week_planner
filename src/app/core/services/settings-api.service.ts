@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MealprepSettings, SchedulerSettings } from '../models/app-data.models';
+import { environment } from '../../../environments/environment';
 
-const API_BASE = 'http://localhost:3000/api/v1';
+const API_BASE = environment.apiBaseUrl;
 
 @Injectable({ providedIn: 'root' })
 export class SettingsApiService {

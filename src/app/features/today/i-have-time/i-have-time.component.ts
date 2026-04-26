@@ -60,8 +60,12 @@ export class IHaveTimeComponent {
       if ((suggestion.kind === 'pending' || suggestion.kind === 'tomorrow') && suggestion.plannedSessionId) {
         const updated = await this.dataStore.scheduleSessionNow(suggestion.plannedSessionId, targetDate, startTime);
         if (updated) {
-          this.uiFeedback.show(`${suggestion.sessionType ?? 'Session'} added to today`);
           this.close();
+          if (updated.linkedCalendarEventId) {
+            await this.router.navigate(['/workout', updated.linkedCalendarEventId]);
+          } else {
+            this.uiFeedback.show(`${suggestion.sessionType ?? 'Session'} added to today`);
+          }
         }
         return;
       }
@@ -102,7 +106,7 @@ export class IHaveTimeComponent {
       if (suggestion.kind === 'recovery') {
         const duration = suggestion.duration ?? 20;
         const endTime = this.addMinutes(startTime, duration);
-        await this.dataStore.addCalendarEvent({
+        const created = await this.dataStore.addCalendarEvent({
           title: suggestion.sessionType ?? 'Yoga & Mobility',
           type: 'workout',
           day,
@@ -116,7 +120,13 @@ export class IHaveTimeComponent {
           priority: 'optional',
           isManuallyPlaced: true,
         });
-        this.uiFeedback.show('Recovery session added to today');
+        this.close();
+        if (created) {
+          await this.router.navigate(['/workout', created.id]);
+        } else {
+          this.uiFeedback.show('Recovery session added to today');
+        }
+        return;
       }
 
       this.close();

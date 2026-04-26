@@ -38,4 +38,6 @@ export interface Workout {
   priority?: WorkoutPriority;
   distanceKm?: number;
   distanceCountsAsLong?: boolean;
+  intensity?: string;
+  cyclePhaseRules?: Record<string, unknown>;
 }

@@ -90,6 +90,11 @@
             }
             @if (canCheckIn(session)) {
               <div class="session-actions">
+                @if (session.linkedCalendarEventId) {
+                  <button type="button" class="btn-start-workout" (click)="startSession(session)">▶ Start</button>
+                } @else {
+                  <p class="schedule-first-hint">Schedule this session first</p>
+                }
                 <button type="button" class="btn-primary" (click)="markDone(session)">Mark as done</button>
                 <button type="button" class="btn-secondary" (click)="skip(session)">Skip</button>
               </div>

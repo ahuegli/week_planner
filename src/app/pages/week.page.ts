@@ -9,9 +9,22 @@ import { QuickAddFabComponent } from '../features/week/quick-add-fab/quick-add-f
 import { ShareMonthComponent } from '../features/week/share-month/share-month.component';
 import { ViewToggleComponent, WeekViewMode } from '../features/week/view-toggle/view-toggle.component';
 import { WeekSummaryComponent } from '../features/week/week-summary/week-summary.component';
+import { ConflictResolutionDialogComponent } from '../shared/conflict-resolution-dialog/conflict-resolution-dialog.component';
 import { CalendarEvent, DaySchedule, MonthDay } from '../mock-data';
 import { DataStoreService } from '../core/services/data-store.service';
-import { PlannedSession, Workout } from '../core/models/app-data.models';
+import { ConflictCheckResult, ConflictMove, PlannedSession, Workout } from '../core/models/app-data.models';
+import { ConflictDetectorService } from '../core/services/conflict-detector.service';
+import { SchedulerApiService } from '../core/services/scheduler-api.service';
+import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
+import { calculatePhasesForWeek, PhaseName } from '../core/utils/cycle-phase.util';
+import { environment } from '../../environments/environment';
+
+const PHASE_COLORS: Partial<Record<PhaseName, string>> = {
+  menstrual: '#A85454',
+  follicular: '#2d4d7a',
+  ovulation: '#C4923A',
+  luteal: '#6B7F5E',
+};
 
 interface SchedulerGenerateResponse {
   placedEvents: Array<Partial<CalendarEvent> & { day: number }>;
@@ -28,6 +41,7 @@ interface SchedulerGenerateResponse {
     MonthGridComponent,
     ShareMonthComponent,
     QuickAddFabComponent,
+    ConflictResolutionDialogComponent,
   ],
   templateUrl: './week.page.html',
   styleUrl: './week.page.scss',
@@ -35,6 +49,8 @@ interface SchedulerGenerateResponse {
 })
 export class WeekPageComponent {
   private readonly dataStore = inject(DataStoreService);
+  private readonly conflictDetector = inject(ConflictDetectorService);
+  private readonly schedulerApi = inject(SchedulerApiService);
   private readonly document = inject(DOCUMENT);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
@@ -45,6 +61,11 @@ export class WeekPageComponent {
   protected readonly currentDate = signal(new Date());
   protected readonly isGenerating = signal(false);
   protected readonly schedulingSessionId = signal<string | null>(null);
+
+  protected readonly conflictDialogOpen = signal(false);
+  protected readonly pendingConflict = signal<ConflictCheckResult | null>(null);
+  protected readonly pendingEventTitle = signal('');
+  private pendingAction: (() => Promise<void>) | null = null;
 
   protected readonly weekStartDate = computed(() => this.startOfWeek(this.currentDate()));
   protected readonly isCurrentWeek = computed(() => this.isSameDate(this.weekStartDate(), this.startOfWeek(new Date())));
@@ -138,6 +159,27 @@ export class WeekPageComponent {
     });
   });
 
+  protected readonly conflictingEventIds = computed<Set<string>>(() => {
+    const events = this.weekEvents();
+    const result = new Set<string>();
+    for (let i = 0; i < events.length; i++) {
+      for (let j = i + 1; j < events.length; j++) {
+        const a = events[i];
+        const b = events[j];
+        if (this.resolveEventDate(a) !== this.resolveEventDate(b)) continue;
+        const aStart = this.timeToMin(a.startTime);
+        const aEnd = this.timeToMin(a.endTime);
+        const bStart = this.timeToMin(b.startTime);
+        const bEnd = this.timeToMin(b.endTime);
+        if (aStart < bEnd && aEnd > bStart) {
+          result.add(a.id);
+          result.add(b.id);
+        }
+      }
+    }
+    return result;
+  });
+
   protected readonly weekSchedule = computed<DaySchedule[]>(() => {
     const start = this.weekStartDate();
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -165,6 +207,25 @@ export class WeekPageComponent {
   );
 
   protected readonly hasWeekEvents = computed(() => this.weekEvents().length > 0);
+
+  protected readonly showCyclePhases = signal(false);
+
+  protected readonly showCyclePhasesToggle = computed(
+    () => cycleTrackingEnabled() && this.dataStore.cycleProfile()?.mode === 'natural',
+  );
+
+  protected readonly phaseDotMap = computed<Map<string, string>>(() => {
+    if (!this.showCyclePhases()) return new Map();
+    const profile = this.dataStore.cycleProfile();
+    if (!profile) return new Map();
+    const phases = calculatePhasesForWeek(profile, this.weekStartDateString());
+    const result = new Map<string, string>();
+    phases.forEach((phase, date) => {
+      const color = PHASE_COLORS[phase];
+      if (color) result.set(date, color);
+    });
+    return result;
+  });
 
   constructor() {
     void this.initialize();
@@ -272,7 +333,7 @@ export class WeekPageComponent {
       };
 
       const response = await firstValueFrom(
-        this.http.post<SchedulerGenerateResponse>('http://localhost:3000/api/v1/scheduler/generate', payload),
+        this.http.post<SchedulerGenerateResponse>(`${environment.apiBaseUrl}/scheduler/generate`, payload),
       );
 
       const workoutLimit = workouts.length;
@@ -349,6 +410,24 @@ export class WeekPageComponent {
       return;
     }
 
+    // For non-workout events (shifts, personal, mealprep), check if the change
+    // causes conflicts with scheduled workouts before saving.
+    if (event.type !== 'workout' && event.date) {
+      const result = await this.conflictDetector.check(
+        { date: event.date, startTime: event.startTime, endTime: event.endTime, type: event.type, commuteMinutes: event.commuteMinutes },
+        event.id,
+      );
+      if (result?.hasConflicts) {
+        this.pendingConflict.set(result);
+        this.pendingEventTitle.set(event.title);
+        this.pendingAction = async () => {
+          await this.dataStore.updateCalendarEvent(event.id, event);
+        };
+        this.conflictDialogOpen.set(true);
+        return;
+      }
+    }
+
     await this.dataStore.updateCalendarEvent(event.id, event);
   }
 
@@ -376,9 +455,59 @@ export class WeekPageComponent {
   }
 
   protected async onQuickAddEvent(events: Partial<CalendarEvent>[]): Promise<void> {
+    // Only check single non-repeating events — repeating shifts span the whole week
+    const first = events[0];
+    if (events.length === 1 && first?.date && !first.isRepeatingWeekly) {
+      const result = await this.conflictDetector.check({
+        date: first.date,
+        startTime: first.startTime ?? '00:00',
+        endTime: first.endTime ?? '00:00',
+        type: first.type ?? 'custom-event',
+        commuteMinutes: first.commuteMinutes,
+      });
+      if (result?.hasConflicts) {
+        this.pendingConflict.set(result);
+        this.pendingEventTitle.set(first.title ?? 'New event');
+        this.pendingAction = async () => {
+          for (const event of events) {
+            await this.dataStore.addCalendarEvent(event);
+          }
+        };
+        this.conflictDialogOpen.set(true);
+        return;
+      }
+    }
     for (const event of events) {
       await this.dataStore.addCalendarEvent(event);
     }
+  }
+
+  protected async onConflictApply(moves: ConflictMove[]): Promise<void> {
+    this.conflictDialogOpen.set(false);
+    if (moves.length > 0) {
+      try {
+        await firstValueFrom(this.schedulerApi.applyConflicts(moves));
+      } catch {
+        // non-fatal — proceed with saving the new event
+      }
+    }
+    await this.pendingAction?.();
+    this.pendingAction = null;
+    this.pendingConflict.set(null);
+    await this.dataStore.loadAll();
+  }
+
+  protected async onConflictKeep(): Promise<void> {
+    this.conflictDialogOpen.set(false);
+    await this.pendingAction?.();
+    this.pendingAction = null;
+    this.pendingConflict.set(null);
+  }
+
+  protected onConflictCancel(): void {
+    this.conflictDialogOpen.set(false);
+    this.pendingAction = null;
+    this.pendingConflict.set(null);
   }
 
   private shiftWeek(days: number): void {
@@ -476,6 +605,11 @@ export class WeekPageComponent {
     }
 
     return 'strength';
+  }
+
+  private timeToMin(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return (h ?? 0) * 60 + (m ?? 0);
   }
 
   private resolveEventDate(event: CalendarEvent): string {

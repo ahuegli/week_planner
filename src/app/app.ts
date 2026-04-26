@@ -31,6 +31,8 @@ export class App {
     const path = rawUrl.split('?')[0]?.split('#')[0] ?? rawUrl;
     const isLogin = path === '/login' || path.startsWith('/login/');
     const isOnboarding = path === '/onboarding' || path.startsWith('/onboarding/');
-    return !isLogin && !isOnboarding;
+    const isWorkout = path.startsWith('/workout/');
+    const isStats = path === '/stats' || path.startsWith('/stats/');
+    return !isLogin && !isOnboarding && !isWorkout && !isStats;
   }
 }

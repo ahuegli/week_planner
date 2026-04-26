@@ -162,6 +162,10 @@ export class PlanPageComponent {
     await this.dataStore.skipSession(sessionId);
   }
 
+  protected onSessionStartRequested(eventId: string): void {
+    void this.router.navigate(['/workout', eventId]);
+  }
+
   protected async scheduleRemainingSessions(): Promise<void> {
     await this.router.navigate(['/week'], { queryParams: { schedule: '1' } });
   }

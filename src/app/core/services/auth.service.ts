@@ -1,6 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface AuthUser {
   id: string;
@@ -13,7 +14,7 @@ interface AuthResponse {
   user: AuthUser;
 }
 
-const AUTH_API_BASE = 'http://localhost:3000/api/v1/auth';
+const AUTH_API_BASE = `${environment.apiBaseUrl}/auth`;
 const AUTH_TOKEN_KEY = 'auth_token';
 const AUTH_USER_KEY = 'auth_user';
 

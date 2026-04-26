@@ -320,6 +320,8 @@ export class ScheduleGeneratorService {
         durationMinutes: duration,
         sessionType: session.kind === 'workout' ? session.title : undefined,
         type,
+        intensity: workout?.intensity,
+        cyclePhaseRules: workout?.cyclePhaseRules,
       },
       totalWorkoutsNeeded,
     };

@@ -19,6 +19,18 @@
     <p class="page-subtitle">{{ shiftUpdateMessage() }}</p>
   }
 
+  @if (showRescheduleChoice()) {
+    <div class="reschedule-banner">
+      <p class="reschedule-msg">
+        {{ shiftConflictCount() }} workout{{ shiftConflictCount() > 1 ? 's' : '' }} may overlap with the new shift times.
+      </p>
+      <div class="reschedule-actions">
+        <button type="button" class="btn-primary small-btn" (click)="applyShiftReschedule()">Auto-reschedule</button>
+        <button type="button" class="btn-secondary small-btn" (click)="dismissReschedule()">Keep as-is</button>
+      </div>
+    </div>
+  }
+
   <a class="restart-link" routerLink="/onboarding">Restart onboarding</a>
 
   <article class="accordion-card">
@@ -32,6 +44,15 @@
     </button>
     @if (isOpen('general')) {
       <div class="accordion-content">
+        <a routerLink="/stats" class="stats-link-row">
+          <span>View my stats</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </a>
+
         <div class="setting-row">
           <span>Dark mode</span>
           <button type="button" class="switch" [class.on]="darkMode()" (click)="toggleSignal(darkMode)"><span></span></button>
@@ -70,21 +91,33 @@
     </button>
     @if (isOpen('training')) {
       <div class="accordion-content">
-        @if (hasPlan()) {
+        @if (currentPlan(); as plan) {
           <button type="button" class="plan-preview-card" (click)="navigateToPlan()">
             <div class="plan-preview-top">
-              <span class="mode-badge">RACE</span>
-              <span class="plan-sport">Half Marathon</span>
+              <span class="mode-badge">{{ planModeLabel(plan.mode) }}</span>
+              <span class="plan-sport">{{ planSportLabel(plan.sportType) }}</span>
             </div>
-            <p class="plan-goal-details">July 12, 2026 · Target 1:45:00</p>
-            <p class="plan-progress-text">Week 8 of 12 · Build Phase</p>
-            <div class="plan-progress-bar"><div class="plan-progress-fill" style="width: 66.6%"></div></div>
+            @if (plan.goalDate || plan.goalTime) {
+              <p class="plan-goal-details">
+                @if (plan.goalDate) { {{ plan.goalDate | date:'MMM d, y' }} }
+                @if (plan.goalDate && plan.goalTime) { · }
+                @if (plan.goalTime) { Target {{ plan.goalTime }} }
+              </p>
+            }
+            <p class="plan-progress-text">
+              Week {{ plan.currentWeek }} of {{ plan.totalWeeks }}
+              @if (planPhase()) { · {{ planPhase() | titlecase }} Phase }
+            </p>
+            <div class="plan-progress-bar">
+              <div class="plan-progress-fill" [style.width.%]="planProgressPct()"></div>
+            </div>
           </button>
 
           <button type="button" class="btn-secondary small-btn" (click)="editPlan()">Edit plan</button>
           <button type="button" class="new-plan-btn" (click)="startNewPlan()">Start a new plan</button>
           <p class="info-text">Switch to a different goal after completing your current plan</p>
         } @else {
+          <p class="info-text">No active training plan.</p>
           <button type="button" class="btn-secondary small-btn" (click)="createPlan()">Create new plan</button>
         }
 

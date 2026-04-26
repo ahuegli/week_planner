@@ -29,6 +29,7 @@ export class DayRowComponent {
   readonly weekNumber = input<number>(1);
   readonly planMode = input<PlanMode>('race');
   readonly sportType = input<string | null>(null);
+  readonly conflictingEventIds = input<Set<string>>(new Set());
   readonly eventToggle = output<string>();
   readonly eventUpdated = output<CalendarEvent>();
   readonly eventDeleted = output<string>();

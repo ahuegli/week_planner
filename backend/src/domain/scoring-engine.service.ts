@@ -20,6 +20,8 @@ export interface ScoringContext {
     durationMinutes?: number;
     sessionType?: string;
     type: 'workout' | 'mealprep';
+    intensity?: string;
+    cyclePhaseRules?: Record<string, unknown>;
   };
   totalWorkoutsNeeded?: number;
 }
@@ -40,21 +42,37 @@ export class ScoringEngineService {
     type: CalendarEventType,
     ctx: ScoringContext,
   ): number {
-    let total = 0;
+    const isLongRun = type === 'workout' && (
+      ctx.candidateWorkout?.isLongEndurance === true ||
+      (ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '').replace(/\s+/g, '_').includes('long_run')
+    );
 
-    total += this.offDayBonus(day, type, ctx.shifts, ctx.alreadyPlaced);
-    total -= this.fatiguePenalty(day, ctx.weekContext.exhaustionByDay);
-    total += this.mealPrepSpacingBonus(day, type, ctx.alreadyPlaced);
-    total += this.timeOfDayBonus(day, startMin, type, ctx.shifts, ctx.settings);
-    total += this.shiftAwareTimePreference(day, startMin, endMin, type, ctx);
-    total += this.longSessionFreeDayBonus(day, startMin, endMin, type, ctx);
-    total -= this.eventDayPenalty(day, type, ctx.alreadyPlaced);
-    total += this.diversityComboBonus(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
-    total -= this.stackingPenalty(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
-    total -= this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
-    total += this.spreadBonus(day, type, ctx.alreadyPlaced, ctx.weekContext, ctx.shifts);
-    total += this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
-    total += this.cyclePhaseAdjustment(day, type, ctx);
+    const offDay       =  this.offDayBonus(day, type, ctx.shifts, ctx.alreadyPlaced);
+    const fatigue      = -this.fatiguePenalty(day, ctx.weekContext.exhaustionByDay);
+    const mealPrep     =  this.mealPrepSpacingBonus(day, type, ctx.alreadyPlaced);
+    const timeOfDay    =  this.timeOfDayBonus(day, startMin, type, ctx.shifts, ctx.settings);
+    const shiftAware   =  this.shiftAwareTimePreference(day, startMin, endMin, type, ctx);
+    const freeDay      =  this.longSessionFreeDayBonus(day, startMin, endMin, type, ctx);
+    const eventDay     = -this.eventDayPenalty(day, type, ctx.alreadyPlaced);
+    const diversity    =  this.diversityComboBonus(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
+    const stacking     = -this.stackingPenalty(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
+    const concentration= -this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
+    const spread       =  this.spreadBonus(day, type, ctx.alreadyPlaced, ctx.weekContext, ctx.shifts);
+    const completion   =  this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
+    const cycle        =  this.cyclePhaseAdjustment(day, type, ctx);
+
+    const total = offDay + fatigue + mealPrep + timeOfDay + shiftAware + freeDay +
+                  eventDay + diversity + stacking + concentration + spread + completion + cycle;
+
+    if (isLongRun) {
+      const phase = ctx.weekContext.cyclePhasesByDay?.[day] ?? 'n/a';
+      console.log('[LongRunScore]', JSON.stringify({
+        day, startMin, phase,
+        offDay, fatigue, mealPrep, timeOfDay, shiftAware, freeDay,
+        eventDay, diversity, stacking, concentration, spread, completion, cycle,
+        total: Number(total.toFixed(4)),
+      }));
+    }
 
     return total;
   }
@@ -481,7 +499,7 @@ export class ScoringEngineService {
     const phase = phasesByDay[day];
     if (phase === 'unknown') return 0;
 
-    const sessionType = ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '';
+    const sessionType = (ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '').replace(/\s+/g, '_');
     const workoutType = ctx.candidateWorkout?.workoutType;
 
     // Classify the candidate as endurance vs strength, hard vs not
@@ -512,6 +530,19 @@ export class ScoringEngineService {
     } else if (phase === 'ovulation') {
       if (isExplosive) raw = -0.1; // injury caution flag, soft penalty
       else if (isHardEndurance) raw = +0.1;
+    }
+
+    // Apply per-session cyclePhaseRules on top of phase defaults
+    const phaseRules = ctx.candidateWorkout?.cyclePhaseRules;
+    if (phaseRules) {
+      const rules = phaseRules[phase] as Record<string, unknown> | undefined;
+      if (rules) {
+        const isHardByIntensity = ctx.candidateWorkout?.intensity === 'hard';
+        const isHard = isHardEndurance || isHardStrength || isHardByIntensity;
+        if (rules['maxIntensity'] === 'moderate' && isHard) raw -= 0.2;
+        if (rules['preferred'] === true) raw += 0.2;
+        if (rules['priorityOverride'] === 'supporting') raw -= 0.1;
+      }
     }
 
     return raw * confidence;

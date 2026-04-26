@@ -9,12 +9,19 @@
   padding: 20px 16px 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.header-icon-btn,
 .header-settings {
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   padding: 4px;
-  margin-top: 4px;
   border-radius: 6px;
   text-decoration: none;
 

@@ -20,6 +20,7 @@ import {
   SessionCarryForwardResult,
   SchedulerSettings,
   SkipSessionResponse,
+  SlotCandidate,
   SymptomLog,
   TrainingPlan,
   UpdateNotePayload,
@@ -129,7 +130,7 @@ export class DataStoreService {
     }
   }
 
-  async addCalendarEvent(event: Partial<CalendarEvent>): Promise<void> {
+  async addCalendarEvent(event: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
     this.error.set(null);
     const snapshot = this.calendarEvents();
 
@@ -147,15 +148,18 @@ export class DataStoreService {
 
     try {
       const created = await firstValueFrom(this.calendarEventApi.create(this.toCalendarEventApiPayload(event)));
+      const normalized = this.normalizeCalendarEvent(created);
       this.calendarEvents.set(
         this.calendarEvents().map((current) =>
-          current.id === tempEvent.id ? this.normalizeCalendarEvent(created) : current,
+          current.id === tempEvent.id ? normalized : current,
         ),
       );
+      return normalized;
     } catch (error) {
       console.error('[DataStore] Failed to create calendar event', error);
       this.calendarEvents.set(snapshot);
       this.error.set('Could not create event.');
+      return null;
     }
   }
 
@@ -1021,10 +1025,32 @@ export class DataStoreService {
     try {
       const notes = await firstValueFrom(this.noteApi.getAll());
       this.notes.set(notes);
+      if (this.hasLoaded()) {
+        await this.reconcileStaleNoteLinks(notes);
+      }
     } catch (error) {
       console.error('[DataStore] Failed to load notes', error);
       this.notes.set([]);
     }
+  }
+
+  private async reconcileStaleNoteLinks(notes: Note[]): Promise<void> {
+    const eventIds = new Set(this.calendarEvents().map((e) => e.id));
+    const stale = notes.filter(
+      (n) => n.linkedCalendarEventId !== null && !eventIds.has(n.linkedCalendarEventId!),
+    );
+    await Promise.all(
+      stale.map(async (n) => {
+        try {
+          const updated = await firstValueFrom(
+            this.noteApi.update(n.id, { linkedCalendarEventId: null, wantsScheduling: false }),
+          );
+          this.notes.set(this.notes().map((note) => (note.id === n.id ? updated : note)));
+        } catch (error) {
+          console.error('[DataStore] Failed to clear stale note link', error);
+        }
+      }),
+    );
   }
 
   async addNote(payload: CreateNotePayload): Promise<Note | null> {
@@ -1099,16 +1125,73 @@ export class DataStoreService {
 
   async deleteNote(id: string): Promise<void> {
     this.error.set(null);
-    const snapshot = this.notes();
+    const notesSnapshot = this.notes();
+    const eventsSnapshot = this.calendarEvents();
 
-    this.notes.set(snapshot.filter((n) => n.id !== id));
+    const linkedEventId = notesSnapshot.find((n) => n.id === id)?.linkedCalendarEventId ?? null;
+
+    this.notes.set(notesSnapshot.filter((n) => n.id !== id));
+    if (linkedEventId) {
+      this.calendarEvents.set(eventsSnapshot.filter((e) => e.id !== linkedEventId));
+    }
 
     try {
       await firstValueFrom(this.noteApi.delete(id));
+      if (linkedEventId) {
+        await firstValueFrom(this.calendarEventApi.delete(linkedEventId));
+      }
     } catch (error) {
       console.error('[DataStore] Failed to delete note', error);
-      this.notes.set(snapshot);
+      this.notes.set(notesSnapshot);
+      if (linkedEventId) {
+        this.calendarEvents.set(eventsSnapshot);
+      }
       this.error.set('Could not delete note.');
+    }
+  }
+
+  async createNoteEventFromSlot(note: Note, slot: SlotCandidate): Promise<CalendarEvent | null> {
+    this.error.set(null);
+    const eventsSnapshot = this.calendarEvents();
+    const notesSnapshot = this.notes();
+
+    const tempEvent: CalendarEvent = this.normalizeCalendarEvent({
+      id: `temp-${Date.now()}`,
+      title: note.title,
+      type: 'custom-event',
+      date: slot.date,
+      day: slot.day,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      durationMinutes: note.estimatedDurationMinutes ?? undefined,
+      isManuallyPlaced: false,
+      isPersonal: true,
+    } as CalendarEvent);
+
+    this.calendarEvents.set([...eventsSnapshot, tempEvent]);
+    this.notes.set(notesSnapshot.map((n) => (n.id === note.id ? { ...n, linkedCalendarEventId: tempEvent.id } : n)));
+
+    try {
+      const created = await firstValueFrom(
+        this.calendarEventApi.create(this.toCalendarEventApiPayload(tempEvent)),
+      );
+      const normalizedCreated = this.normalizeCalendarEvent(created);
+      this.calendarEvents.set(
+        this.calendarEvents().map((e) => (e.id === tempEvent.id ? normalizedCreated : e)),
+      );
+
+      const updatedNote = await firstValueFrom(
+        this.noteApi.update(note.id, { linkedCalendarEventId: normalizedCreated.id }),
+      );
+      this.notes.set(this.notes().map((n) => (n.id === note.id ? updatedNote : n)));
+
+      return normalizedCreated;
+    } catch (error) {
+      console.error('[DataStore] Failed to create note event from slot', error);
+      this.calendarEvents.set(eventsSnapshot);
+      this.notes.set(notesSnapshot);
+      this.error.set('Could not schedule note.');
+      return null;
     }
   }
 

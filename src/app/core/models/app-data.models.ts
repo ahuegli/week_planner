@@ -50,6 +50,8 @@ export interface SchedulerSettings {
   strengthWeight: number;
   yogaWeight: number;
   cycleTrackingEnabled: boolean;
+  autoPlaceEarliestTime?: string;
+  autoPlaceLatestTime?: string;
 }
 
 export interface MealprepSettings {
@@ -310,7 +312,187 @@ export interface CreateNotePayload {
   wantsScheduling?: boolean;
 }
 
-export type UpdateNotePayload = Partial<CreateNotePayload> & { completed?: boolean };
+export type UpdateNotePayload = Partial<CreateNotePayload> & {
+  completed?: boolean;
+  linkedCalendarEventId?: string | null;
+};
+
+export interface SlotCandidate {
+  date: string; // YYYY-MM-DD
+  day: number; // 0-6 (offset from week start)
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  score: number;
+  label: string; // e.g. "Tuesday 14:00"
+}
+
+export type EnergyRating = 'easy' | 'moderate' | 'hard';
+
+export interface WorkoutLog {
+  id: string;
+  userId: string;
+  plannedSessionId?: string;
+  calendarEventId?: string;
+  sessionType: string;
+  sportType?: string;
+  energyRating: EnergyRating;
+  plannedDuration: number;
+  actualDuration?: number;
+  actualDistance?: number;
+  averagePace?: string;
+  averageSpeed?: number;
+  averageHeartRate?: number;
+  maxHeartRate?: number;
+  calories?: number;
+  elevationGain?: number;
+  notes?: string;
+  endedEarly: boolean;
+  endedEarlyReason?: string;
+  completedAt: string;
+}
+
+export interface CreateWorkoutLogPayload {
+  plannedSessionId?: string;
+  calendarEventId?: string;
+  sessionType: string;
+  sportType?: string;
+  energyRating: EnergyRating;
+  plannedDuration: number;
+  actualDuration?: number;
+  actualDistance?: number;
+  averagePace?: string;
+  averageSpeed?: number;
+  averageHeartRate?: number;
+  maxHeartRate?: number;
+  calories?: number;
+  elevationGain?: number;
+  notes?: string;
+  endedEarly?: boolean;
+  endedEarlyReason?: string;
+  completedAt?: string;
+}
+
+export type UpdateWorkoutLogPayload = Partial<Omit<CreateWorkoutLogPayload, 'plannedSessionId' | 'calendarEventId' | 'sessionType' | 'sportType' | 'plannedDuration'>>;
+
+// ── Conflict resolution ───────────────────────────────────────────────────
+
+export interface ConflictSuggestion {
+  action: 'shift_time' | 'move_day' | 'cannot_resolve';
+  suggestedDay?: number;
+  suggestedDate?: string;
+  suggestedStartTime?: string;
+  suggestedEndTime?: string;
+  reason: string;
+}
+
+export interface DetectedConflict {
+  eventId: string;
+  title: string;
+  day: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  priority: string;
+  isManuallyPlaced: boolean;
+  suggestion: ConflictSuggestion;
+}
+
+export interface ConflictCheckResult {
+  hasConflicts: boolean;
+  conflicts: DetectedConflict[];
+}
+
+export interface ConflictMove {
+  eventId: string;
+  newDate: string;
+  newStartTime: string;
+  newEndTime: string;
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+
+export interface StatsSummary {
+  totalWorkoutsCompleted: number;
+  totalDurationMinutes: number;
+  totalDistanceKm: number;
+  totalCalories: number;
+  averageEnergyRating: 'easy' | 'moderate' | 'hard';
+  completionRate: number;
+  keyCompletionRate: number;
+  supportingCompletionRate: number;
+  optionalCompletionRate: number;
+  keyCompleted: number;
+  keyTotal: number;
+  supportCompleted: number;
+  supportTotal: number;
+  optCompleted: number;
+  optTotal: number;
+  currentPlan: {
+    mode: string;
+    sportType: string;
+    weekNumber: number;
+    totalWeeks: number;
+    phase: string;
+  } | null;
+  thisWeek: {
+    completed: number;
+    total: number;
+    keySessionsHit: number;
+    keySessionsTotal: number;
+  };
+  activeSince: string | null;
+  earlyBirdCount: number;
+  nightOwlCount: number;
+}
+
+export interface WeeklyStatsWeek {
+  weekStart: string;
+  weekNumber: number;
+  phase: string | null;
+  completed: number;
+  total: number;
+  skipped: number;
+  totalDurationMinutes: number;
+  totalDistanceKm: number;
+  keySessionsHit: number;
+  keySessionsTotal: number;
+  averageEnergyRating: string | null;
+}
+
+export interface WeeklyStats {
+  weeks: WeeklyStatsWeek[];
+}
+
+export interface StreakStats {
+  currentWeekStreak: number;
+  bestWeekStreak: number;
+  currentDayStreak: number;
+  bestDayStreak: number;
+  currentKeySessionStreak: number;
+  bestKeySessionStreak: number;
+  lastWorkoutDate: string | null;
+}
+
+export interface SportStatsWeek {
+  weekStart: string;
+  distanceKm: number;
+  durationMinutes: number;
+  sessionsCount: number;
+  averagePace: string | null;
+}
+
+export interface SportStats {
+  sportType: string;
+  totalSessions: number;
+  totalDurationMinutes: number;
+  totalDistanceKm: number;
+  averagePaceMinPerKm: string | null;
+  averageSpeedKmh: number | null;
+  bestPace: string | null;
+  longestSessionKm: number | null;
+  longestSessionMinutes: number | null;
+  weeklyTrend: SportStatsWeek[];
+}
 
 export type EnergyLevel = 'low' | 'normal' | 'high';
 

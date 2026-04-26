@@ -95,6 +95,7 @@
           <p class="status-inline is-skipped">Skipped</p>
         } @else {
           <div class="action-row">
+            <button class="check-btn check-start" (click)="$event.stopPropagation(); navigateToWorkout()" type="button">▶ Start</button>
             <button class="check-btn check-done" (click)="$event.stopPropagation(); setStatus('completed')" type="button">Mark as done</button>
             <button class="check-btn check-skipped" (click)="$event.stopPropagation(); setStatus('skipped')" type="button">Skip</button>
           </div>

@@ -20,6 +20,43 @@
   gap: 10px;
 }
 
+.reschedule-banner {
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-card));
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reschedule-msg {
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.reschedule-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.stats-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
+
+  svg { color: var(--color-text-secondary); }
+
+  &:hover { color: var(--color-primary); }
+}
+
 .save-btn {
   width: auto;
   min-width: 82px;

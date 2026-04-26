@@ -69,6 +69,31 @@ export class ValidateConstraintsDto {
   minDaysBetweenMealPrepSessions?: number;
 }
 
+export class CheckConflictsDto {
+  @IsObject()
+  event: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    type: string;
+    commuteMinutes?: number;
+  };
+
+  @IsOptional()
+  @IsString()
+  excludeEventId?: string;
+}
+
+export class ApplyConflictsDto {
+  @IsArray()
+  moves: Array<{
+    eventId: string;
+    newDate: string;
+    newStartTime: string;
+    newEndTime: string;
+  }>;
+}
+
 export class ScoreSlotDto {
   @IsNumber()
   day: number;

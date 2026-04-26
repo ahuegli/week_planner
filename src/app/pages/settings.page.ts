@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { RouterLink } from '@angular/router';
+import { DatePipe, TitleCasePipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
 import { AuthService } from '../core/services/auth.service';
 import { DataStoreService } from '../core/services/data-store.service';
@@ -8,7 +8,7 @@ import { CycleProfile } from '../core/models/app-data.models';
 
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe, TitleCasePipe],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,8 +24,22 @@ export class SettingsPageComponent {
   protected readonly openSections = signal<string[]>(['general']);
   protected readonly saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
   protected readonly shiftUpdateMessage = signal<string | null>(null);
+  protected readonly shiftConflictCount = signal(0);
+  protected readonly showRescheduleChoice = signal(false);
 
-  protected readonly hasPlan = signal(true);
+  protected readonly currentPlan = computed(() => this.dataStore.currentPlan());
+
+  protected readonly planPhase = computed(() => {
+    const plan = this.currentPlan();
+    if (!plan?.weeks?.length) return null;
+    return plan.weeks.find(w => w.weekNumber === plan.currentWeek)?.phase ?? null;
+  });
+
+  protected readonly planProgressPct = computed(() => {
+    const plan = this.currentPlan();
+    if (!plan || plan.totalWeeks === 0) return 0;
+    return Math.round((plan.currentWeek / plan.totalWeeks) * 100);
+  });
 
   protected readonly darkMode = signal(false);
   protected readonly workoutReminders = signal(true);
@@ -185,10 +199,14 @@ export class SettingsPageComponent {
       });
 
       const rescheduleResult = shiftSyncResult.reschedule;
-      if (rescheduleResult?.workoutsRescheduled && rescheduleResult.workoutsRescheduled > 0) {
-        this.shiftUpdateMessage.set(`Done - ${rescheduleResult.workoutsRescheduled} workouts rescheduled`);
+      const affected = rescheduleResult?.workoutsRescheduled ?? 0;
+      if (affected > 0) {
+        this.shiftConflictCount.set(affected);
+        this.showRescheduleChoice.set(true);
+        this.shiftUpdateMessage.set(null);
       } else {
-        this.shiftUpdateMessage.set('All workouts still fit your new schedule.');
+        this.shiftUpdateMessage.set('Shift updated — no workout conflicts found.');
+        this.showRescheduleChoice.set(false);
       }
 
       if (this.cycleTrackingEnabled()) {
@@ -211,6 +229,47 @@ export class SettingsPageComponent {
   protected logout(): void {
     this.authService.logout();
     void this.router.navigate(['/login']);
+  }
+
+  protected planModeLabel(mode: string): string {
+    const map: Record<string, string> = {
+      race: 'RACE',
+      general_fitness: 'FITNESS',
+      weight_loss: 'WEIGHT LOSS',
+    };
+    return map[mode] ?? mode.toUpperCase();
+  }
+
+  protected planSportLabel(sport: string | null | undefined): string {
+    const map: Record<string, string> = {
+      running: 'Running',
+      biking: 'Cycling',
+      swimming: 'Swimming',
+      strength: 'Strength',
+      yoga: 'Yoga & Mobility',
+    };
+    return sport ? (map[sport] ?? sport) : '';
+  }
+
+  protected async applyShiftReschedule(): Promise<void> {
+    this.showRescheduleChoice.set(false);
+    const plan = this.dataStore.currentPlan();
+    if (!plan) {
+      this.shiftUpdateMessage.set('No active plan to reschedule.');
+      return;
+    }
+    try {
+      await this.dataStore.rescheduleConflicts(plan.id);
+      this.shiftUpdateMessage.set('Done — workouts rescheduled around the new shift times.');
+    } catch {
+      this.shiftUpdateMessage.set('Could not reschedule. Try again from the week view.');
+    }
+  }
+
+  protected dismissReschedule(): void {
+    this.showRescheduleChoice.set(false);
+    this.shiftUpdateMessage.set(`Shift saved. ${this.shiftConflictCount()} workout(s) may overlap — adjust manually.`);
+    this.shiftConflictCount.set(0);
   }
 
   protected editPlan(): void {

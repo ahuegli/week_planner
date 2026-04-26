@@ -1,11 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { SlotPickerDialogComponent } from '../components/slot-picker-dialog/slot-picker-dialog.component';
+import { CalendarEvent, Note, SlotCandidate } from '../core/models/app-data.models';
 import { DataStoreService } from '../core/services/data-store.service';
-import { Note } from '../core/models/app-data.models';
+import { SlotSuggestionService } from '../core/services/slot-suggestion.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 
 @Component({
   selector: 'app-notes-page',
   standalone: true,
-  imports: [],
+  imports: [SlotPickerDialogComponent],
   template: `
     <section class="page-wrap">
       <header class="page-header">
@@ -69,11 +73,15 @@ import { Note } from '../core/models/app-data.models';
               type="button"
               class="scheduling-toggle"
               [class.active]="newWantsScheduling()"
+              [disabled]="!canScheduleNote()"
               (click)="newWantsScheduling.set(!newWantsScheduling())"
             >
               <span class="toggle-pip"></span>
               Find time in my calendar for this
             </button>
+            @if (!canScheduleNote()) {
+              <p class="scheduling-hint">Set an estimated duration to enable</p>
+            }
             <div class="form-actions">
               <button type="button" class="btn-ghost" (click)="resetForm()">Cancel</button>
               <button
@@ -115,7 +123,7 @@ import { Note } from '../core/models/app-data.models';
               @if (note.body) {
                 <p class="note-body">{{ note.body }}</p>
               }
-              @if (note.dueDate || note.estimatedDurationMinutes || note.wantsScheduling) {
+              @if (note.dueDate || note.estimatedDurationMinutes) {
                 <div class="note-meta">
                   @if (note.dueDate) {
                     <span class="meta-badge">{{ formatDue(note.dueDate, note.dueTime) }}</span>
@@ -123,9 +131,22 @@ import { Note } from '../core/models/app-data.models';
                   @if (note.estimatedDurationMinutes) {
                     <span class="meta-badge">{{ note.estimatedDurationMinutes }} min</span>
                   }
-                  @if (note.wantsScheduling) {
-                    <span class="meta-badge scheduling-badge">Find time</span>
-                  }
+                </div>
+              }
+              @if (scheduledLabel(note); as label) {
+                <button type="button" class="scheduled-indicator" (click)="openScheduledEvent(note)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Scheduled for {{ label }}
+                </button>
+              } @else if (note.wantsScheduling && !note.linkedCalendarEventId) {
+                <div class="pending-row">
+                  <span class="meta-badge scheduling-badge pending-label">Scheduling pending</span>
+                  <button
+                    type="button"
+                    class="retry-link"
+                    [disabled]="findingSlots()"
+                    (click)="retryScheduling(note)"
+                  >Retry</button>
                 </div>
               }
             </div>
@@ -144,6 +165,14 @@ import { Note } from '../core/models/app-data.models';
 
       <div class="bottom-spacer"></div>
     </section>
+
+    <app-slot-picker-dialog
+      [open]="slotPickerOpen()"
+      [note]="pendingNote()"
+      [slots]="pendingSlots()"
+      (slotSelected)="onSlotSelected($event)"
+      (cancelled)="onSlotCancelled()"
+    />
   `,
   styles: `
     .page-wrap { display: flex; flex-direction: column; gap: 10px; padding: 16px; max-width: 480px; margin: 0 auto; }
@@ -168,6 +197,8 @@ import { Note } from '../core/models/app-data.models';
     .scheduling-toggle.active { border-color: var(--color-primary); color: var(--color-primary); background: rgba(45, 77, 122, 0.06); }
     .toggle-pip { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; flex-shrink: 0; }
     .scheduling-toggle.active .toggle-pip { background: var(--color-primary); border-color: var(--color-primary); }
+    .scheduling-toggle:disabled { opacity: 0.45; cursor: not-allowed; }
+    .scheduling-hint { margin: -4px 0 0; font-size: 12px; color: var(--color-text-secondary); }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 2px; }
     .btn-primary { background: var(--color-primary); color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -192,6 +223,12 @@ import { Note } from '../core/models/app-data.models';
     .scheduling-badge { color: var(--color-primary); background: rgba(45, 77, 122, 0.08); }
     .delete-btn { background: none; border: none; padding: 2px; cursor: pointer; color: var(--color-text-secondary); flex-shrink: 0; display: flex; border-radius: 4px; opacity: 0.6; }
     .delete-btn:hover { opacity: 1; color: #c0392b; }
+    .scheduled-indicator { display: inline-flex; align-items: center; gap: 5px; background: rgba(45, 77, 122, 0.06); border: 1px solid rgba(45, 77, 122, 0.2); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--color-primary); }
+    .scheduled-indicator:hover { background: rgba(45, 77, 122, 0.12); }
+    .pending-row { display: flex; align-items: center; gap: 8px; }
+    .pending-label { font-size: 11px; }
+    .retry-link { background: none; border: none; padding: 0; font-size: 11px; font-weight: 600; color: var(--color-primary); cursor: pointer; text-decoration: underline; }
+    .retry-link:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .bottom-spacer { height: 80px; }
   `,
@@ -199,6 +236,17 @@ import { Note } from '../core/models/app-data.models';
 })
 export class NotesPageComponent {
   private readonly dataStore = inject(DataStoreService);
+  private readonly slotSuggestion = inject(SlotSuggestionService);
+  private readonly uiFeedback = inject(UiFeedbackService);
+  private readonly router = inject(Router);
+
+  private readonly calendarEventsById = computed(() => {
+    const map = new Map<string, CalendarEvent>();
+    for (const e of this.dataStore.calendarEvents()) {
+      map.set(e.id, e);
+    }
+    return map;
+  });
 
   protected readonly sortedNotes = computed<Note[]>(() => {
     const all = this.dataStore.notes();
@@ -219,9 +267,23 @@ export class NotesPageComponent {
   protected readonly newDuration = signal('');
   protected readonly newWantsScheduling = signal(false);
   protected readonly saving = signal(false);
+  protected readonly findingSlots = signal(false);
+  protected readonly slotPickerOpen = signal(false);
+  protected readonly pendingSlots = signal<SlotCandidate[]>([]);
+  protected readonly pendingNote = signal<Note | null>(null);
+
+  protected readonly canScheduleNote = computed(() => {
+    const num = Number(this.newDuration());
+    return this.newDuration() !== '' && Number.isFinite(num) && num > 0;
+  });
 
   constructor() {
     void this.dataStore.loadNotes();
+    effect(() => {
+      if (!this.canScheduleNote()) {
+        this.newWantsScheduling.set(false);
+      }
+    });
   }
 
   protected expandForm(): void {
@@ -230,24 +292,66 @@ export class NotesPageComponent {
 
   protected async submitNote(): Promise<void> {
     const title = this.newTitle().trim();
-    if (!title) {
-      return;
-    }
+    if (!title) return;
 
     this.saving.set(true);
+    const wantsScheduling = this.newWantsScheduling();
     const duration = this.newDuration() ? Number(this.newDuration()) : undefined;
 
-    await this.dataStore.addNote({
+    const created = await this.dataStore.addNote({
       title,
       body: this.newBody().trim() || undefined,
       dueDate: this.newDueDate() || undefined,
       dueTime: this.newDueTime() || undefined,
       estimatedDurationMinutes: duration && duration > 0 ? duration : undefined,
-      wantsScheduling: this.newWantsScheduling(),
+      wantsScheduling,
     });
 
     this.resetForm();
     this.saving.set(false);
+
+    if (wantsScheduling && created) {
+      await this.findSlotsForNote(created);
+    }
+  }
+
+  protected async onSlotSelected(slot: SlotCandidate): Promise<void> {
+    const note = this.pendingNote();
+    if (!note) return;
+    this.slotPickerOpen.set(false);
+    this.pendingNote.set(null);
+    this.pendingSlots.set([]);
+    await this.dataStore.createNoteEventFromSlot(note, slot);
+    this.uiFeedback.show(`Scheduled for ${slot.label}`);
+  }
+
+  protected onSlotCancelled(): void {
+    this.slotPickerOpen.set(false);
+    this.pendingNote.set(null);
+    this.pendingSlots.set([]);
+  }
+
+  protected async retryScheduling(note: Note): Promise<void> {
+    await this.findSlotsForNote(note);
+  }
+
+  protected scheduledLabel(note: Note): string | null {
+    if (!note.linkedCalendarEventId) return null;
+    const event = this.calendarEventsById().get(note.linkedCalendarEventId);
+    if (!event) return null;
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayName = event.date
+      ? dayNames[(new Date(`${event.date}T00:00:00`).getDay() + 6) % 7]
+      : null;
+    return dayName ? `${dayName} ${event.startTime}` : event.startTime;
+  }
+
+  protected openScheduledEvent(note: Note): void {
+    if (!note.linkedCalendarEventId) return;
+    const event = this.calendarEventsById().get(note.linkedCalendarEventId);
+    void this.router.navigate(['/week'], {
+      queryParams: event?.date ? { date: event.date } : {},
+    });
   }
 
   protected resetForm(): void {
@@ -272,5 +376,21 @@ export class NotesPageComponent {
     const date = new Date(`${dueDate}T00:00:00`);
     const label = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     return dueTime ? `${label} · ${dueTime}` : label;
+  }
+
+  private async findSlotsForNote(note: Note): Promise<void> {
+    this.findingSlots.set(true);
+    this.uiFeedback.show('Finding good times…', 5000);
+    const slots = await this.slotSuggestion.suggestSlotsForNote(note);
+    this.findingSlots.set(false);
+
+    if (slots.length === 0) {
+      this.uiFeedback.show("Couldn't find a free slot this week. Set a due date to suggest a different week.", 4000);
+      return;
+    }
+
+    this.pendingNote.set(note);
+    this.pendingSlots.set(slots);
+    this.slotPickerOpen.set(true);
   }
 }

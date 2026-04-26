@@ -18,6 +18,7 @@ export class CurrentWeekCardComponent {
   readonly scheduleRequested = output<void>();
   readonly completeRequested = output<{ sessionId: string; energyRating: 'easy' | 'moderate' | 'hard' }>();
   readonly skipRequested = output<string>();
+  readonly startRequested = output<string>();
   protected readonly expandedSessionIndex = signal<number | null>(null);
   protected readonly whyExpandedSessionIndex = signal<number | null>(null);
 
@@ -78,6 +79,12 @@ export class CurrentWeekCardComponent {
     }
 
     this.skipRequested.emit(session.id);
+  }
+
+  protected startSession(session: ReturnType<typeof this.week>['sessions'][number]): void {
+    if (session.linkedCalendarEventId) {
+      this.startRequested.emit(session.linkedCalendarEventId);
+    }
   }
 
   protected scheduleRemaining(): void {

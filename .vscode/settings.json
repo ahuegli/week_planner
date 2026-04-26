@@ -5,6 +5,8 @@
         "ForEach-Object": true,
         "Push-Location": true,
         "Set-Content": true,
-        "docker compose": true
+        "docker compose": true,
+        "git remote": true,
+        "git add": true
     }
 }

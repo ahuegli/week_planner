@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { CalendarEvent } from '../../../mock-data';
 import { PlanMode, PlannedSession } from '../../../core/models/app-data.models';
 import { DataStoreService } from '../../../core/services/data-store.service';
@@ -27,6 +28,7 @@ const TYPE_COLORS: Record<CalendarEvent['type'], string> = {
 export class EventCardComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly uiFeedback = inject(UiFeedbackService);
+  private readonly router = inject(Router);
 
   readonly event = input.required<CalendarEvent>();
   readonly isPast = input<boolean>(false);
@@ -303,6 +305,11 @@ export class EventCardComponent {
     }
 
     return sessions.find((session) => this.normalizeSessionType(session.sessionType) === targetSessionType) ?? null;
+  }
+
+  protected navigateToWorkout(): void {
+    const id = this.displayEvent().id;
+    this.router.navigate(['/workout', id]);
   }
 
   private normalizeSessionType(value: string): string {

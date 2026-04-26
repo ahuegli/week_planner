@@ -38,6 +38,7 @@
         (scheduleRequested)="scheduleRemainingSessions()"
         (completeRequested)="markSessionDone($event.sessionId, $event.energyRating)"
         (skipRequested)="skipSession($event)"
+        (startRequested)="onSessionStartRequested($event)"
       />
     }
 

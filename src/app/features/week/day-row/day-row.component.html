@@ -33,6 +33,13 @@
                         <path d="M20 6 9 17l-5-5" />
                       </svg>
                     }
+                    @if (conflictingEventIds().has(event.id)) {
+                      <svg class="conflict-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-label="Scheduling conflict" role="img">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    }
                     <p class="event-title">{{ event.type === 'workout' ? sessionTypeLabel(event) : event.title }}</p>
                     @if (event.type === 'workout' && event.intensity) {
                       <span class="intensity-dot" [style.background]="intensityColor(event)"></span>

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { DataStoreService } from '../core/services/data-store.service';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
+import { calculatePhaseBoundaries } from '../core/utils/cycle-phase.util';
 
 type EnergyLevel = 'low' | 'normal' | 'high' | null;
 type PhaseKey = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
@@ -227,7 +228,7 @@ export class CyclePageComponent {
   protected readonly currentDay = computed(() => this.currentPhase()?.day ?? 1);
 
   protected readonly phaseSegments = computed<PhaseSegment[]>(() => {
-    const boundaries = this.calculatePhaseBoundaries(this.cycleLength());
+    const boundaries = calculatePhaseBoundaries(this.cycleLength());
     return [
       { key: 'menstrual', label: 'Menstrual', color: '#A85454', startDay: boundaries.menstrual.start, endDay: boundaries.menstrual.end },
       { key: 'follicular', label: 'Follicular', color: '#2d4d7a', startDay: boundaries.follicular.start, endDay: boundaries.follicular.end },
@@ -375,25 +376,5 @@ export class CyclePageComponent {
     };
   }
 
-  private calculatePhaseBoundaries(length: number): {
-    menstrual: { start: number; end: number };
-    follicular: { start: number; end: number };
-    ovulation: { start: number; end: number };
-    luteal: { start: number; end: number };
-  } {
-    const safeLength = Math.min(40, Math.max(21, length));
-    const lutealStart = safeLength - 13;
-    const ovulationStart = safeLength - 16;
-    const ovulationEnd = safeLength - 14;
-    const menstrualEnd = Math.min(5, ovulationStart - 1);
-    const follicularStart = menstrualEnd + 1;
-    const follicularEnd = Math.max(follicularStart, ovulationStart - 1);
 
-    return {
-      menstrual: { start: 1, end: menstrualEnd },
-      follicular: { start: follicularStart, end: follicularEnd },
-      ovulation: { start: ovulationStart, end: ovulationEnd },
-      luteal: { start: lutealStart, end: safeLength },
-    };
-  }
 }

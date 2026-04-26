@@ -17,6 +17,8 @@ import {
   RescheduleConflictsDto,
   ValidateConstraintsDto,
   ScoreSlotDto,
+  CheckConflictsDto,
+  ApplyConflictsDto,
 } from './dto/scheduler.dto';
 import {
   GeneratePlanResponse,
@@ -24,6 +26,9 @@ import {
   RescheduleConflictsResponse,
   ValidateConstraintsResponse,
   ScoreSlotResponse,
+  CheckConflictsResponse,
+  ApplyConflictsResponse,
+  ConflictSuggestionDto,
 } from './dto/scheduler.response';
 import { ConstraintCheckerService } from '../../domain/constraint-checker.service';
 import { ScoringEngineService } from '../../domain/scoring-engine.service';
@@ -59,6 +64,8 @@ export class SchedulerController {
     private readonly dataSource: DataSource,
     @InjectRepository(CalendarEvent)
     private readonly calendarEventRepository: Repository<CalendarEvent>,
+    @InjectRepository(PlannedSession)
+    private readonly plannedSessionRepository: Repository<PlannedSession>,
   ) {}
 
   /**
@@ -207,6 +214,135 @@ export class SchedulerController {
   }
 
   /**
+   * Detect conflicts for a new/edited event and suggest resolutions
+   * POST /api/v1/scheduler/check-conflicts
+   */
+  @Post('check-conflicts')
+  @HttpCode(HttpStatus.OK)
+  async checkConflicts(
+    @Request() req,
+    @Body() dto: CheckConflictsDto,
+  ): Promise<CheckConflictsResponse> {
+    const userId = req.user.userId as string;
+    const { event, excludeEventId } = dto;
+    const eventDate = event.date;
+
+    const [rangeEvents, repeatShifts, rawSettings] = await Promise.all([
+      this.calendarEventRepository.find({
+        where: [
+          { userId, isRepeatingWeekly: false, date: this.shiftDate(eventDate, -1) },
+          { userId, isRepeatingWeekly: false, date: eventDate },
+          { userId, isRepeatingWeekly: false, date: this.shiftDate(eventDate, 1) },
+        ],
+      }),
+      this.loadRecurringShifts(userId),
+      this.schedulerSettingsService.findByUser(userId),
+    ]);
+
+    const earliestMin = this.toMinutes(rawSettings?.autoPlaceEarliestTime ?? '06:00');
+    const latestMin = this.toMinutes(rawSettings?.autoPlaceLatestTime ?? '22:00');
+
+    const commute = event.commuteMinutes ?? 0;
+    const evStartMin = this.toMinutes(event.startTime);
+    const evEndMin = this.toMinutes(event.endTime);
+    const bufferStart = event.type === 'shift' ? Math.max(0, evStartMin - commute) : evStartMin;
+    const bufferEnd = event.type === 'shift' ? Math.min(1440, evEndMin + commute) : evEndMin;
+
+    const sameDayWorkouts = rangeEvents.filter(
+      (e) =>
+        e.date === eventDate &&
+        e.id !== excludeEventId &&
+        e.type === 'workout' &&
+        !e.isManuallyPlaced &&
+        this.toMinutes(e.startTime) < bufferEnd &&
+        this.toMinutes(e.endTime) > bufferStart,
+    );
+
+    // Protect completed sessions — look up by linkedCalendarEventId
+    const workoutIds = sameDayWorkouts.map((w) => w.id);
+    const completedEventIds = new Set<string>();
+    if (workoutIds.length > 0) {
+      const linkedSessions = await this.plannedSessionRepository.find({
+        where: { linkedCalendarEventId: In(workoutIds) },
+        select: ['linkedCalendarEventId', 'status'],
+      });
+      for (const s of linkedSessions) {
+        if (s.status === 'completed' && s.linkedCalendarEventId) {
+          completedEventIds.add(s.linkedCalendarEventId);
+        }
+      }
+    }
+
+    const toProcess = sameDayWorkouts
+      .filter((w) => !completedEventIds.has(w.id))
+      .slice(0, 2); // max 2 per spec
+
+    const conflicts: ConflictSuggestionDto[] = toProcess.map((workout) => ({
+      eventId: workout.id,
+      title: workout.title,
+      day: workout.day,
+      date: workout.date ?? eventDate,
+      startTime: workout.startTime,
+      endTime: workout.endTime,
+      priority: workout.priority ?? 'supporting',
+      isManuallyPlaced: workout.isManuallyPlaced ?? false,
+      suggestion: this.generateConflictSuggestion(
+        workout,
+        rangeEvents,
+        repeatShifts,
+        event,
+        earliestMin,
+        latestMin,
+      ),
+    }));
+
+    return { hasConflicts: conflicts.length > 0, conflicts };
+  }
+
+  /**
+   * Apply accepted conflict resolutions — batch-move calendar events
+   * POST /api/v1/scheduler/apply-conflicts
+   */
+  @Post('apply-conflicts')
+  @HttpCode(HttpStatus.OK)
+  async applyConflicts(
+    @Request() req,
+    @Body() dto: ApplyConflictsDto,
+  ): Promise<ApplyConflictsResponse> {
+    const userId = req.user.userId as string;
+    const moveIds = dto.moves.map((m) => m.eventId);
+
+    const completedEventIds = new Set<string>();
+    if (moveIds.length > 0) {
+      const linked = await this.plannedSessionRepository.find({
+        where: { linkedCalendarEventId: In(moveIds) },
+        select: ['linkedCalendarEventId', 'status'],
+      });
+      for (const s of linked) {
+        if (s.status === 'completed' && s.linkedCalendarEventId) {
+          completedEventIds.add(s.linkedCalendarEventId);
+        }
+      }
+    }
+
+    let moved = 0;
+    await this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(CalendarEvent);
+      for (const move of dto.moves) {
+        if (completedEventIds.has(move.eventId)) continue;
+        const newDay = this.dayIndexFromDate(move.newDate);
+        await repo.update(
+          { id: move.eventId, userId },
+          { day: newDay, date: move.newDate, startTime: move.newStartTime, endTime: move.newEndTime },
+        );
+        moved++;
+      }
+    });
+
+    return { moved };
+  }
+
+  /**
    * Score a specific time slot
    * POST /api/v1/scheduler/score
    */
@@ -322,6 +458,8 @@ export class SchedulerController {
       priority: session.priority,
       distanceKm: session.distanceTarget ?? undefined,
       distanceCountsAsLong: session.sessionType === 'long_run',
+      intensity: session.intensity,
+      cyclePhaseRules: session.cyclePhaseRules ?? undefined,
     };
   }
 
@@ -730,5 +868,94 @@ export class SchedulerController {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private formatTime(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  private generateConflictSuggestion(
+    workout: CalendarEvent,
+    rangeEvents: CalendarEvent[],
+    repeatShifts: CalendarEvent[],
+    newEvent: CheckConflictsDto['event'],
+    earliestMin: number,
+    latestMin: number,
+  ): ConflictSuggestionDto['suggestion'] {
+    const workoutDate = workout.date!;
+    const duration = workout.durationMinutes ?? 45;
+    const originalStart = this.toMinutes(workout.startTime);
+
+    const newEvStart = this.toMinutes(newEvent.startTime);
+    const newEvEnd = this.toMinutes(newEvent.endTime);
+    const commute = newEvent.commuteMinutes ?? 0;
+    const newBufStart = newEvent.type === 'shift' ? Math.max(0, newEvStart - commute) : newEvStart;
+    const newBufEnd = newEvent.type === 'shift' ? Math.min(1440, newEvEnd + commute) : newEvEnd;
+
+    const getOccupied = (date: string): Array<[number, number]> => {
+      const dow = this.dayIndexFromDate(date);
+      const occupied: Array<[number, number]> = [];
+
+      for (const e of rangeEvents) {
+        if (e.date !== date || e.id === workout.id) continue;
+        const buf = e.type === 'shift' ? (e.commuteMinutes ?? 0) : 0;
+        occupied.push([Math.max(0, this.toMinutes(e.startTime) - buf), Math.min(1440, this.toMinutes(e.endTime) + buf)]);
+      }
+
+      for (const s of repeatShifts) {
+        if (s.day !== dow) continue;
+        const buf = s.commuteMinutes ?? 0;
+        occupied.push([Math.max(0, this.toMinutes(s.startTime) - buf), Math.min(1440, this.toMinutes(s.endTime) + buf)]);
+      }
+
+      if (date === newEvent.date) {
+        occupied.push([newBufStart, newBufEnd]);
+      }
+
+      return occupied;
+    };
+
+    const canPlace = (date: string, start: number, end: number): boolean => {
+      if (start < earliestMin || end > latestMin) return false;
+      return !getOccupied(date).some(([s, e]) => start < e && end > s);
+    };
+
+    for (const offset of [60, 90, 120, -60, -90]) {
+      const start = originalStart + offset;
+      const end = start + duration;
+      if (canPlace(workoutDate, start, end)) {
+        return {
+          action: 'shift_time',
+          suggestedDay: this.dayIndexFromDate(workoutDate),
+          suggestedDate: workoutDate,
+          suggestedStartTime: this.formatTime(start),
+          suggestedEndTime: this.formatTime(end),
+          reason: `Moved ${Math.abs(offset)} min ${offset > 0 ? 'later' : 'earlier'} to avoid overlap`,
+        };
+      }
+    }
+
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    for (const dayOffset of [-1, 1]) {
+      const adjDate = this.shiftDate(workoutDate, dayOffset);
+      for (const start of [originalStart, 6 * 60, 7 * 60, 8 * 60, 17 * 60, 18 * 60, 19 * 60]) {
+        const end = start + duration;
+        if (canPlace(adjDate, start, end)) {
+          const dayName = DAY_NAMES[this.dayIndexFromDate(adjDate)] ?? 'nearby day';
+          return {
+            action: 'move_day',
+            suggestedDay: this.dayIndexFromDate(adjDate),
+            suggestedDate: adjDate,
+            suggestedStartTime: this.formatTime(start),
+            suggestedEndTime: this.formatTime(end),
+            reason: `Moved to ${dayName} at ${this.formatTime(start)}`,
+          };
+        }
+      }
+    }
+
+    return { action: 'cannot_resolve', reason: 'No available slot found. Reschedule manually.' };
   }
 }

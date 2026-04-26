@@ -156,6 +156,11 @@
   color: var(--color-success);
 }
 
+.conflict-icon {
+  color: var(--color-error);
+  flex-shrink: 0;
+}
+
 .event-title {
   font-size: 12px;
   font-weight: 500;
