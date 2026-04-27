@@ -32,6 +32,7 @@ export class EventDetailModalComponent {
   readonly open = input(false);
   readonly event = input<CalendarEvent | null>(null);
   readonly showSuggestedSlotNote = input(false);
+  readonly openTo = input<'edit' | 'invite'>('edit');
 
   readonly closeRequested = output<void>();
   readonly saveRequested = output<CalendarEvent>();
@@ -109,6 +110,7 @@ export class EventDetailModalComponent {
 
       this.form.reset(this.toFormValue(activeEvent), { emitEvent: false });
       this.selectedDay.set(this.resolveEventDay(activeEvent));
+      this.showInviteDialog.set(this.openTo() === 'invite' && this.canInvite());
     });
   }
 

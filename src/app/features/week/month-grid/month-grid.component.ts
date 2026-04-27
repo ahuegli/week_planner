@@ -44,6 +44,7 @@ export class MonthGridComponent {
   protected readonly quickAddType = signal<'shift' | 'workout' | 'personal' | 'mealprep' | null>(null);
   protected readonly expandedEventIds = signal<string[]>([]);
   protected readonly editingEventId = signal<string | null>(null);
+  protected readonly editingEventOpenTo = signal<'edit' | 'invite'>('edit');
   protected readonly editingEventDraft = signal<CalendarEvent | null>(null);
   protected readonly showSuggestedSlotHint = signal(false);
   protected readonly confirmingDeleteEventId = signal<string | null>(null);
@@ -192,12 +193,23 @@ export class MonthGridComponent {
     this.workoutDeleteEventId.set(null);
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
+    this.editingEventOpenTo.set('edit');
+    this.editingEventId.set(event.id);
+  }
+
+  protected openEditorForInvite(event: CalendarEvent): void {
+    this.confirmingDeleteEventId.set(null);
+    this.workoutDeleteEventId.set(null);
+    this.editingEventDraft.set(null);
+    this.showSuggestedSlotHint.set(false);
+    this.editingEventOpenTo.set('invite');
     this.editingEventId.set(event.id);
   }
 
   protected closeEditor(): void {
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
+    this.editingEventOpenTo.set('edit');
     this.editingEventId.set(null);
   }
 
@@ -516,7 +528,11 @@ export class MonthGridComponent {
   }
 
   protected shareEvent(event: CalendarEvent): void {
-    this.openEditor(event);
+    this.openEditorForInvite(event);
+  }
+
+  protected isInviteable(event: CalendarEvent): boolean {
+    return event.type === 'workout' || event.type === 'custom-event' || event.type === 'personal';
   }
 
   protected dayEventLabels(day: MonthDay): MonthEventLabel[] {

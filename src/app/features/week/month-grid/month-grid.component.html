@@ -147,7 +147,9 @@
               <div class="action-row">
                 <button type="button" class="btn-primary action-primary" (click)="$event.stopPropagation(); markDone(event)">Mark as done</button>
                 <button type="button" class="action-text" (click)="$event.stopPropagation(); skipEvent(event)">Skip</button>
-                <button type="button" class="action-text" (click)="$event.stopPropagation(); shareEvent(event)">Invite</button>
+                @if (isInviteable(event)) {
+                  <button type="button" class="action-text" (click)="$event.stopPropagation(); shareEvent(event)">Invite</button>
+                }
               </div>
 
               <div class="manage-row">
@@ -278,6 +280,7 @@
   <app-event-detail-modal
     [open]="editingEvent() !== null"
     [event]="editingEvent()"
+    [openTo]="editingEventOpenTo()"
     [showSuggestedSlotNote]="showSuggestedSlotHint()"
     (closeRequested)="closeEditor()"
     (saveRequested)="saveEvent($event)"
