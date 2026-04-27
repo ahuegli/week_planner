@@ -251,10 +251,6 @@ export class DayRowComponent {
     return event.type === 'workout' && event.status === 'skipped';
   }
 
-  protected shouldShowInviteLink(event: CalendarEvent): boolean {
-    return event.type === 'workout' || event.type === 'personal' || event.type === 'custom-event';
-  }
-
   protected openEditor(event: CalendarEvent): void {
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
@@ -400,21 +396,6 @@ export class DayRowComponent {
 
   protected undoSkip(event: CalendarEvent): void {
     this.eventUpdated.emit({ ...event, status: 'scheduled' });
-  }
-
-  protected shareEvent(event: CalendarEvent): void {
-    const date = new Date(`${this.day().date}T00:00:00`);
-    const day = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
-    const monthDay = new Intl.DateTimeFormat('en-GB', { month: 'short', day: 'numeric' }).format(date);
-    const start = this.toDisplayTime(event.startTime);
-    const distanceText = event.distanceTarget ? ` ${event.distanceTarget}km` : '';
-    const message = `Join me for ${event.title} on ${day} ${monthDay} at ${start}!${distanceText}`;
-
-    if (navigator.share) {
-      void navigator.share({ text: message });
-      return;
-    }
-
   }
 
   private toDisplayTime(time24: string): string {

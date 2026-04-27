@@ -312,6 +312,17 @@
   width: 100%;
 }
 
+.invite-share-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: center;
+}
+
 .invite-cancel-btn {
   border: none;
   background: transparent;

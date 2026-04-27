@@ -61,6 +61,8 @@ export class EventDetailModalComponent {
     return t === 'workout' || t === 'custom-event' || t === 'personal';
   });
 
+  protected readonly inviteOnlyMode = computed(() => this.openTo() === 'invite');
+
   protected readonly isWorkout = computed(() => this.event()?.type === 'workout');
   protected readonly isShift = computed(() => this.event()?.type === 'shift');
   protected readonly isMealPrep = computed(() => this.event()?.type === 'mealprep');
@@ -187,7 +189,25 @@ export class EventDetailModalComponent {
   }
 
   protected closeInviteDialog(): void {
+    if (this.inviteOnlyMode()) {
+      this.close();
+      return;
+    }
     this.showInviteDialog.set(false);
+  }
+
+  protected shareExternally(): void {
+    const ev = this.event();
+    if (!ev) return;
+    const date = ev.date ? new Date(`${ev.date}T00:00:00`) : new Date();
+    const day = new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(date);
+    const monthDay = new Intl.DateTimeFormat('en-GB', { month: 'short', day: 'numeric' }).format(date);
+    const start = this.toDisplayTime(ev.startTime);
+    const distanceText = ev.distanceTarget ? ` ${ev.distanceTarget}km` : '';
+    const message = `Join me for ${ev.title} on ${day} ${monthDay} at ${start}!${distanceText}`;
+    if (navigator.share) {
+      void navigator.share({ text: message });
+    }
   }
 
   protected async submitInvite(): Promise<void> {
@@ -284,6 +304,16 @@ export class EventDetailModalComponent {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private toDisplayTime(time24: string): string {
+    const [hoursText, minutesText] = time24.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    const suffix = hours >= 12 ? 'pm' : 'am';
+    const hour12 = ((hours + 11) % 12) + 1;
+    const minute = String(minutes).padStart(2, '0');
+    return `${hour12}:${minute}${suffix}`;
   }
 
   private diffEvent(original: CalendarEvent, updated: CalendarEvent): Partial<CalendarEvent> {

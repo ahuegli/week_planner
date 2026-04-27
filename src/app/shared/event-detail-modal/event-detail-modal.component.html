@@ -1,6 +1,7 @@
 @if (open() && event(); as activeEvent) {
   <div class="modal-overlay" (click)="close()" role="presentation" aria-hidden="true"></div>
 
+  @if (!inviteOnlyMode()) {
   <section
     class="modal-panel"
     role="dialog"
@@ -142,6 +143,7 @@
       </div>
     </form>
   </section>
+  }
 
   @if (showInviteDialog()) {
     <div class="modal-overlay" (click)="closeInviteDialog()" role="presentation" aria-hidden="true"></div>
@@ -202,6 +204,7 @@
           >
             {{ inviteSending() ? 'Sending…' : 'Send invitation' }}
           </button>
+          <button type="button" class="invite-share-btn" (click)="shareExternally()">Share externally</button>
           <button type="button" class="invite-cancel-btn" (click)="closeInviteDialog()">Cancel</button>
         </div>
       </div>
