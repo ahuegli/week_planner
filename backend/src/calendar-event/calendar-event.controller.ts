@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Put,
@@ -13,11 +14,15 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CalendarEventService } from './calendar-event.service';
 import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event.dto';
+import { CalendarShareService } from '../calendar-share/calendar-share.service';
 
 @Controller('calendar-events')
 @UseGuards(JwtAuthGuard)
 export class CalendarEventController {
-  constructor(private readonly calendarEventService: CalendarEventService) {}
+  constructor(
+    private readonly calendarEventService: CalendarEventService,
+    private readonly calendarShareService: CalendarShareService,
+  ) {}
 
   @Get()
   async findAll(
@@ -30,6 +35,25 @@ export class CalendarEventController {
     }
 
     return this.calendarEventService.findAllByUser(req.user.userId);
+  }
+
+  @Get('shared/:ownerId')
+  async getSharedCalendar(
+    @Param('ownerId') ownerId: string,
+    @Request() req,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const share = await this.calendarShareService.findActiveShare(ownerId, req.user.userId);
+    if (!share) {
+      throw new ForbiddenException('No active share');
+    }
+    // TODO WP4B: implement busy_only and workouts_only filtering
+    // For WP4A all share levels return full event data
+    if (startDate && endDate) {
+      return this.calendarEventService.findByDateRange(ownerId, startDate, endDate);
+    }
+    return this.calendarEventService.findAllByUser(ownerId);
   }
 
   @Get(':id')
