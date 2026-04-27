@@ -3,6 +3,8 @@ import { firstValueFrom } from 'rxjs';
 import type { CalendarEvent as UiCalendarEvent } from '../../mock-data';
 import {
   CalendarEvent,
+  CalendarShare,
+  CreateCalendarSharePayload,
   CreateEnergyCheckInPayload,
   CreateNotePayload,
   CreateSymptomLogPayload,
@@ -27,6 +29,7 @@ import {
   WeeklyProgress,
   Workout,
 } from '../models/app-data.models';
+import { CalendarShareApiService } from './calendar-share-api.service';
 import { CalendarEventApiService } from './calendar-event-api.service';
 import { EnergyCheckInApiService } from './energy-check-in-api.service';
 import { NoteApiService } from './note-api.service';
@@ -60,6 +63,10 @@ export class DataStoreService {
   readonly error = signal<string | null>(null);
   readonly showCoachAdjustmentPrompt = signal(false);
   readonly recentSkippedKeyCount = signal(0);
+  readonly outgoingShares = signal<CalendarShare[]>([]);
+  readonly incomingShares = signal<CalendarShare[]>([]);
+  readonly viewingSharedCalendar = signal<{ ownerId: string; ownerEmail: string } | null>(null);
+  readonly sharedCalendarEvents = signal<CalendarEvent[]>([]);
 
   readonly cycleStatusForDisplay = computed<CycleStatus | null>(() => {
     const profile = this.cycleProfile();
@@ -89,6 +96,7 @@ export class DataStoreService {
     private readonly cycleApi: CycleApiService,
     private readonly schedulerApi: SchedulerApiService,
     private readonly uiFeedback: UiFeedbackService,
+    private readonly calendarShareApi: CalendarShareApiService,
   ) {}
 
   async loadAll(): Promise<void> {
@@ -1583,5 +1591,60 @@ export class DataStoreService {
 
     this.recentSkippedKeyCount.set(skippedKeyCount);
     this.showCoachAdjustmentPrompt.set(skippedKeyCount >= 3);
+  }
+
+  // ── Calendar sharing ────────────────────────────────────────────────────
+
+  async loadShares(): Promise<void> {
+    try {
+      const [outgoing, incoming] = await Promise.all([
+        firstValueFrom(this.calendarShareApi.listOutgoing()),
+        firstValueFrom(this.calendarShareApi.listIncoming()),
+      ]);
+      this.outgoingShares.set(outgoing);
+      this.incomingShares.set(incoming);
+    } catch (error) {
+      console.error('[DataStore] Failed to load shares', error);
+    }
+  }
+
+  async grantShare(payload: CreateCalendarSharePayload): Promise<void> {
+    try {
+      const created = await firstValueFrom(this.calendarShareApi.create(payload));
+      this.outgoingShares.set([...this.outgoingShares(), created]);
+    } catch (error) {
+      console.error('[DataStore] Failed to grant share', error);
+      throw error;
+    }
+  }
+
+  async revokeShare(shareId: string): Promise<void> {
+    const outSnapshot = this.outgoingShares();
+    const inSnapshot = this.incomingShares();
+    this.outgoingShares.set(outSnapshot.filter((s) => s.id !== shareId));
+    this.incomingShares.set(inSnapshot.filter((s) => s.id !== shareId));
+    try {
+      await firstValueFrom(this.calendarShareApi.delete(shareId));
+    } catch (error) {
+      console.error('[DataStore] Failed to revoke share', error);
+      this.outgoingShares.set(outSnapshot);
+      this.incomingShares.set(inSnapshot);
+    }
+  }
+
+  async viewSharedCalendar(ownerId: string, ownerEmail: string): Promise<void> {
+    this.viewingSharedCalendar.set({ ownerId, ownerEmail });
+    try {
+      const events = await firstValueFrom(this.calendarShareApi.getSharedCalendar(ownerId));
+      this.sharedCalendarEvents.set(events);
+    } catch (error) {
+      console.error('[DataStore] Failed to load shared calendar', error);
+      this.sharedCalendarEvents.set([]);
+    }
+  }
+
+  exitSharedCalendar(): void {
+    this.viewingSharedCalendar.set(null);
+    this.sharedCalendarEvents.set([]);
   }
 }

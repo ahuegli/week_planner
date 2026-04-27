@@ -512,6 +512,29 @@ export interface CreateEnergyCheckInPayload {
   source: string;
 }
 
+// ── Calendar Sharing ──────────────────────────────────────────────────────
+
+export interface CalendarShare {
+  id: string;
+  ownerId: string;
+  ownerEmail: string;
+  recipientId: string;
+  recipientEmail: string;
+  shareLevel: 'full' | 'busy_only' | 'workouts_only';
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreateCalendarSharePayload {
+  recipientEmail: string;
+  shareLevel?: string;
+}
+
+export interface UpdateCalendarSharePayload {
+  shareLevel?: string;
+  active?: boolean;
+}
+
 export type UpdateEnergyCheckInPayload = Partial<CreateEnergyCheckInPayload>;
 
 export interface SymptomLog {
