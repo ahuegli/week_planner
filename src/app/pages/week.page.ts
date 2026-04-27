@@ -134,6 +134,10 @@ export class WeekPageComponent {
   });
 
   protected readonly weekEvents = computed(() => {
+    if (this.viewingSharedCalendar()) {
+      return this.dataStore.sharedCalendarEvents();
+    }
+
     const linkedSessions = this.linkedSessionsByEventId();
 
     return this.dataStore.eventsForWeek(this.weekStartDateString()).map((event) => {
@@ -213,6 +217,8 @@ export class WeekPageComponent {
   protected readonly showCyclePhasesToggle = computed(
     () => cycleTrackingEnabled() && this.dataStore.cycleProfile()?.mode === 'natural',
   );
+
+  protected readonly viewingSharedCalendar = computed(() => this.dataStore.viewingSharedCalendar());
 
   protected readonly phaseDotMap = computed<Map<string, string>>(() => {
     if (!this.showCyclePhases()) return new Map();
@@ -410,6 +416,10 @@ export class WeekPageComponent {
     }
 
     await this.dataStore.updateCalendarEvent(event.id, event);
+  }
+
+  protected exitSharedCalendar(): void {
+    this.dataStore.exitSharedCalendar();
   }
 
   protected scrollToFirstWorkout(): void {
@@ -646,7 +656,7 @@ export class WeekPageComponent {
           hasWorkout: workoutCount > 0,
           hasMealPrep,
           hasPersonal,
-          isFreeDay: dayEvents.length === 0,
+          isFreeDay: !shiftEvent,
         },
         shiftLabel: shiftEvent ? this.shiftLabel(shiftEvent.title) : undefined,
         workoutCount,

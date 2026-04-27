@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 import {
   MOCK_DID_YOU_KNOW,
   MOCK_REMINDER,
@@ -43,12 +44,15 @@ function timeToMinutes(time: string): number {
 export class TodayPageComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly router = inject(Router);
+  private readonly uiFeedback = inject(UiFeedbackService);
   private readonly today = signal(new Date());
   protected readonly selectedDate = signal(new Date());
   protected readonly expandedEventId = signal<string | null>(null);
   private readonly nowMinutes = signal(new Date().getHours() * 60 + new Date().getMinutes());
   protected readonly hasLoaded = signal(false);
   protected readonly cycleTrackingEnabled = cycleTrackingEnabled;
+  protected readonly pendingInvitations = computed(() => this.dataStore.pendingInvitations());
+  protected readonly errorInvitationId = signal<string | null>(null);
 
   protected readonly formattedDate = computed(() =>
     new Intl.DateTimeFormat('en-GB', {
@@ -146,6 +150,8 @@ export class TodayPageComponent {
   }
 
   private async load(): Promise<void> {
+    void this.dataStore.loadInvitations();
+
     if (this.dataStore.isLoaded()) {
       if (this.cycleTrackingEnabled() && !this.dataStore.currentPhase()) {
         await this.dataStore.loadCycle();
@@ -174,6 +180,26 @@ export class TodayPageComponent {
 
   protected openCoachAdjustmentPrompt(): void {
     void this.router.navigate(['/coach']);
+  }
+
+  protected formatInviteDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(`${dateStr}T00:00:00`);
+    return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
+  }
+
+  protected async acceptInvitation(id: string): Promise<void> {
+    this.errorInvitationId.set(null);
+    try {
+      await this.dataStore.respondToInvitation(id, 'accepted');
+      this.uiFeedback.show('Added to your calendar');
+    } catch {
+      this.errorInvitationId.set(id);
+    }
+  }
+
+  protected async declineInvitation(id: string): Promise<void> {
+    await this.dataStore.respondToInvitation(id, 'declined');
   }
 
   private toDateString(date: Date): string {

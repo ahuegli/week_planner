@@ -442,11 +442,26 @@
             <p class="info-text">You haven't shared your calendar with anyone yet.</p>
           } @else {
             @for (share of outgoingShares(); track share.id) {
-              <div class="share-row">
+              <div class="share-row" [class.share-row--deleted]="isDeletedRecipient(share)">
                 <span class="share-email">{{ share.recipientEmail }}</span>
-                <span class="share-badge">{{ shareLevelLabel(share.shareLevel) }}</span>
+                @if (!isDeletedRecipient(share)) {
+                  <button type="button" class="share-badge-btn" (click)="startEditShareLevel(share)">{{ shareLevelLabel(share.shareLevel) }}</button>
+                }
                 <button type="button" class="text-link share-danger" (click)="revokeShare(share.id)">Revoke</button>
               </div>
+              @if (editingShareId() === share.id && !isDeletedRecipient(share)) {
+                <div class="share-edit-form">
+                  <div class="share-edit-levels">
+                    @for (opt of shareLevelOptions; track opt.value) {
+                      <button type="button" class="share-edit-pill" [class.selected]="editingShareLevel() === opt.value" (click)="editingShareLevel.set(opt.value)">{{ opt.label }}</button>
+                    }
+                  </div>
+                  <div class="share-edit-actions">
+                    <button type="button" class="btn-primary small-btn" (click)="saveEditShareLevel()">Save</button>
+                    <button type="button" class="btn-secondary small-btn" (click)="cancelEditShareLevel()">Cancel</button>
+                  </div>
+                </div>
+              }
             }
           }
           @if (!shareFormVisible()) {
@@ -460,6 +475,15 @@
                 [value]="shareEmail()"
                 (input)="shareEmail.set($any($event.target).value)"
               />
+              <div class="share-level-opts">
+                @for (opt of shareLevelOptions; track opt.value) {
+                  <label class="share-level-opt" [class.selected]="shareFormLevel() === opt.value">
+                    <input type="radio" name="share-form-level" [value]="opt.value" [checked]="shareFormLevel() === opt.value" (change)="shareFormLevel.set(opt.value)" />
+                    <span class="share-level-opt-title">{{ opt.label }}</span>
+                    <span class="share-level-opt-sub">{{ shareEmail().trim() || 'They' }}{{ opt.sub }}</span>
+                  </label>
+                }
+              </div>
               @if (shareError()) {
                 <p class="share-error">{{ shareError() }}</p>
               }

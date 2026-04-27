@@ -1,7 +1,7 @@
 export interface CalendarEvent {
   id: string;
   title: string;
-  type: 'shift' | 'workout' | 'mealprep' | 'custom-event' | 'personal' | 'oncall';
+  type: 'shift' | 'workout' | 'mealprep' | 'custom-event' | 'personal' | 'oncall' | 'busy';
   day?: number;
   date?: string;
   startTime: string; // "HH:MM"
@@ -9,6 +9,8 @@ export interface CalendarEvent {
   durationMinutes?: number;
   commuteMinutes?: number;
   isManuallyPlaced?: boolean;
+  linkedInvitationId?: string;
+  acceptedInviteeEmails?: string[];
   shiftType?: 'early' | 'late' | 'night';
   workoutType?: 'swimming' | 'running' | 'biking' | 'strength' | 'yoga';
   distanceKm?: number;

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-share-month',
@@ -8,6 +9,9 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShareMonthComponent {
+  private readonly router = inject(Router);
+
   protected shareSchedule(): void {
+    void this.router.navigate(['/settings'], { queryParams: { open: 'sharing' } });
   }
 }

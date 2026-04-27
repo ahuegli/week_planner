@@ -24,3 +24,19 @@
   rather than full chat page. Most apps work better with a one-shot 
   Q&A modal than a conversation history.
 - Files to investigate: coach.page.html, coach.page.scss, coach.dto.ts
+
+
+## Triathlon plan generates only run sessions
+Plan template service produces runs + strength + intervals correctly, 
+but bike and swim sessions are missing for tri mode. Likely in 
+plan-template.service.ts — missing sport branching when sportType === 
+'triathlon'. Fix scope: investigate template generator, ensure all 
+three disciplines get session types per training methodology doc.
+
+## Shared calendar views show cached data
+Recipient sees the owner's events as of the last time `GET /calendar-events/shared/:ownerId` was called (on page load). Changes the owner makes after that point are not pushed to the recipient in real-time. The recipient must navigate away and back (or refresh) to see updates. Real-time sync via WebSocket/SSE is a v2 item.
+
+## No off-plan workout logging
+Users can only log workouts that started as planned sessions. Need 
+a "Log a workout" button on Today that opens the post-workout form 
+without requiring a linkedSessionId. Stats should include these.

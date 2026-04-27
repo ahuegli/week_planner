@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { DatePipe, TitleCasePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
 import { AuthService } from '../core/services/auth.service';
 import { DataStoreService } from '../core/services/data-store.service';
-import { CycleProfile } from '../core/models/app-data.models';
+import { CalendarShare, CycleProfile } from '../core/models/app-data.models';
 
 @Component({
   selector: 'app-settings-page',
@@ -16,6 +16,7 @@ import { CycleProfile } from '../core/models/app-data.models';
 export class SettingsPageComponent {
   constructor(
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly authService: AuthService,
     private readonly dataStore: DataStoreService,
   ) {
@@ -96,6 +97,16 @@ export class SettingsPageComponent {
   protected readonly shareEmail = signal('');
   protected readonly shareError = signal<string | null>(null);
   protected readonly shareSubmitting = signal(false);
+  protected readonly shareFormLevel = signal<'full' | 'busy_only' | 'workouts_only'>('full');
+  protected readonly editingShareId = signal<string | null>(null);
+  protected readonly editingShareLevel = signal<string>('full');
+
+  protected readonly shareLevelOptions = [
+    { value: 'full' as const, label: 'Full access', sub: ' sees your full calendar' },
+    { value: 'busy_only' as const, label: 'Busy/free only', sub: ' sees when you\'re busy or free, not what you\'re doing' },
+    { value: 'workouts_only' as const, label: 'Workouts only', sub: ' sees only your workouts (training partner mode)' },
+  ];
+
   protected readonly cycleStatus = signal<'regular' | 'irregular' | 'hormonal' | 'menopause'>('regular');
   protected readonly cycleLastPeriod = signal('');
   protected readonly cycleLength = signal(28);
@@ -318,6 +329,7 @@ export class SettingsPageComponent {
     this.shareFormVisible.set(false);
     this.shareEmail.set('');
     this.shareError.set(null);
+    this.shareFormLevel.set('full');
   }
 
   protected async submitShare(): Promise<void> {
@@ -326,14 +338,34 @@ export class SettingsPageComponent {
     this.shareSubmitting.set(true);
     this.shareError.set(null);
     try {
-      await this.dataStore.grantShare({ recipientEmail: email });
+      await this.dataStore.grantShare({ recipientEmail: email, shareLevel: this.shareFormLevel() });
       this.shareEmail.set('');
+      this.shareFormLevel.set('full');
       this.shareFormVisible.set(false);
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
       this.shareError.set(status === 404 ? 'User not found' : 'Couldn\'t share — try again.');
     } finally {
       this.shareSubmitting.set(false);
+    }
+  }
+
+  protected startEditShareLevel(share: CalendarShare): void {
+    this.editingShareId.set(share.id);
+    this.editingShareLevel.set(share.shareLevel);
+  }
+
+  protected cancelEditShareLevel(): void {
+    this.editingShareId.set(null);
+  }
+
+  protected async saveEditShareLevel(): Promise<void> {
+    const shareId = this.editingShareId();
+    if (!shareId) return;
+    try {
+      await this.dataStore.updateShareLevel(shareId, this.editingShareLevel());
+    } finally {
+      this.editingShareId.set(null);
     }
   }
 
@@ -349,6 +381,10 @@ export class SettingsPageComponent {
   protected shareLevelLabel(level: string): string {
     const map: Record<string, string> = { full: 'Full access', busy_only: 'Busy/Free', workouts_only: 'Workouts' };
     return map[level] ?? level;
+  }
+
+  protected isDeletedRecipient(share: { recipientEmail: string }): boolean {
+    return share.recipientEmail === 'Unknown user (account deleted)';
   }
 
   private async loadSettings(): Promise<void> {
@@ -387,6 +423,14 @@ export class SettingsPageComponent {
     if (this.cycleTrackingEnabled()) {
       await this.dataStore.loadCycle();
       this.applyCycleProfileToUi(this.dataStore.cycleProfile());
+    }
+
+    const openSection = this.route.snapshot.queryParamMap.get('open');
+    if (openSection && !this.openSections().includes(openSection)) {
+      this.openSections.update((s) => [...s, openSection]);
+      if (openSection === 'sharing') {
+        await this.dataStore.loadShares();
+      }
     }
   }
 

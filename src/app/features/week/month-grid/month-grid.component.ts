@@ -516,6 +516,7 @@ export class MonthGridComponent {
   }
 
   protected shareEvent(event: CalendarEvent): void {
+    this.openEditor(event);
   }
 
   protected dayEventLabels(day: MonthDay): MonthEventLabel[] {

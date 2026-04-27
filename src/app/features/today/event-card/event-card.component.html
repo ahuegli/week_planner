@@ -17,6 +17,11 @@
 
       <div class="event-header">
         <span class="event-title">{{ displayEvent().title }}</span>
+        @if (event().linkedInvitationId) {
+          <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        }
         @if (effectiveStatus() === 'completed') {
           <span class="status-icon status-done" aria-label="Completed">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -31,6 +36,18 @@
         }
         @if (effectiveStatus() === 'moved') {
           <span class="status-label status-moved">Moved</span>
+        }
+        @if (inviteeBubbles().length > 0) {
+          <span class="invitee-bubbles">
+            @for (email of inviteeBubbles(); track email) {
+              <span class="invitee-bubble" [style.background]="bubbleColor(email)" [title]="email">
+                {{ email[0].toUpperCase() }}
+              </span>
+            }
+            @if (inviteeOverflow() > 0) {
+              <span class="invitee-overflow">+{{ inviteeOverflow() }}</span>
+            }
+          </span>
         }
       </div>
 

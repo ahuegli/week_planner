@@ -37,3 +37,19 @@
 .tab-link.is-active {
   color: var(--color-primary);
 }
+
+.tab-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.notif-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-error);
+  border: 1.5px solid var(--color-card);
+}

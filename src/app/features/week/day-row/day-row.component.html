@@ -40,6 +40,11 @@
                         <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/>
                       </svg>
                     }
+                    @if (event.linkedInvitationId) {
+                      <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    }
                     <p class="event-title">{{ event.type === 'workout' ? sessionTypeLabel(event) : event.title }}</p>
                     @if (event.type === 'workout' && event.intensity) {
                       <span class="intensity-dot" [style.background]="intensityColor(event)"></span>
@@ -47,12 +52,26 @@
                     @if (event.priority === 'key') {
                       <span class="key-badge">Key</span>
                     }
+                    @if (inviteeBubbles(event).length > 0) {
+                      <span class="invitee-bubbles">
+                        @for (email of inviteeBubbles(event); track email) {
+                          <span class="invitee-bubble" [style.background]="bubbleColor(email)" [title]="email">
+                            {{ email[0].toUpperCase() }}
+                          </span>
+                        }
+                        @if (inviteeOverflow(event) > 0) {
+                          <span class="invitee-overflow">+{{ inviteeOverflow(event) }}</span>
+                        }
+                      </span>
+                    }
                   </div>
                   <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
                 </div>
-                <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
+                @if (event.type !== 'busy') {
+                  <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                }
               </button>
 
               @if (hasExpandedDetails(event)) {

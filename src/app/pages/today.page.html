@@ -32,6 +32,27 @@
     <app-week-snapshot [days]="weekDays()" (daySelected)="selectDay($event)" />
   </div>
 
+  @if (pendingInvitations().length > 0) {
+    <div class="content-pad">
+      <p class="section-label">Invitations</p>
+      <div class="invite-cards">
+        @for (inv of pendingInvitations(); track inv.id) {
+          <div class="invite-card">
+            <p class="invite-card-title">{{ inv.inviterEmail }} invited you to {{ inv.eventTitle }}</p>
+            <p class="invite-card-sub">{{ formatInviteDate(inv.eventDate) }} at {{ inv.eventStartTime }}</p>
+            @if (errorInvitationId() === inv.id) {
+              <p class="invite-card-error">Couldn't accept — try again</p>
+            }
+            <div class="invite-card-actions">
+              <button type="button" class="btn-accept" (click)="acceptInvitation(inv.id)">Accept</button>
+              <button type="button" class="btn-decline" (click)="declineInvitation(inv.id)">Decline</button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   <!-- Your Day -->
   <div class="content-pad">
     <p class="section-label">Your Day</p>

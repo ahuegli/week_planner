@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { CalendarEvent } from '../../mock-data';
+import { DataStoreService } from '../../core/services/data-store.service';
+import { UiFeedbackService } from '../ui-feedback.service';
 
 type EventFormValue = {
   title: string;
@@ -23,6 +25,8 @@ type EventFormValue = {
 })
 export class EventDetailModalComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly dataStore = inject(DataStoreService);
+  private readonly uiFeedback = inject(UiFeedbackService);
   private readonly weekDayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
   readonly open = input(false);
@@ -33,6 +37,11 @@ export class EventDetailModalComponent {
   readonly saveRequested = output<CalendarEvent>();
   readonly deleteRequested = output<string>();
   protected readonly selectedDay = signal<number | null>(null);
+  protected readonly showInviteDialog = signal(false);
+  protected readonly inviteEmail = signal('');
+  protected readonly inviteMessage = signal('');
+  protected readonly inviteSending = signal(false);
+  protected readonly inviteError = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.nonNullable.group({
     title: '',
@@ -44,6 +53,11 @@ export class EventDetailModalComponent {
     intensity: '' as EventFormValue['intensity'],
     priority: '' as EventFormValue['priority'],
     sessionType: '',
+  });
+
+  protected readonly canInvite = computed(() => {
+    const t = this.event()?.type;
+    return t === 'workout' || t === 'custom-event' || t === 'personal';
   });
 
   protected readonly isWorkout = computed(() => this.event()?.type === 'workout');
@@ -161,6 +175,36 @@ export class EventDetailModalComponent {
     }
 
     this.deleteRequested.emit(activeEvent.id);
+  }
+
+  protected openInviteDialog(): void {
+    this.inviteEmail.set('');
+    this.inviteMessage.set('');
+    this.inviteError.set(null);
+    this.showInviteDialog.set(true);
+  }
+
+  protected closeInviteDialog(): void {
+    this.showInviteDialog.set(false);
+  }
+
+  protected async submitInvite(): Promise<void> {
+    const ev = this.event();
+    const email = this.inviteEmail().trim();
+    if (!ev || !email) return;
+
+    this.inviteSending.set(true);
+    this.inviteError.set(null);
+    try {
+      await this.dataStore.sendInvitation(ev.id, email);
+      this.uiFeedback.show('Invitation sent');
+      this.showInviteDialog.set(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send invitation';
+      this.inviteError.set(msg);
+    } finally {
+      this.inviteSending.set(false);
+    }
   }
 
   private toFormValue(event: CalendarEvent): EventFormValue {

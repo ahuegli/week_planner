@@ -32,7 +32,7 @@ export class CalendarShareService {
         return {
           ...share,
           ownerEmail: owner?.email ?? 'Unknown',
-          recipientEmail: recipient?.email ?? 'Unknown',
+          recipientEmail: recipient?.email ?? 'Unknown user (account deleted)',
         };
       }),
     );
@@ -41,16 +41,18 @@ export class CalendarShareService {
   async findIncoming(recipientId: string): Promise<CalendarShareWithEmails[]> {
     const shares = await this.shareRepository.find({ where: { recipientId } });
     const recipient = await this.userService.findById(recipientId);
-    return Promise.all(
+    const hydrated = await Promise.all(
       shares.map(async (share) => {
         const owner = await this.userService.findById(share.ownerId);
+        if (!owner) return null;
         return {
           ...share,
-          ownerEmail: owner?.email ?? 'Unknown',
+          ownerEmail: owner.email,
           recipientEmail: recipient?.email ?? 'Unknown',
         };
       }),
     );
+    return hydrated.filter((s): s is CalendarShareWithEmails => s !== null);
   }
 
   async findActiveShare(ownerId: string, recipientId: string): Promise<CalendarShare | null> {

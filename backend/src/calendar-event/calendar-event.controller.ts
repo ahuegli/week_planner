@@ -13,8 +13,10 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CalendarEventService } from './calendar-event.service';
+import { CalendarEvent } from './calendar-event.entity';
 import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event.dto';
 import { CalendarShareService } from '../calendar-share/calendar-share.service';
+import { EventInvitationService } from '../event-invitation/event-invitation.service';
 
 @Controller('calendar-events')
 @UseGuards(JwtAuthGuard)
@@ -22,6 +24,7 @@ export class CalendarEventController {
   constructor(
     private readonly calendarEventService: CalendarEventService,
     private readonly calendarShareService: CalendarShareService,
+    private readonly eventInvitationService: EventInvitationService,
   ) {}
 
   @Get()
@@ -30,11 +33,18 @@ export class CalendarEventController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    if (startDate && endDate) {
-      return this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate);
-    }
+    const events = startDate && endDate
+      ? await this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate)
+      : await this.calendarEventService.findAllByUser(req.user.userId);
 
-    return this.calendarEventService.findAllByUser(req.user.userId);
+    const inviteesMap = await this.eventInvitationService.getAcceptedInviteesForEvents(
+      events.map((e) => e.id),
+    );
+
+    return events.map((e) => ({
+      ...e,
+      acceptedInviteeEmails: inviteesMap.get(e.id) ?? [],
+    }));
   }
 
   @Get('shared/:ownerId')
@@ -48,12 +58,36 @@ export class CalendarEventController {
     if (!share) {
       throw new ForbiddenException('No active share');
     }
-    // TODO WP4B: implement busy_only and workouts_only filtering
-    // For WP4A all share levels return full event data
-    if (startDate && endDate) {
-      return this.calendarEventService.findByDateRange(ownerId, startDate, endDate);
+
+    const raw = startDate && endDate
+      ? await this.calendarEventService.findByDateRange(ownerId, startDate, endDate)
+      : await this.calendarEventService.findAllByUser(ownerId);
+
+    return this.applyShareFilter(raw, share.shareLevel);
+  }
+
+  private applyShareFilter(events: CalendarEvent[], shareLevel: string): object[] {
+    if (shareLevel === 'workouts_only') {
+      return events.filter((e) => e.type === 'workout');
     }
-    return this.calendarEventService.findAllByUser(ownerId);
+
+    if (shareLevel === 'busy_only') {
+      return events.map((e) => {
+        const isWorkout = e.type === 'workout';
+        return {
+          id: e.id,
+          date: e.date,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          durationMinutes: e.durationMinutes,
+          type: isWorkout ? 'workout' : 'busy',
+          title: isWorkout ? e.title : 'Busy',
+        };
+      });
+    }
+
+    // full — return as-is
+    return events;
   }
 
   @Get(':id')

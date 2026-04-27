@@ -1,4 +1,4 @@
-export type CalendarEventType = 'shift' | 'workout' | 'mealprep' | 'custom-event' | 'personal' | 'oncall';
+export type CalendarEventType = 'shift' | 'workout' | 'mealprep' | 'custom-event' | 'personal' | 'oncall' | 'busy';
 export type ShiftType = 'early' | 'late' | 'night';
 
 export interface CalendarEvent {
@@ -20,6 +20,8 @@ export interface CalendarEvent {
   isRepeatingWeekly?: boolean;
   commuteMinutes?: number;
   isManuallyPlaced?: boolean;
+  linkedInvitationId?: string;
+  acceptedInviteeEmails?: string[];
   status?: 'pending' | 'scheduled' | 'completed' | 'skipped' | 'moved';
   intensity?: 'easy' | 'moderate' | 'hard';
   priority?: 'key' | 'supporting' | 'optional';
@@ -554,3 +556,30 @@ export interface CreateSymptomLogPayload {
 }
 
 export type UpdateSymptomLogPayload = Partial<CreateSymptomLogPayload>;
+
+// ── Event Invitations ──────────────────────────────────────────────────────
+
+export interface EventInvitation {
+  id: string;
+  inviterId: string;
+  recipientId: string;
+  calendarEventId: string;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  respondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  inviterEmail: string;
+  recipientEmail: string;
+  eventTitle: string;
+  eventDate: string;
+  eventStartTime: string;
+}
+
+export interface CreateEventInvitationPayload {
+  calendarEventId: string;
+  recipientEmail: string;
+}
+
+export interface RespondToInvitationPayload {
+  response: 'accepted' | 'declined';
+}

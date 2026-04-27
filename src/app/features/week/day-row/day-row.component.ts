@@ -75,7 +75,9 @@ export class DayRowComponent {
     return groups;
   });
 
-  protected readonly isFreeDay = computed(() => !this.visibleEvents().some((event) => event.type === 'shift'));
+  protected readonly isFreeDay = computed(() =>
+    !this.visibleEvents().some((event) => event.type === 'shift' || event.type === 'busy'),
+  );
 
   protected eventColor(event: CalendarEvent): string {
     switch (event.type) {
@@ -90,6 +92,8 @@ export class DayRowComponent {
         return 'var(--color-personal)';
       case 'oncall':
         return 'var(--color-oncall)';
+      case 'busy':
+        return 'rgba(139, 129, 120, 0.5)';
       default:
         return 'var(--color-border)';
     }
@@ -108,6 +112,8 @@ export class DayRowComponent {
         return 'rgba(184, 112, 75, 0.15)';
       case 'oncall':
         return 'rgba(196, 146, 58, 0.15)';
+      case 'busy':
+        return 'rgba(139, 129, 120, 0.08)';
       default:
         return 'rgba(232, 229, 224, 0.4)';
     }
@@ -128,6 +134,21 @@ export class DayRowComponent {
 
   protected isExpanded(event: CalendarEvent): boolean {
     return this.expandedEventId() === event.id;
+  }
+
+  private static readonly BUBBLE_COLORS = ['#2d4d7a', '#6B7F5E', '#A85454', '#C4923A', '#5a7a8a'];
+
+  protected inviteeBubbles(event: CalendarEvent): string[] {
+    return (event.acceptedInviteeEmails ?? []).slice(0, 3);
+  }
+
+  protected inviteeOverflow(event: CalendarEvent): number {
+    return Math.max((event.acceptedInviteeEmails?.length ?? 0) - 3, 0);
+  }
+
+  protected bubbleColor(email: string): string {
+    const hash = [...email].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return DayRowComponent.BUBBLE_COLORS[hash % DayRowComponent.BUBBLE_COLORS.length];
   }
 
   protected navigateToDay(): void {

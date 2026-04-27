@@ -1,4 +1,11 @@
 <section class="week-page">
+  @if (viewingSharedCalendar()) {
+    <div class="shared-banner">
+      <span class="shared-banner-text">👁 Viewing {{ viewingSharedCalendar()!.ownerEmail }}'s calendar</span>
+      <button type="button" class="shared-exit-btn" (click)="exitSharedCalendar()">Exit</button>
+    </div>
+  }
+
   <header class="week-header">
     <div>
       <h1 class="page-title">My Schedule</h1>
@@ -39,7 +46,7 @@
         </button>
       </div>
 
-      @if (showCyclePhasesToggle()) {
+      @if (showCyclePhasesToggle() && !viewingSharedCalendar()) {
         <button
           type="button"
           class="cycle-phase-toggle"
@@ -52,16 +59,18 @@
         </button>
       }
 
-      <button type="button" class="btn-secondary generate-plan-btn" (click)="scheduleWeek()" [disabled]="isGenerating()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
-          <path d="m9 16 2 2 4-4" />
-        </svg>
-        <span>{{ isGenerating() ? 'Scheduling...' : 'Schedule this week' }}</span>
-      </button>
+      @if (!viewingSharedCalendar()) {
+        <button type="button" class="btn-secondary generate-plan-btn" (click)="scheduleWeek()" [disabled]="isGenerating()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+            <path d="m9 16 2 2 4-4" />
+          </svg>
+          <span>{{ isGenerating() ? 'Scheduling...' : 'Schedule this week' }}</span>
+        </button>
+      }
 
       <app-week-summary
         [completedWorkouts]="completedWorkouts()"
@@ -76,39 +85,46 @@
         (scheduleRequested)="scheduleUnplacedSession($event)"
       />
 
-      <div class="rows-wrap" aria-label="Weekly day rows">
-        @if (!hasWeekEvents()) {
-          <p class="page-subtitle">Your week is clear — add a shift or workout to get started</p>
+      <div class="rows-wrap-outer">
+        @if (viewingSharedCalendar()) {
+          <div class="shared-rows-overlay" aria-hidden="true"></div>
         }
-        @for (day of weekSchedule(); track day.date) {
-          <div class="day-row-wrap">
-            @if (phaseDotMap().get(day.date)) {
-              <span
-                class="phase-dot"
-                [style.background]="phaseDotMap().get(day.date)"
-                aria-hidden="true"
-              ></span>
-            }
-            <app-day-row
-              [day]="day"
-              [expandedEventId]="expandedEventId()"
-              [phase]="displayedPhase()"
-              [weekNumber]="displayedWeekNumber()"
-              [planMode]="currentPlan()?.mode ?? 'race'"
-              [sportType]="currentPlan()?.sportType ?? null"
-              [conflictingEventIds]="conflictingEventIds()"
-              (eventToggle)="toggleExpandedEvent($event)"
-              (eventUpdated)="onEventUpdated($event)"
-              (eventDeleted)="onEventDeleted($event)"
-            />
-          </div>
-        }
+        <div class="rows-wrap" aria-label="Weekly day rows">
+          @if (!hasWeekEvents()) {
+            <p class="page-subtitle">Your week is clear — add a shift or workout to get started</p>
+          }
+          @for (day of weekSchedule(); track day.date) {
+            <div class="day-row-wrap">
+              @if (phaseDotMap().get(day.date)) {
+                <span
+                  class="phase-dot"
+                  [style.background]="phaseDotMap().get(day.date)"
+                  aria-hidden="true"
+                ></span>
+              }
+              <app-day-row
+                [day]="day"
+                [expandedEventId]="expandedEventId()"
+                [phase]="displayedPhase()"
+                [weekNumber]="displayedWeekNumber()"
+                [planMode]="currentPlan()?.mode ?? 'race'"
+                [sportType]="currentPlan()?.sportType ?? null"
+                [conflictingEventIds]="conflictingEventIds()"
+                (eventToggle)="toggleExpandedEvent($event)"
+                (eventUpdated)="onEventUpdated($event)"
+                (eventDeleted)="onEventDeleted($event)"
+              />
+            </div>
+          }
+        </div>
       </div>
 
       <div class="bottom-spacer"></div>
     </section>
 
-    <app-quick-add-fab [weekStartDate]="weekStartDateString()" (eventCreated)="onQuickAddEvent($event)" />
+    @if (!viewingSharedCalendar()) {
+      <app-quick-add-fab [weekStartDate]="weekStartDateString()" (eventCreated)="onQuickAddEvent($event)" />
+    }
   } @else {
     <section class="month-pane">
       <app-month-grid

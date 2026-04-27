@@ -15,6 +15,7 @@ const TYPE_COLORS: Record<CalendarEvent['type'], string> = {
   'custom-event': 'var(--color-personal)',
   personal: 'var(--color-personal)',
   oncall: 'var(--color-oncall)',
+  busy: 'rgba(139, 129, 120, 0.5)',
 };
 
 @Component({
@@ -314,5 +315,20 @@ export class EventCardComponent {
 
   private normalizeSessionType(value: string): string {
     return value.trim().toLowerCase().replace(/\s+/g, '_');
+  }
+
+  private static readonly BUBBLE_COLORS = ['#2d4d7a', '#6B7F5E', '#A85454', '#C4923A', '#5a7a8a'];
+
+  protected inviteeBubbles(): string[] {
+    return (this.displayEvent().acceptedInviteeEmails ?? []).slice(0, 3);
+  }
+
+  protected inviteeOverflow(): number {
+    return Math.max((this.displayEvent().acceptedInviteeEmails?.length ?? 0) - 3, 0);
+  }
+
+  protected bubbleColor(email: string): string {
+    const hash = [...email].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return EventCardComponent.BUBBLE_COLORS[hash % EventCardComponent.BUBBLE_COLORS.length];
   }
 }
