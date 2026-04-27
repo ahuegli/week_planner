@@ -425,6 +425,76 @@
   </article>
 
   <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleSharing()">
+      <h2>Sharing</h2>
+      <span class="chevron" [class.open]="isOpen('sharing')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('sharing')) {
+      <div class="accordion-content">
+
+        <div class="setting-block">
+          <p class="block-title">People I share with</p>
+          @if (outgoingShares().length === 0) {
+            <p class="info-text">You haven't shared your calendar with anyone yet.</p>
+          } @else {
+            @for (share of outgoingShares(); track share.id) {
+              <div class="share-row">
+                <span class="share-email">{{ share.recipientEmail }}</span>
+                <span class="share-badge">{{ shareLevelLabel(share.shareLevel) }}</span>
+                <button type="button" class="text-link share-danger" (click)="revokeShare(share.id)">Revoke</button>
+              </div>
+            }
+          }
+          @if (!shareFormVisible()) {
+            <button type="button" class="text-link" (click)="showShareForm()">+ Share with someone</button>
+          } @else {
+            <div class="share-form">
+              <input
+                class="input"
+                type="email"
+                placeholder="their email"
+                [value]="shareEmail()"
+                (input)="shareEmail.set($any($event.target).value)"
+              />
+              @if (shareError()) {
+                <p class="share-error">{{ shareError() }}</p>
+              }
+              <div class="share-form-actions">
+                <button type="button" class="btn-primary small-btn" (click)="submitShare()" [disabled]="shareSubmitting()">
+                  {{ shareSubmitting() ? 'Sharing...' : 'Share' }}
+                </button>
+                <button type="button" class="btn-secondary small-btn" (click)="cancelShareForm()">Cancel</button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="setting-block">
+          <p class="block-title">People who share with me</p>
+          @if (incomingShares().length === 0) {
+            <p class="info-text">No one is sharing their calendar with you.</p>
+          } @else {
+            @for (share of incomingShares(); track share.id) {
+              <div class="share-row">
+                <span class="share-email">{{ share.ownerEmail }}</span>
+                <button type="button" class="btn-secondary small-btn" (click)="viewCalendar(share.ownerId, share.ownerEmail)">View calendar</button>
+                <button type="button" class="text-link share-danger" (click)="revokeShare(share.id)">Stop receiving</button>
+              </div>
+            }
+          }
+        </div>
+
+        <p class="info-text">Sharing is one-way. They'll need to share back if you want to see theirs.</p>
+
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
     <button type="button" class="accordion-header" (click)="toggleSection('account')">
       <h2>Account</h2>
       <span class="chevron" [class.open]="isOpen('account')" aria-hidden="true">

@@ -89,6 +89,13 @@ export class SettingsPageComponent {
   protected readonly cycleAwareSchedulingEnabled = computed(
     () => this.dataStore.schedulerSettings()?.cycleTrackingEnabled ?? false,
   );
+
+  protected readonly outgoingShares = computed(() => this.dataStore.outgoingShares());
+  protected readonly incomingShares = computed(() => this.dataStore.incomingShares());
+  protected readonly shareFormVisible = signal(false);
+  protected readonly shareEmail = signal('');
+  protected readonly shareError = signal<string | null>(null);
+  protected readonly shareSubmitting = signal(false);
   protected readonly cycleStatus = signal<'regular' | 'irregular' | 'hormonal' | 'menopause'>('regular');
   protected readonly cycleLastPeriod = signal('');
   protected readonly cycleLength = signal(28);
@@ -292,6 +299,56 @@ export class SettingsPageComponent {
   }
 
   protected deleteAccount(): void {
+  }
+
+  protected async toggleSharing(): Promise<void> {
+    const wasOpen = this.isOpen('sharing');
+    this.toggleSection('sharing');
+    if (!wasOpen) {
+      await this.dataStore.loadShares();
+    }
+  }
+
+  protected showShareForm(): void {
+    this.shareFormVisible.set(true);
+    this.shareError.set(null);
+  }
+
+  protected cancelShareForm(): void {
+    this.shareFormVisible.set(false);
+    this.shareEmail.set('');
+    this.shareError.set(null);
+  }
+
+  protected async submitShare(): Promise<void> {
+    const email = this.shareEmail().trim();
+    if (!email) return;
+    this.shareSubmitting.set(true);
+    this.shareError.set(null);
+    try {
+      await this.dataStore.grantShare({ recipientEmail: email });
+      this.shareEmail.set('');
+      this.shareFormVisible.set(false);
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      this.shareError.set(status === 404 ? 'User not found' : 'Couldn\'t share — try again.');
+    } finally {
+      this.shareSubmitting.set(false);
+    }
+  }
+
+  protected async revokeShare(shareId: string): Promise<void> {
+    await this.dataStore.revokeShare(shareId);
+  }
+
+  protected async viewCalendar(ownerId: string, ownerEmail: string): Promise<void> {
+    await this.dataStore.viewSharedCalendar(ownerId, ownerEmail);
+    void this.router.navigate(['/week']);
+  }
+
+  protected shareLevelLabel(level: string): string {
+    const map: Record<string, string> = { full: 'Full access', busy_only: 'Busy/Free', workouts_only: 'Workouts' };
+    return map[level] ?? level;
   }
 
   private async loadSettings(): Promise<void> {

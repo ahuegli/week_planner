@@ -511,3 +511,55 @@ select.input {
 .bottom-spacer {
   height: 100px;
 }
+
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  flex-wrap: wrap;
+}
+
+.share-email {
+  font-size: 13px;
+  color: var(--color-text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+  background: rgba(45, 77, 122, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.share-danger {
+  color: var(--color-error, #c0392b);
+  flex-shrink: 0;
+}
+
+.share-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.share-error {
+  font-size: 12px;
+  color: var(--color-error, #c0392b);
+  margin: 0;
+}
