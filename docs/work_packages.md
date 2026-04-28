@@ -319,6 +319,10 @@
 - Offline mode with sync
 - App store submission
 
+
+
+
+
 ---
 
 ## V2 Features (Post-Launch)

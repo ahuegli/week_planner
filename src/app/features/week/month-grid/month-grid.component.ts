@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { CalendarEvent, MonthDay } from '../../../mock-data';
+import { workoutDisciplineBorderColor, workoutDisciplineBgColor } from '../../../shared/utils/discipline-colors.util';
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { DataStoreService } from '../../../core/services/data-store.service';
@@ -19,6 +20,13 @@ interface DayChoice {
   dayNumber: string;
   date: string;
 }
+
+type BrickEvent = CalendarEvent & {
+  discipline?: string | null;
+  linkedNextSessionId?: string | null;
+  linkedPriorSessionId?: string | null;
+  prescriptionData?: Record<string, unknown> | null;
+};
 
 @Component({
   selector: 'app-month-grid',
@@ -432,7 +440,7 @@ export class MonthGridComponent {
   protected eventTypeColor(event: CalendarEvent): string {
     switch (event.type) {
       case 'workout':
-        return 'var(--color-workout)';
+        return workoutDisciplineBorderColor(event.sessionType);
       case 'shift':
         return 'var(--color-shift)';
       case 'mealprep':
@@ -445,6 +453,35 @@ export class MonthGridComponent {
       default:
         return 'var(--color-border)';
     }
+  }
+
+  protected isBrickLinked(event: CalendarEvent): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    return this.hasBrickPriorInSelected(event) || this.hasBrickNextInSelected(event);
+  }
+
+  protected hasBrickPriorInSelected(event: CalendarEvent): boolean {
+    const priorId = this.brickPriorId(event);
+    return !!priorId && this.selectedEvents().some((candidate) => candidate.id === priorId);
+  }
+
+  protected hasBrickNextInSelected(event: CalendarEvent): boolean {
+    const nextId = this.brickNextId(event);
+    return !!nextId && this.selectedEvents().some((candidate) => candidate.id === nextId);
+  }
+
+  protected isOffBikeRun(event: CalendarEvent): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    const brick = event as BrickEvent;
+    const isRunDiscipline = brick.discipline === 'run';
+    const isOffBike = (brick.prescriptionData?.['isOffBike'] as boolean | undefined) === true;
+    return isRunDiscipline && (isOffBike || !!this.brickPriorId(event));
   }
 
   protected intensityLabel(event: CalendarEvent): string {
@@ -568,10 +605,10 @@ export class MonthGridComponent {
     return Math.max(this.dayEventLabels(day).length - 2, 0);
   }
 
-  protected eventBorderColor(type: MonthEventType): string {
+  protected eventBorderColor(type: MonthEventType, sessionType?: string): string {
     switch (type) {
       case 'workout':
-        return 'var(--color-workout)';
+        return workoutDisciplineBorderColor(sessionType);
       case 'mealprep':
         return 'var(--color-mealprep)';
       case 'personal':
@@ -581,10 +618,10 @@ export class MonthGridComponent {
     }
   }
 
-  protected eventBackground(type: MonthEventType): string {
+  protected eventBackground(type: MonthEventType, sessionType?: string): string {
     switch (type) {
       case 'workout':
-        return 'rgba(45, 77, 122, 0.10)';
+        return workoutDisciplineBgColor(sessionType);
       case 'mealprep':
         return 'rgba(107, 127, 94, 0.10)';
       case 'personal':
@@ -689,5 +726,15 @@ export class MonthGridComponent {
     this.confirmingDeleteEventId.set(null);
     this.editingEventId.set(null);
     this.expandedEventIds.update((current) => current.filter((id) => id !== eventId));
+  }
+
+  private brickNextId(event: CalendarEvent): string | null {
+    const value = (event as BrickEvent).linkedNextSessionId;
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private brickPriorId(event: CalendarEvent): string | null {
+    const value = (event as BrickEvent).linkedPriorSessionId;
+    return typeof value === 'string' && value.length > 0 ? value : null;
   }
 }

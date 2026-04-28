@@ -54,6 +54,22 @@ export class CreateCalendarEventDto {
   @IsOptional()
   @IsString()
   priority?: string;
+
+  @IsOptional()
+  @IsIn(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'])
+  discipline?: string;
+
+  @IsOptional()
+  @IsString()
+  sessionType?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedNextSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedPriorSessionId?: string;
 }
 
 export class UpdateCalendarEventDto {
@@ -114,4 +130,20 @@ export class UpdateCalendarEventDto {
   @IsOptional()
   @IsString()
   priority?: string;
+
+  @IsOptional()
+  @IsIn(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'])
+  discipline?: string;
+
+  @IsOptional()
+  @IsString()
+  sessionType?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedNextSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedPriorSessionId?: string;
 }

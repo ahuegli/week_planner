@@ -17,6 +17,11 @@ export declare class CalendarEvent {
     isManuallyPlaced: boolean;
     commuteMinutes?: number;
     priority?: string;
+    discipline: string | null;
+    sessionType: string | null;
+    linkedInvitationId?: string;
+    linkedNextSessionId: string | null;
+    linkedPriorSessionId: string | null;
     userId: string;
     user: User;
 }

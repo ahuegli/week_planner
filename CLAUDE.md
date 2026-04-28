@@ -146,3 +146,15 @@ Hard constraints cause backtracking: shift + commute buffers, no workouts after 
 - Cycle colours: menstrual `#A85454`, follicular `#2d4d7a`, ovulation `#C4923A`, luteal `#6B7F5E`
 - Event colours: shift=grey, workout=blue, meal prep=olive, personal=terracotta
 - Cards: white on cream, 12px radius, subtle borders.
+
+## Database
+
+This project uses **Supabase (cloud Postgres)**, not local Postgres. 
+Do NOT run psql, pg_dump, or any tool against C:\Program Files\PostgreSQL\.
+The local Postgres installation is unrelated to our data.
+
+To verify schema changes:
+- Read the backend startup log (TypeORM logs DDL for new columns)
+- Hit the relevant API endpoint with curl + JWT (functional 
+  verification)
+- Or check Supabase dashboard directly via web UI

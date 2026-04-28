@@ -314,9 +314,15 @@ export class ConstraintCheckerService {
       return false;
     }
 
+    const candidateIsStrength = workout.workoutType === 'strength' || workout.workoutType === 'yoga';
     const candidateIsLongEndurance = this.isEnduranceNeedingRestDay(workout, ctx.settings);
+
     if (candidateIsLongEndurance) {
-      return true;
+      // Long endurance can share the day only with strength/yoga — not with other endurance sessions.
+      const hasNonStrength = sameDayWorkouts.some(
+        (e) => e.workoutType !== 'strength' && e.workoutType !== 'yoga',
+      );
+      if (hasNonStrength) return true;
     }
 
     const isLongEndurance = (event: CalendarEvent): boolean => {
@@ -337,7 +343,8 @@ export class ConstraintCheckerService {
     };
 
     for (const event of sameDayWorkouts) {
-      if (isLongEndurance(event)) {
+      if (isLongEndurance(event) && !candidateIsStrength) {
+        // Strength/yoga may share the day with a long endurance session; other types may not.
         return true;
       }
     }

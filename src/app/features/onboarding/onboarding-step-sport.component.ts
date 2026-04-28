@@ -1,6 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { GoalMode, OnboardingData } from './onboarding.models';
 
+const TRIATHLON_DISTANCE_MAP: Record<string, OnboardingData['triathlonDistance']> = {
+  'Triathlon (Sprint)': 'sprint',
+  'Triathlon (Olympic)': 'olympic',
+  'Triathlon (Half / 70.3)': '70_3',
+  'Triathlon (Full / 140.6)': '140_6',
+};
+
 @Component({
   selector: 'app-onboarding-step-sport',
   imports: [],
@@ -115,6 +122,7 @@ export class OnboardingStepSportComponent {
     'Triathlon (Sprint)',
     'Triathlon (Olympic)',
     'Triathlon (Half / 70.3)',
+    'Triathlon (Full / 140.6)',
     'Cycling event',
     'Swimming event',
     'Other',
@@ -134,7 +142,8 @@ export class OnboardingStepSportComponent {
   ];
 
   protected setRaceEvent(value: string): void {
-    this.dataChange.emit({ raceEvent: value });
+    const dist = TRIATHLON_DISTANCE_MAP[value] ?? '';
+    this.dataChange.emit({ raceEvent: value, triathlonDistance: dist });
   }
 
   protected toggleActivity(value: string): void {

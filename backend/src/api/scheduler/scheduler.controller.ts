@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -48,6 +49,17 @@ import { CycleProfileService } from '../../cycle-profile/cycle-profile.service';
 import { CalendarEvent } from '../../calendar-event/calendar-event.entity';
 import { PlannedSession } from '../../planned-session/planned-session.entity';
 import { SchedulerSettings } from '../../scheduler-settings/scheduler-settings.entity';
+import { PlanWeek } from '../../plan-week/plan-week.entity';
+import { TrainingPlan, TriathlonDistance } from '../../training-plan/training-plan.entity';
+import {
+  TriathlonPlanTemplateService,
+  TriathlonPlanParams,
+  TriCalibrationData,
+  TriTier,
+  TriPeriodisation,
+  TriEndurancePedigree,
+  TriPoolAccess,
+} from '../../domain/triathlon-plan-template.service';
 
 @Controller('scheduler')
 @UseGuards(JwtAuthGuard)
@@ -61,6 +73,7 @@ export class SchedulerController {
     private readonly trainingPlanService: TrainingPlanService,
     private readonly schedulerSettingsService: SchedulerSettingsService,
     private readonly cycleProfileService: CycleProfileService,
+    private readonly triathlonPlanTemplate: TriathlonPlanTemplateService,
     private readonly dataSource: DataSource,
     @InjectRepository(CalendarEvent)
     private readonly calendarEventRepository: Repository<CalendarEvent>,
@@ -122,11 +135,21 @@ export class SchedulerController {
     @Body() dto: GeneratePlanDto,
   ): Promise<GeneratePlanResponse> {
     const userId = req.user.userId as string;
-    const plan = await this.trainingPlanService.findOneByUser(dto.planId, userId);
-    const [recurringShiftTemplates, schedulerSettings] = await Promise.all([
+    let plan = await this.trainingPlanService.findOneByUser(dto.planId, userId);
+    const [recurringShiftTemplates, rawSettings] = await Promise.all([
       this.loadRecurringShifts(userId),
-      this.schedulerSettingsService.findByUser(userId).then((s) => this.toSchedulerSettings(s)),
+      this.schedulerSettingsService.findByUser(userId),
     ]);
+    const schedulerSettings = this.toSchedulerSettings(rawSettings);
+
+    if (plan.sportType === 'triathlon') {
+      if (!plan.triathlonDistance) {
+        throw new BadRequestException('triathlonDistance required for triathlon plans');
+      }
+      await this.buildAndPersistTriathlonTemplate(plan, rawSettings, userId);
+      plan = await this.trainingPlanService.findOneByUser(dto.planId, userId);
+    }
+
     this.markScheduledSessionsPending(plan);
     return this.schedulePendingWeeks({
       userId,
@@ -135,6 +158,121 @@ export class SchedulerController {
       schedulerSettings,
       resetExisting: true,
     });
+  }
+
+  private async buildAndPersistTriathlonTemplate(
+    plan: TrainingPlan,
+    rawSettings: SchedulerSettings,
+    userId: string,
+  ): Promise<void> {
+    const distance = plan.triathlonDistance as TriathlonDistance;
+    const experienceLevel = TriathlonPlanTemplateService.computeExperienceLevel(
+      rawSettings.triathlonsCompleted,
+      rawSettings.endurancePedigree as TriEndurancePedigree | null,
+    );
+    const periodisation = TriathlonPlanTemplateService.defaultPeriodisation(
+      experienceLevel,
+      distance,
+      rawSettings.periodisationOverride as TriPeriodisation | null,
+    );
+    const tier: TriTier = experienceLevel === 'experienced' ? 'tier4plus' : 'tier3';
+    const weeklyHours = this.deriveWeeklyHours(tier, distance);
+
+    const calibration: TriCalibrationData = {
+      ftpWatts: rawSettings.ftpWatts,
+      lthrBpm: rawSettings.lthrBpm,
+      cssSecondsPer100m: rawSettings.cssSecondsPer100m,
+      hasPowerMeter: rawSettings.hasPowerMeter ?? false,
+    };
+    const poolAccess = (rawSettings.poolAccess ?? '25m') as TriPoolAccess;
+
+    const params: TriathlonPlanParams = {
+      distance,
+      weeklyHours,
+      tier,
+      experienceLevel,
+      periodisation,
+      calibration,
+      poolAccess,
+    };
+
+    const generated = this.triathlonPlanTemplate.generateWeeksAndSessions(plan, rawSettings, params);
+
+    await this.dataSource.transaction(async (manager) => {
+      const weekRepo = manager.getRepository(PlanWeek);
+      const sessionRepo = manager.getRepository(PlannedSession);
+
+      await sessionRepo
+        .createQueryBuilder()
+        .delete()
+        .from(PlannedSession)
+        .where('"planWeekId" IN (SELECT id FROM plan_weeks WHERE "planId" = :planId)', { planId: plan.id })
+        .execute();
+      await weekRepo.delete({ planId: plan.id });
+
+      const weekEntities = generated.weeks.map((week) =>
+        weekRepo.create({
+          userId,
+          planId: plan.id,
+          weekNumber: week.weekNumber,
+          phase: week.phase,
+          isDeload: week.isDeload,
+          volumeTarget: week.volumeTarget,
+          startDate: week.startDate,
+          endDate: week.endDate,
+        }),
+      );
+      const savedWeeks = await weekRepo.save(weekEntities);
+      const weekIdByNumber = new Map(savedWeeks.map((w) => [w.weekNumber, w.id]));
+
+      const sessionEntities = generated.sessions
+        .map((session) => {
+          const weekNumber = Number(session.planWeekId.replace('week-', ''));
+          const savedWeekId = weekIdByNumber.get(weekNumber);
+          if (!savedWeekId) return null;
+          return sessionRepo.create({
+            // Preserve pre-assigned ID for brick sessions (enables cross-linking before DB save)
+            ...(session.id ? { id: session.id } : {}),
+            userId,
+            planWeekId: savedWeekId,
+            sessionType: session.sessionType,
+            purpose: session.purpose,
+            priority: session.priority,
+            duration: session.duration,
+            intensity: session.intensity,
+            distanceTarget: session.distanceTarget,
+            paceTarget: session.paceTarget,
+            skippable: session.skippable,
+            shortenable: session.shortenable,
+            minimumDuration: session.minimumDuration,
+            substituteOptions: session.substituteOptions,
+            missImpact: session.missImpact,
+            discipline: session.discipline,
+            prescriptionData: session.prescriptionData,
+            cyclePhaseRules: session.cyclePhaseRules,
+            linkedNextSessionId: session.linkedNextSessionId ?? null,
+            linkedPriorSessionId: session.linkedPriorSessionId ?? null,
+            status: 'pending',
+            completedAt: null,
+            energyRating: null,
+            linkedCalendarEventId: null,
+            notes: null,
+          });
+        })
+        .filter((s): s is PlannedSession => !!s);
+
+      await sessionRepo.save(sessionEntities);
+    });
+
+    await this.trainingPlanService.update(plan.id, userId, { totalWeeks: generated.weeks.length });
+  }
+
+  private deriveWeeklyHours(tier: TriTier, distance: TriathlonDistance): number {
+    const defaults: Record<TriTier, Partial<Record<TriathlonDistance, number>>> = {
+      tier4plus: { sprint: 8, olympic: 10, '70_3': 12, '140_6': 16 },
+      tier3: { sprint: 5, olympic: 7, '70_3': 8, '140_6': 8 },
+    };
+    return defaults[tier][distance] ?? 8;
   }
 
   @Post('reschedule-conflicts')
@@ -460,6 +598,7 @@ export class SchedulerController {
       distanceCountsAsLong: session.sessionType === 'long_run',
       intensity: session.intensity,
       cyclePhaseRules: session.cyclePhaseRules ?? undefined,
+      linkedPriorSessionId: session.linkedPriorSessionId ?? undefined,
     };
   }
 
@@ -479,6 +618,7 @@ export class SchedulerController {
       },
       enduranceRestDays: settings.enduranceRestDays ?? 1,
       priorityHierarchy: ['sport', 'recovery', 'mealprep'],
+      maxTrainingDaysPerWeek: settings.maxTrainingDaysPerWeek ?? 7,
     };
   }
 
@@ -558,9 +698,21 @@ export class SchedulerController {
           cycleTrackingEnabled: cycleData.trackingEnabled,
         };
 
+        const SCHED_PRIORITY_ORDER: Record<string, number> = { key: 0, supporting: 1, optional: 2 };
+        const rawWorkouts = pendingSessions.map((session) => this.toWorkout(session));
+        // Ensure brick-bike precedes brick-run in the DFS session list. Both have the same
+        // priority (key), so a secondary sort is needed — the DFS stable-sorts by priority,
+        // preserving this ordering within the same priority bucket.
+        rawWorkouts.sort((a, b) => {
+          if (b.linkedPriorSessionId === a.id) return -1;
+          if (a.linkedPriorSessionId === b.id) return 1;
+          return (SCHED_PRIORITY_ORDER[a.priority ?? 'supporting'] ?? 1)
+               - (SCHED_PRIORITY_ORDER[b.priority ?? 'supporting'] ?? 1);
+        });
+
         const generationInput: GenerationInput = {
           existingEvents,
-          workouts: pendingSessions.map((session) => this.toWorkout(session)),
+          workouts: rawWorkouts,
           mealPrep: {
             duration: 90,
             sessionsPerWeek: 0,
@@ -608,6 +760,8 @@ export class SchedulerController {
             isPersonal: false,
             isRepeatingWeekly: false,
             priority: linkedSession?.priority,
+            discipline: linkedSession?.discipline ?? null,
+            sessionType: linkedSession?.sessionType ?? null,
           });
         });
 
@@ -632,6 +786,25 @@ export class SchedulerController {
         await transactionSessionRepository.save(
           pendingSessions.filter((session) => session.status === 'scheduled'),
         );
+
+        // Second pass: link brick pair calendar events to each other.
+        // PlannedSession.linkedNextSessionId points to the partner PlannedSession ID.
+        // We map those to CalendarEvent IDs using createdEventBySessionId.
+        const brickLinkUpdates: CalendarEvent[] = [];
+        for (const session of pendingSessions) {
+          if (session.linkedNextSessionId) {
+            const bikeCalEvent = createdEventBySessionId.get(session.id);
+            const runCalEvent = createdEventBySessionId.get(session.linkedNextSessionId);
+            if (bikeCalEvent && runCalEvent) {
+              bikeCalEvent.linkedNextSessionId = runCalEvent.id;
+              runCalEvent.linkedPriorSessionId = bikeCalEvent.id;
+              brickLinkUpdates.push(bikeCalEvent, runCalEvent);
+            }
+          }
+        }
+        if (brickLinkUpdates.length > 0) {
+          await transactionEventRepository.save(brickLinkUpdates);
+        }
 
         for (const unplaced of result.unplacedWorkouts) {
           unplacedSessions.push({
@@ -829,12 +1002,14 @@ export class SchedulerController {
     intervals: 'running',
     hill_reps: 'running',
     cardio_run: 'running',
+    run: 'running',
     strength: 'strength',
     hiit: 'strength',
     yoga: 'yoga',
     mobility: 'yoga',
     swim: 'swimming',
     bike: 'biking',
+    brick: 'biking',
   };
 
   private mapSessionTypeToWorkoutType(sessionType: string): WorkoutType {

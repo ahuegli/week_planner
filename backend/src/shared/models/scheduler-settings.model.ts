@@ -20,6 +20,7 @@ export interface SchedulerSettings {
   };
   enduranceRestDays: number;
   priorityHierarchy: PriorityItem[];
+  maxTrainingDaysPerWeek: number;
 }
 
 export const DEFAULT_SETTINGS: SchedulerSettings = {
@@ -37,4 +38,5 @@ export const DEFAULT_SETTINGS: SchedulerSettings = {
   },
   enduranceRestDays: 1,
   priorityHierarchy: ['sport', 'recovery', 'mealprep'],
+  maxTrainingDaysPerWeek: 7,
 };

@@ -143,6 +143,8 @@ export class PlannedSessionService {
       linkedEvent.endTime = endTime;
       linkedEvent.durationMinutes = session.duration;
       linkedEvent.priority = session.priority;
+      linkedEvent.discipline = session.discipline ?? null;
+      linkedEvent.sessionType = session.sessionType ?? null;
       linkedEvent.isManuallyPlaced = true;
       linkedEvent.isRepeatingWeekly = false;
       linkedEvent.isLocked = false;
@@ -159,6 +161,8 @@ export class PlannedSessionService {
           endTime,
           durationMinutes: session.duration,
           priority: session.priority,
+          discipline: session.discipline ?? null,
+          sessionType: session.sessionType ?? null,
           userId,
           isLocked: false,
           isPersonal: false,
@@ -329,6 +333,8 @@ export class PlannedSessionService {
       ),
       isCarryForward: true,
       originalWeekNumber: sourceSession.planWeek?.weekNumber ?? null,
+      discipline: sourceSession.discipline ?? null,
+      prescriptionData: sourceSession.prescriptionData ?? null,
     });
 
     const savedSession = await this.sessionRepository.save(carryForwardSession);
@@ -419,6 +425,8 @@ export class PlannedSessionService {
         endTime: suggestion.endTime,
         durationMinutes: suggestion.durationMinutes ?? session.duration,
         priority: session.priority,
+        discipline: session.discipline ?? null,
+        sessionType: session.sessionType ?? null,
         userId: session.userId,
         isLocked: false,
         isPersonal: false,
@@ -620,6 +628,7 @@ export class PlannedSessionService {
       },
       enduranceRestDays: settings.enduranceRestDays ?? 1,
       priorityHierarchy: ['sport', 'recovery', 'mealprep'],
+      maxTrainingDaysPerWeek: settings.maxTrainingDaysPerWeek ?? 7,
     };
   }
 

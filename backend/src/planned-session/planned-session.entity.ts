@@ -6,6 +6,8 @@ export type PlannedSessionPriority = 'key' | 'supporting' | 'optional';
 export type PlannedSessionIntensity = 'easy' | 'moderate' | 'hard';
 export type PlannedSessionStatus = 'pending' | 'scheduled' | 'completed' | 'skipped' | 'moved';
 export type MissImpact = 'high' | 'medium' | 'low';
+export type PlannedSessionType = 'run' | 'swim' | 'bike' | 'brick' | 'strength' | 'yoga' | 'mobility' | 'rest';
+export type PlannedSessionDiscipline = 'swim' | 'bike' | 'run' | 'brick' | 'strength' | 'mobility' | 'rest';
 
 @Entity('planned_sessions')
 export class PlannedSession {
@@ -77,6 +79,18 @@ export class PlannedSession {
 
   @Column({ type: 'int', nullable: true })
   originalWeekNumber: number | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedNextSessionId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedPriorSessionId: string | null;
+
+  @Column({ type: 'enum', enum: ['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'], nullable: true })
+  discipline: PlannedSessionDiscipline | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  prescriptionData: Record<string, unknown> | null;
 
   @ManyToOne(() => PlanWeek, (planWeek) => planWeek.sessions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'planWeekId' })

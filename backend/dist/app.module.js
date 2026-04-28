@@ -27,6 +27,8 @@ const symptom_log_module_1 = require("./symptom-log/symptom-log.module");
 const workout_log_module_1 = require("./workout-log/workout-log.module");
 const stats_module_1 = require("./stats/stats.module");
 const ai_module_1 = require("./ai/ai.module");
+const calendar_share_module_1 = require("./calendar-share/calendar-share.module");
+const event_invitation_module_1 = require("./event-invitation/event-invitation.module");
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 const databaseImports = USE_DATABASE
     ? [
@@ -57,6 +59,8 @@ const databaseImports = USE_DATABASE
         workout_log_module_1.WorkoutLogModule,
         stats_module_1.StatsModule,
         ai_module_1.AiModule,
+        calendar_share_module_1.CalendarShareModule,
+        event_invitation_module_1.EventInvitationModule,
     ]
     : [mock_data_module_1.MockDataModule];
 let AppModule = class AppModule {

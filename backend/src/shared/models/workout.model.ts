@@ -40,4 +40,5 @@ export interface Workout {
   distanceCountsAsLong?: boolean;
   intensity?: string;
   cyclePhaseRules?: Record<string, unknown>;
+  linkedPriorSessionId?: string;
 }

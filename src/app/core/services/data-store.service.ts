@@ -5,6 +5,10 @@ import {
   CalendarEvent,
   CalendarShare,
   CreateCalendarSharePayload,
+  UpdateCalendarSharePayload,
+  EventInvitation,
+  CreateEventInvitationPayload,
+  RespondToInvitationPayload,
   CreateEnergyCheckInPayload,
   CreateNotePayload,
   CreateSymptomLogPayload,
@@ -30,6 +34,7 @@ import {
   Workout,
 } from '../models/app-data.models';
 import { CalendarShareApiService } from './calendar-share-api.service';
+import { EventInvitationApiService } from './event-invitation-api.service';
 import { CalendarEventApiService } from './calendar-event-api.service';
 import { EnergyCheckInApiService } from './energy-check-in-api.service';
 import { NoteApiService } from './note-api.service';
@@ -67,6 +72,8 @@ export class DataStoreService {
   readonly incomingShares = signal<CalendarShare[]>([]);
   readonly viewingSharedCalendar = signal<{ ownerId: string; ownerEmail: string } | null>(null);
   readonly sharedCalendarEvents = signal<CalendarEvent[]>([]);
+  readonly pendingInvitations = signal<EventInvitation[]>([]);
+  readonly outgoingInvitations = signal<EventInvitation[]>([]);
 
   readonly cycleStatusForDisplay = computed<CycleStatus | null>(() => {
     const profile = this.cycleProfile();
@@ -97,6 +104,7 @@ export class DataStoreService {
     private readonly schedulerApi: SchedulerApiService,
     private readonly uiFeedback: UiFeedbackService,
     private readonly calendarShareApi: CalendarShareApiService,
+    private readonly eventInvitationApi: EventInvitationApiService,
   ) {}
 
   async loadAll(): Promise<void> {
@@ -1643,8 +1651,69 @@ export class DataStoreService {
     }
   }
 
+  async updateShareLevel(shareId: string, newLevel: string): Promise<void> {
+    const prev = this.outgoingShares();
+    this.outgoingShares.update((shares) =>
+      shares.map((s) => (s.id === shareId ? { ...s, shareLevel: newLevel as CalendarShare['shareLevel'] } : s)),
+    );
+    try {
+      await firstValueFrom(this.calendarShareApi.update(shareId, { shareLevel: newLevel } as UpdateCalendarSharePayload));
+    } catch (err) {
+      this.outgoingShares.set(prev);
+      throw err;
+    }
+  }
+
   exitSharedCalendar(): void {
     this.viewingSharedCalendar.set(null);
     this.sharedCalendarEvents.set([]);
+  }
+
+  // ── Event invitations ────────────────────────────────────────────────────
+
+  async loadInvitations(): Promise<void> {
+    try {
+      const [pending, outgoing] = await Promise.all([
+        firstValueFrom(this.eventInvitationApi.listIncoming()),
+        firstValueFrom(this.eventInvitationApi.listOutgoing()),
+      ]);
+      this.pendingInvitations.set(pending);
+      this.outgoingInvitations.set(outgoing);
+    } catch (error) {
+      console.error('[DataStore] Failed to load invitations', error);
+    }
+  }
+
+  async sendInvitation(eventId: string, recipientEmail: string): Promise<void> {
+    const created = await firstValueFrom(
+      this.eventInvitationApi.create({ calendarEventId: eventId, recipientEmail } as CreateEventInvitationPayload),
+    );
+    this.outgoingInvitations.set([created, ...this.outgoingInvitations()]);
+  }
+
+  async respondToInvitation(id: string, response: 'accepted' | 'declined'): Promise<void> {
+    const prev = this.pendingInvitations();
+    this.pendingInvitations.set(prev.filter((inv) => inv.id !== id));
+    try {
+      await firstValueFrom(this.eventInvitationApi.respond(id, { response } as RespondToInvitationPayload));
+      if (response === 'accepted') {
+        const events = await firstValueFrom(this.calendarEventApi.getAll());
+        this.calendarEvents.set(events.map((e) => this.normalizeCalendarEvent(e)));
+      }
+    } catch (error) {
+      this.pendingInvitations.set(prev);
+      throw error;
+    }
+  }
+
+  async cancelInvitation(id: string): Promise<void> {
+    const prev = this.outgoingInvitations();
+    this.outgoingInvitations.set(prev.filter((inv) => inv.id !== id));
+    try {
+      await firstValueFrom(this.eventInvitationApi.cancel(id));
+    } catch (error) {
+      this.outgoingInvitations.set(prev);
+      throw error;
+    }
   }
 }

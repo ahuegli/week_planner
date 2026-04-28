@@ -61,8 +61,11 @@ export class ScoringEngineService {
     const completion   =  this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
     const cycle        =  this.cyclePhaseAdjustment(day, type, ctx);
 
+    const laterDay   =  this.laterFreeWeekdayBonus(day, type, ctx);
+
     const total = offDay + fatigue + mealPrep + timeOfDay + shiftAware + freeDay +
-                  eventDay + diversity + stacking + concentration + spread + completion + cycle;
+                  eventDay + diversity + stacking + concentration + spread + completion + cycle +
+                  laterDay;
 
     if (isLongRun) {
       const phase = ctx.weekContext.cyclePhasesByDay?.[day] ?? 'n/a';
@@ -70,6 +73,7 @@ export class ScoringEngineService {
         day, startMin, phase,
         offDay, fatigue, mealPrep, timeOfDay, shiftAware, freeDay,
         eventDay, diversity, stacking, concentration, spread, completion, cycle,
+        laterDay,
         total: Number(total.toFixed(4)),
       }));
     }
@@ -482,6 +486,19 @@ export class ScoringEngineService {
   private toMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  private laterFreeWeekdayBonus(
+    day: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout' || !this.isLongOrIntensiveCandidate(ctx.candidateWorkout)) return 0;
+    const dayHasShift = ctx.shifts.some((s) => s.day === day);
+    if (dayHasShift) return 0;
+    // Later free days score higher for long sessions: day 6 → +0.4, day 0 → +0.0.
+    // Keeps long sessions away from Monday and toward the natural weekend rest window.
+    return (day / 6) * 0.4;
   }
 
   private cyclePhaseAdjustment(

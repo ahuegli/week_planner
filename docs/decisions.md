@@ -46,3 +46,25 @@
 | Free-day morning bonus | +0.2 |
 | Universal late night penalty (after 21:30) | -0.4 |
 | Candidate sort | Earlier wins ties |
+
+
+## App architecture decision (Sunday afternoon)
+
+Three pillars + one foundation:
+- Foundation: Calendar (substrate, sharing lives here)  
+- Pillar 1: Workouts (training plans, cycle-aware scheduling, logs, badges)
+- Pillar 2: Cycle (phase tracking, methodology, visibility on calendar)
+- Pillar 3: Tasks (notes, find-time scheduling, gamification)
+
+Cross-cutting (each pillar reuses): badges, streaks, completion 
+animations, sharing.
+
+Premiumization: AI features sit on top of the free tier.
+- AI coach (chat) — premium
+- AI task breakdown (Goblin Tools-style) — premium  
+- AI weekly review — premium
+- AI plan adaptation — premium
+
+This MECE is the constraint when evaluating new feature requests. 
+Anything that doesn't fit into one of the three pillars or the 
+calendar foundation should be questioned, not built.

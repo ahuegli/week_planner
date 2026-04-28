@@ -100,7 +100,7 @@
             <app-mini-bar-chart [data]="weeklyChartData()" />
             <p class="chart-unit">{{ volumeMetric() === 'duration' ? 'minutes' : 'km' }}</p>
           } @else {
-            <p class="empty-text">No data yet.</p>
+            <p class="empty-text">Stats start showing up after your first workout. The graphs build themselves.</p>
           }
         </div>
       </div>
@@ -114,28 +114,28 @@
         <p class="section-label">Completion Rate</p>
         <div class="card rate-card">
           <div class="rate-main">
-            <span class="rate-pct" [style.color]="completionRateColor(s.completionRate)">{{ s.completionRate }}%</span>
+            <span class="rate-pct" [style.color]="completionRateColor(s.completionRate, s.totalWorkoutsCompleted > 0)">{{ s.completionRate }}%</span>
             <span class="rate-label">overall</span>
           </div>
           <div class="rate-rows">
             <div class="rate-row">
               <span class="rate-name">Key</span>
               <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.keyCompletionRate" [style.background]="completionRateColor(s.keyCompletionRate)"></div>
+                <div class="rate-bar-fill" [style.width.%]="s.keyCompletionRate" [style.background]="completionRateColor(s.keyCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
               </div>
               <span class="rate-val">{{ s.keyCompletionRate }}%</span>
             </div>
             <div class="rate-row">
               <span class="rate-name">Supporting</span>
               <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.supportingCompletionRate" [style.background]="completionRateColor(s.supportingCompletionRate)"></div>
+                <div class="rate-bar-fill" [style.width.%]="s.supportingCompletionRate" [style.background]="completionRateColor(s.supportingCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
               </div>
               <span class="rate-val">{{ s.supportingCompletionRate }}%</span>
             </div>
             <div class="rate-row">
               <span class="rate-name">Optional</span>
               <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.optionalCompletionRate" [style.background]="completionRateColor(s.optionalCompletionRate)"></div>
+                <div class="rate-bar-fill" [style.width.%]="s.optionalCompletionRate" [style.background]="completionRateColor(s.optionalCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
               </div>
               <span class="rate-val">{{ s.optionalCompletionRate }}%</span>
             </div>
@@ -192,7 +192,11 @@
                   </div>
                   @if (sport.totalDistanceKm > 0) {
                     <div class="sport-stat">
-                      <span class="sstat-val">{{ sport.totalDistanceKm | number:'1.0-1' }} km</span>
+                      @if (sport.sportType === 'swimming') {
+                        <span class="sstat-val">{{ (sport.totalDistanceKm * 1000) | number:'1.0-0' }} m</span>
+                      } @else {
+                        <span class="sstat-val">{{ sport.totalDistanceKm | number:'1.0-1' }} km</span>
+                      }
                       <span class="sstat-lbl">distance</span>
                     </div>
                   }

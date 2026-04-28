@@ -21,6 +21,8 @@ export interface CalendarEvent {
   commuteMinutes?: number;
   isManuallyPlaced?: boolean;
   linkedInvitationId?: string;
+  linkedNextSessionId?: string | null;
+  linkedPriorSessionId?: string | null;
   acceptedInviteeEmails?: string[];
   status?: 'pending' | 'scheduled' | 'completed' | 'skipped' | 'moved';
   intensity?: 'easy' | 'moderate' | 'hard';
@@ -28,6 +30,7 @@ export interface CalendarEvent {
   duration?: number;
   distanceTarget?: number;
   sessionType?: string;
+  discipline?: string | null;
   energyRating?: 'easy' | 'moderate' | 'hard';
 }
 
@@ -54,6 +57,16 @@ export interface SchedulerSettings {
   cycleTrackingEnabled: boolean;
   autoPlaceEarliestTime?: string;
   autoPlaceLatestTime?: string;
+  preferredWorkoutTimes?: string[] | null;
+  maxTrainingDaysPerWeek?: number;
+  ftpWatts?: number | null;
+  lthrBpm?: number | null;
+  cssSecondsPer100m?: number | null;
+  poolAccess?: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none' | null;
+  hasPowerMeter?: boolean;
+  triathlonsCompleted?: number | null;
+  endurancePedigree?: 'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple' | null;
+  periodisationOverride?: 'traditional' | 'reverse' | null;
 }
 
 export interface MealprepSettings {
@@ -153,6 +166,8 @@ export interface PlannedSession {
   notes: string | null;
   isCarryForward: boolean;
   originalWeekNumber: number | null;
+  discipline?: 'swim' | 'bike' | 'run' | 'brick' | 'strength' | 'mobility' | 'rest' | null;
+  prescriptionData?: Record<string, unknown> | null;
 }
 
 export interface SessionCarryForwardResult {
@@ -208,6 +223,7 @@ export interface TrainingPlan {
   userId: string;
   mode: PlanMode;
   sportType?: string | null;
+  triathlonDistance?: 'sprint' | 'olympic' | '70_3' | '140_6' | null;
   goalDate?: string | null;
   goalDistance?: string | null;
   goalTime?: string | null;
@@ -278,10 +294,11 @@ export interface WeeklyProgress {
 export interface PlanCreatePayload {
   mode: PlanMode;
   sportType?: string;
+  triathlonDistance?: 'sprint' | 'olympic' | '70_3' | '140_6';
   goalDate?: string;
   goalDistance?: string;
   goalTime?: string;
-  totalWeeks: number;
+  totalWeeks?: number;
   currentWeek?: number;
   status?: PlanStatus;
 }

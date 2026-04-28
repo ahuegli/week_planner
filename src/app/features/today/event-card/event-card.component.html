@@ -1,6 +1,7 @@
 <div
   class="event-card"
   [class.is-dimmed]="isDimmed()"
+  [class.is-brick]="brickLinked()"
   [style.--bar-color]="barColor()"
   role="article"
   [attr.aria-label]="displayEvent().title"
@@ -54,6 +55,9 @@
       @if (detailsText()) {
         <div class="event-details">
           <span class="details-text">{{ detailsText() }}</span>
+          @if (brickLinked()) {
+            <span class="brick-badge">Brick</span>
+          }
           @if (displayEvent().type === 'workout' && displayEvent().priority === 'key') {
             <span class="key-badge">Key</span>
           }
@@ -73,6 +77,9 @@
       <div class="check-in-divider" aria-hidden="true"></div>
 
       @if (displayEvent().type === 'workout') {
+        @if (offBikeRun()) {
+          <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
+        }
         <p class="detail-row"><span class="detail-label">Duration:</span> {{ displayEvent().duration || (durationHours() * 60) }} min</p>
         @if (displayEvent().distanceTarget) {
           <p class="detail-row"><span class="detail-label">Distance:</span> {{ displayEvent().distanceTarget }} km</p>

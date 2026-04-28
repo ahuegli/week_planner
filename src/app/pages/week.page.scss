@@ -184,3 +184,43 @@
 .bottom-spacer {
   height: 140px;
 }
+
+.shared-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: color-mix(in srgb, #C4923A 15%, var(--color-card));
+  border: 1px solid color-mix(in srgb, #C4923A 40%, var(--color-border));
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+}
+
+.shared-banner-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.shared-exit-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.rows-wrap-outer {
+  position: relative;
+}
+
+.shared-rows-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 12px;
+  cursor: default;
+}

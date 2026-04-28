@@ -14,6 +14,10 @@ export declare class CreateCalendarEventDto {
     isManuallyPlaced?: boolean;
     commuteMinutes?: number;
     priority?: string;
+    discipline?: string;
+    sessionType?: string;
+    linkedNextSessionId?: string;
+    linkedPriorSessionId?: string;
 }
 export declare class UpdateCalendarEventDto {
     title?: string;
@@ -30,4 +34,8 @@ export declare class UpdateCalendarEventDto {
     isManuallyPlaced?: boolean;
     commuteMinutes?: number;
     priority?: string;
+    discipline?: string;
+    sessionType?: string;
+    linkedNextSessionId?: string;
+    linkedPriorSessionId?: string;
 }

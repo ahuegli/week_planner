@@ -2,11 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { Router } from '@angular/router';
 import { CalendarEvent } from '../../../mock-data';
 import { PlanMode, PlannedSession } from '../../../core/models/app-data.models';
+import { workoutDisciplineBorderColor } from '../../../shared/utils/discipline-colors.util';
 import { DataStoreService } from '../../../core/services/data-store.service';
 import { getWorkoutDescription } from '../../../core/utils/workout-descriptions';
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
+
+type BrickEvent = CalendarEvent & {
+  discipline?: string | null;
+  linkedNextSessionId?: string | null;
+  linkedPriorSessionId?: string | null;
+  prescriptionData?: Record<string, unknown> | null;
+};
 
 const TYPE_COLORS: Record<CalendarEvent['type'], string> = {
   shift: 'var(--color-shift)',
@@ -17,6 +25,7 @@ const TYPE_COLORS: Record<CalendarEvent['type'], string> = {
   oncall: 'var(--color-oncall)',
   busy: 'rgba(139, 129, 120, 0.5)',
 };
+// workout bar color is overridden per discipline in barColor computed below
 
 @Component({
   selector: 'app-event-card',
@@ -52,7 +61,28 @@ export class EventCardComponent {
 
   protected readonly effectiveStatus = computed(() => this.displayEvent().status);
 
-  protected readonly barColor = computed(() => TYPE_COLORS[this.displayEvent().type]);
+  protected readonly barColor = computed(() => {
+    const e = this.displayEvent();
+    if (e.type === 'workout') return workoutDisciplineBorderColor(e.sessionType);
+    return TYPE_COLORS[e.type];
+  });
+
+  protected readonly brickLinked = computed(() => {
+    const event = this.displayEvent();
+    return this.hasBrickPrior(event) || this.hasBrickNext(event);
+  });
+
+  protected readonly offBikeRun = computed(() => {
+    const event = this.displayEvent();
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    const brick = event as BrickEvent;
+    const isRunDiscipline = brick.discipline === 'run';
+    const isOffBike = (brick.prescriptionData?.['isOffBike'] as boolean | undefined) === true;
+    return isRunDiscipline && (isOffBike || this.hasBrickPrior(event));
+  });
 
   protected readonly isDimmed = computed(
     () =>
@@ -315,6 +345,24 @@ export class EventCardComponent {
 
   private normalizeSessionType(value: string): string {
     return value.trim().toLowerCase().replace(/\s+/g, '_');
+  }
+
+  private hasBrickNext(event: CalendarEvent): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    const nextId = (event as BrickEvent).linkedNextSessionId;
+    return typeof nextId === 'string' && nextId.length > 0;
+  }
+
+  private hasBrickPrior(event: CalendarEvent): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    const priorId = (event as BrickEvent).linkedPriorSessionId;
+    return typeof priorId === 'string' && priorId.length > 0;
   }
 
   private static readonly BUBBLE_COLORS = ['#2d4d7a', '#6B7F5E', '#A85454', '#C4923A', '#5a7a8a'];

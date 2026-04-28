@@ -93,6 +93,7 @@
 }
 
 .event-pill {
+  position: relative;
   min-height: 44px;
   border-radius: 8px;
   border-left: 2px solid var(--color-border);
@@ -191,6 +192,47 @@
   padding: 1px 6px;
 }
 
+.brick-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #7c5fa8;
+  background: rgba(124, 95, 168, 0.14);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.event-pill.is-brick {
+  border-color: rgba(124, 95, 168, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(124, 95, 168, 0.08);
+}
+
+.event-pill.is-brick::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  width: 2px;
+  background: rgba(124, 95, 168, 0.42);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.event-pill.is-brick.brick-has-prior::after {
+  top: -7px;
+  height: calc(50% + 7px);
+}
+
+.event-pill.is-brick.brick-has-next::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 2px;
+  height: calc(50% + 7px);
+  background: rgba(124, 95, 168, 0.42);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 .event-time {
   margin-top: 2px;
   font-size: 11px;
@@ -235,6 +277,11 @@
 .detail-row {
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+.off-bike-row {
+  color: #7c5fa8;
+  font-weight: 600;
 }
 
 .detail-label {

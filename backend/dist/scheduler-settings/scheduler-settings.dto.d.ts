@@ -13,4 +13,13 @@ export declare class UpdateSchedulerSettingsDto {
     swimmingDistanceThreshold?: number;
     enduranceRestDays?: number;
     cycleTrackingEnabled?: boolean;
+    maxTrainingDaysPerWeek?: number;
+    ftpWatts?: number;
+    lthrBpm?: number;
+    cssSecondsPer100m?: number;
+    poolAccess?: string;
+    hasPowerMeter?: boolean;
+    triathlonsCompleted?: number;
+    endurancePedigree?: string;
+    periodisationOverride?: string;
 }

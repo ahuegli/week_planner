@@ -331,7 +331,46 @@ export class ScheduleGeneratorService {
     const latestMin = safeTimeToMinutes(settings.autoPlaceLatestTime, 22 * 60);
     const normalizedLatestMin = latestMin > earliestMin ? latestMin : earliestMin + 60;
 
+    // Brick-run coupling: must land on the same day as its bike partner, immediately after bike end + T2 gap.
+    // Returns early with at most one candidate, bypassing the normal day-loop entirely.
+    if (session.kind === 'workout' && session.workout.linkedPriorSessionId) {
+      const linkedEvent = alreadyPlaced.find(
+        (e) => e.plannedSessionId === session.workout.linkedPriorSessionId,
+      );
+      if (!linkedEvent) {
+        // Bike partner not placed yet (or was skipped) — no valid slot for the brick run.
+        return [];
+      }
+      const T2_GAP_MIN = 5;
+      const bikeEndMin = safeTimeToMinutes(linkedEvent.endTime, 0);
+      const brickDay = linkedEvent.day;
+      const startMin = bikeEndMin + T2_GAP_MIN;
+      const endMin = startMin + duration;
+
+      if (endMin <= normalizedLatestMin) {
+        const dayOccupied = occupied.filter((s) => s.day === brickDay);
+        const slotFree = !dayOccupied.some((s) =>
+          overlaps({ day: brickDay, start: startMin, end: endMin }, s),
+        );
+        // Brick runs intentionally skip the 180-min same-day rest constraint — T2 is by design.
+        // Physical slot overlap (above) is sufficient; shift/night-shift constraints are
+        // already satisfied by the bike which was placed on the same day.
+        if (slotFree) {
+          const score = this.scoringEngine.score(brickDay, startMin, endMin, type, scoringCtx);
+          candidates.push({ day: brickDay, startMin, score });
+        }
+      }
+      return candidates;
+    }
+
+    const maxDays = settings.maxTrainingDaysPerWeek ?? 7;
+    const daysWithWorkouts = new Set(alreadyPlaced.filter((e) => e.type === 'workout').map((e) => e.day));
+
     for (let day = 0; day < 7; day++) {
+      if (type === 'workout' && !daysWithWorkouts.has(day) && daysWithWorkouts.size >= maxDays) {
+        continue;
+      }
+
       const dayOccupied = occupied.filter((s) => s.day === day);
 
       for (let startMin = earliestMin; startMin <= normalizedLatestMin; startMin += 30) {

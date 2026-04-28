@@ -54,6 +54,21 @@ export class CalendarEvent {
   @Column({ type: 'varchar', length: 20, nullable: true })
   priority?: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  discipline: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  sessionType: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedInvitationId?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedNextSessionId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  linkedPriorSessionId: string | null;
+
   @Column()
   userId: string;
 

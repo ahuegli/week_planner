@@ -22,10 +22,14 @@
   @if (showRescheduleChoice()) {
     <div class="reschedule-banner">
       <p class="reschedule-msg">
-        {{ shiftConflictCount() }} workout{{ shiftConflictCount() > 1 ? 's' : '' }} may overlap with the new shift times.
+        @if (rescheduleContext() === 'settings') {
+          Reschedule existing sessions to apply new timing preferences?
+        } @else {
+          {{ shiftConflictCount() }} workout{{ shiftConflictCount() > 1 ? 's' : '' }} may overlap with the new shift times.
+        }
       </p>
       <div class="reschedule-actions">
-        <button type="button" class="btn-primary small-btn" (click)="applyShiftReschedule()">Auto-reschedule</button>
+        <button type="button" class="btn-primary small-btn" (click)="applyShiftReschedule()">Reschedule</button>
         <button type="button" class="btn-secondary small-btn" (click)="dismissReschedule()">Keep as-is</button>
       </div>
     </div>
@@ -369,20 +373,20 @@
         <div class="setting-block">
           <div class="setting-row">
             <div>
-              <p class="block-title">Optimize training around your menstrual cycle</p>
-              <p class="subtle-text">We'll adjust workout intensity and recovery based on your cycle phase</p>
+              <p class="block-title">Cycle-aware scheduling</p>
+              <p class="subtle-text">Adjust workout placement based on your cycle phase</p>
             </div>
-            <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="toggleSignal(cycleTrackingEnabled)"><span></span></button>
+            <button type="button" class="switch" [class.on]="cycleAwareSchedulingEnabled()" (click)="toggleCycleAwareScheduling()"><span></span></button>
           </div>
         </div>
 
         <div class="setting-block">
           <div class="setting-row">
             <div>
-              <p class="block-title">Cycle-aware scheduling</p>
-              <p class="subtle-text">Adjust workout placement based on your cycle phase</p>
+              <p class="block-title">Optimize training around your menstrual cycle</p>
+              <p class="subtle-text">We'll adjust workout intensity and recovery based on your cycle phase</p>
             </div>
-            <button type="button" class="switch" [class.on]="cycleAwareSchedulingEnabled()" (click)="toggleCycleAwareScheduling()"><span></span></button>
+            <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="toggleSignal(cycleTrackingEnabled)"><span></span></button>
           </div>
         </div>
 
@@ -517,6 +521,82 @@
       </div>
     }
   </article>
+
+  @if (hasTriathlonPlan()) {
+    <article class="accordion-card">
+      <button type="button" class="accordion-header" (click)="toggleSection('triathlon')">
+        <h2>Triathlon Calibration</h2>
+        <span class="chevron" [class.open]="isOpen('triathlon')" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </button>
+      @if (isOpen('triathlon')) {
+        <div class="accordion-content">
+          <p class="info-text">Updating zones takes effect on your next plan regeneration.</p>
+
+          <div class="setting-row">
+            <span>Power meter</span>
+            <button type="button" class="switch" [class.on]="hasPowerMeter()" (click)="hasPowerMeter.set(!hasPowerMeter())"><span></span></button>
+          </div>
+
+          <label class="field-label">FTP (watts)</label>
+          <input class="input" type="number" min="50" max="500" placeholder="e.g. 240"
+            [value]="ftpWatts() ?? ''"
+            (input)="ftpWatts.set(+$any($event.target).value || null)" />
+
+          <label class="field-label">LTHR (bpm)</label>
+          <input class="input" type="number" min="50" max="220" placeholder="e.g. 165"
+            [value]="lthrBpm() ?? ''"
+            (input)="lthrBpm.set(+$any($event.target).value || null)" />
+
+          <label class="field-label">CSS pace (seconds per 100m)</label>
+          <input class="input" type="number" min="60" max="300" placeholder="e.g. 95"
+            [value]="cssSecondsPer100m() ?? ''"
+            (input)="cssSecondsPer100m.set(+$any($event.target).value || null)" />
+
+          <label class="field-label">Pool access</label>
+          <select class="input" [value]="poolAccess()" (change)="poolAccess.set($any($event.target).value)">
+            <option value="25m">25m pool</option>
+            <option value="50m">50m pool</option>
+            <option value="pool_and_open_water">Pool and open water</option>
+            <option value="open_water">Open water only</option>
+            <option value="none">No pool access</option>
+          </select>
+
+          <div class="setting-row">
+            <span>Triathlons completed</span>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" (click)="adjustSignal(triathlonsCompleted, -1, 0, 99)">-</button>
+              <span>{{ triathlonsCompleted() }}</span>
+              <button type="button" class="stepper-btn" (click)="adjustSignal(triathlonsCompleted, 1, 0, 99)">+</button>
+            </div>
+          </div>
+
+          <label class="field-label">Endurance background</label>
+          <select class="input" [value]="endurancePedigree()" (change)="endurancePedigree.set($any($event.target).value)">
+            <option value="none">None</option>
+            <option value="runner">Runner</option>
+            <option value="cyclist">Cyclist</option>
+            <option value="swimmer">Swimmer</option>
+            <option value="multiple">Multiple sports</option>
+          </select>
+
+          <label class="field-label">Periodisation preference</label>
+          <select class="input" [value]="periodisationOverride()" (change)="periodisationOverride.set($any($event.target).value)">
+            <option value="">Auto (based on experience)</option>
+            <option value="traditional">Traditional (base → build → peak)</option>
+            <option value="reverse">Reverse (intensity-first)</option>
+          </select>
+
+          <button type="button" class="btn-primary small-btn" (click)="saveTriathlonCalibration()" [disabled]="triCalibSaveStatus() === 'saving'">
+            {{ triCalibSaveStatus() === 'saving' ? 'Saving...' : triCalibSaveStatus() === 'saved' ? 'Saved' : 'Save calibration' }}
+          </button>
+        </div>
+      }
+    </article>
+  }
 
   <article class="accordion-card">
     <button type="button" class="accordion-header" (click)="toggleSection('account')">

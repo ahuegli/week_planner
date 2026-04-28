@@ -104,4 +104,59 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdateSchedulerSettingsDto.prototype, "cycleTrackingEnabled", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(7),
+    __metadata("design:type", Number)
+], UpdateSchedulerSettingsDto.prototype, "maxTrainingDaysPerWeek", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(50),
+    (0, class_validator_1.Max)(500),
+    __metadata("design:type", Number)
+], UpdateSchedulerSettingsDto.prototype, "ftpWatts", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(50),
+    (0, class_validator_1.Max)(220),
+    __metadata("design:type", Number)
+], UpdateSchedulerSettingsDto.prototype, "lthrBpm", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(60),
+    (0, class_validator_1.Max)(300),
+    __metadata("design:type", Number)
+], UpdateSchedulerSettingsDto.prototype, "cssSecondsPer100m", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['25m', '50m', 'open_water', 'pool_and_open_water', 'none']),
+    __metadata("design:type", String)
+], UpdateSchedulerSettingsDto.prototype, "poolAccess", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateSchedulerSettingsDto.prototype, "hasPowerMeter", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(99),
+    __metadata("design:type", Number)
+], UpdateSchedulerSettingsDto.prototype, "triathlonsCompleted", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['none', 'runner', 'cyclist', 'swimmer', 'multiple']),
+    __metadata("design:type", String)
+], UpdateSchedulerSettingsDto.prototype, "endurancePedigree", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['traditional', 'reverse']),
+    __metadata("design:type", String)
+], UpdateSchedulerSettingsDto.prototype, "periodisationOverride", void 0);
 //# sourceMappingURL=scheduler-settings.dto.js.map

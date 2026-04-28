@@ -76,6 +76,42 @@ __decorate([
     __metadata("design:type", Boolean)
 ], SchedulerSettings.prototype, "cycleTrackingEnabled", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 7 }),
+    __metadata("design:type", Number)
+], SchedulerSettings.prototype, "maxTrainingDaysPerWeek", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "ftpWatts", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "lthrBpm", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "cssSecondsPer100m", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['25m', '50m', 'open_water', 'pool_and_open_water', 'none'], nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "poolAccess", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], SchedulerSettings.prototype, "hasPowerMeter", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "triathlonsCompleted", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['none', 'runner', 'cyclist', 'swimmer', 'multiple'], nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "endurancePedigree", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['traditional', 'reverse'], nullable: true }),
+    __metadata("design:type", Object)
+], SchedulerSettings.prototype, "periodisationOverride", void 0);
+__decorate([
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], SchedulerSettings.prototype, "userId", void 0);

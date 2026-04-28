@@ -20,6 +20,11 @@
   &.is-dimmed {
     opacity: 0.45;
   }
+
+  &.is-brick {
+    border-color: rgba(124, 95, 168, 0.3);
+    box-shadow: inset 0 0 0 1px rgba(124, 95, 168, 0.08);
+  }
 }
 
 .event-summary {
@@ -126,6 +131,16 @@
   white-space: nowrap;
 }
 
+.brick-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c5fa8;
+  background: rgba(124, 95, 168, 0.14);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
 .check-in {
   margin-top: 12px;
 }
@@ -151,6 +166,11 @@
   font-size: 13px;
   color: var(--color-text-secondary);
   margin-bottom: 6px;
+}
+
+.off-bike-row {
+  color: #7c5fa8;
+  font-weight: 600;
 }
 
 .detail-label {

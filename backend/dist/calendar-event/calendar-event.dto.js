@@ -81,6 +81,26 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateCalendarEventDto.prototype, "priority", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest']),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "discipline", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "sessionType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "linkedNextSessionId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCalendarEventDto.prototype, "linkedPriorSessionId", void 0);
 class UpdateCalendarEventDto {
 }
 exports.UpdateCalendarEventDto = UpdateCalendarEventDto;
@@ -156,4 +176,24 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateCalendarEventDto.prototype, "priority", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest']),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "discipline", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "sessionType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "linkedNextSessionId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCalendarEventDto.prototype, "linkedPriorSessionId", void 0);
 //# sourceMappingURL=calendar-event.dto.js.map

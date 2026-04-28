@@ -38,6 +38,18 @@ export interface OnboardingData {
   cycleStatus: CycleStatus;
   lastPeriodDate: string;
   cycleLength: number;
+  triathlonDistance: 'sprint' | 'olympic' | '70_3' | '140_6' | '';
+  isGeneralTriTraining: boolean;
+  triathlonsCompleted: number;
+  endurancePedigree: 'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple';
+  poolAccess: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none';
+  hasPowerMeter: boolean;
+  knowsFtp: boolean;
+  ftpWatts: number | null;
+  knowsLthr: boolean;
+  lthrBpm: number | null;
+  knowsCss: boolean;
+  cssSecondsPer100m: number | null;
 }
 
 export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
@@ -76,4 +88,16 @@ export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   cycleStatus: 'regular',
   lastPeriodDate: '',
   cycleLength: 28,
+  triathlonDistance: '',
+  isGeneralTriTraining: false,
+  triathlonsCompleted: 0,
+  endurancePedigree: 'none',
+  poolAccess: '25m',
+  hasPowerMeter: false,
+  knowsFtp: false,
+  ftpWatts: null,
+  knowsLthr: false,
+  lthrBpm: null,
+  knowsCss: false,
+  cssSecondsPer100m: null,
 };

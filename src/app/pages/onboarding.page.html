@@ -11,7 +11,7 @@
     }
 
     <div class="dots" aria-label="Onboarding progress">
-      @for (dot of [1,2,3,4,5,6,7]; track dot) {
+      @for (dot of stepDots(); track dot) {
         <span class="dot" [class.active]="dot === currentStep()"></span>
       }
     </div>
@@ -40,20 +40,27 @@
         />
       }
       @case (4) {
-        <app-onboarding-step-availability
+        <app-onboarding-step-triathlon
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
           (next)="nextStep()"
         />
       }
       @case (5) {
-        <app-onboarding-step-work
+        <app-onboarding-step-availability
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
           (next)="nextStep()"
         />
       }
       @case (6) {
+        <app-onboarding-step-work
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (7) {
         <app-onboarding-step-cycle
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
@@ -61,7 +68,7 @@
           (next)="nextStep()"
         />
       }
-      @case (7) {
+      @case (8) {
         <app-onboarding-step-summary
           [data]="onboardingData()"
           [loading]="loading()"

@@ -81,7 +81,101 @@
       </div>
     </div>
 
-    <!-- Workout Structure -->
+    <!-- Discipline Prescription (swim / bike only — run uses existing steps below) -->
+    @if (showPrescriptionCard()) {
+      <div class="content-pad">
+        <div class="card">
+          <p class="section-label">Your Session</p>
+
+          @if (prescriptionDiscipline() === 'swim') {
+
+            @if (rxStr('WARNING')) {
+              <p class="prescription-warning">{{ rxStr('WARNING') }}</p>
+            } @else {
+              @if (rxStr('poolLength')) {
+                <p class="prescription-meta">Pool: {{ rxStr('poolLength') }}
+                  @if (rxStr('cssAnchorPace')) { · CSS: {{ rxStr('cssAnchorPace') }} }
+                </p>
+              }
+              @if (rxStr('totalMeters')) {
+                <p class="prescription-meta">Total: {{ rxStr('totalMeters') }}m</p>
+              }
+              @if (rxStr('totalMinutes')) {
+                <p class="prescription-meta">Estimated time: ~{{ rxStr('totalMinutes') }} min</p>
+              }
+              <div class="prescription-blocks">
+                @if (rxStr('warmUp')) {
+                  <div class="prescription-block">
+                    <span class="block-label">Warm-up</span>
+                    <span class="block-text">{{ rxStr('warmUp') }}</span>
+                  </div>
+                }
+                <div class="prescription-block block-main">
+                  <span class="block-label">Main Set</span>
+                  <span class="block-text">{{ rxStr('mainSet') }}</span>
+                </div>
+                @if (rxStr('coolDown')) {
+                  <div class="prescription-block">
+                    <span class="block-label">Cool-down</span>
+                    <span class="block-text">{{ rxStr('coolDown') }}</span>
+                  </div>
+                }
+              </div>
+              @if (rxArr('technique').length > 0) {
+                <p class="prescription-cues">Focus: {{ rxArr('technique').join(', ') }}</p>
+              }
+              @if (rxStr('poolNote')) {
+                <p class="prescription-note">{{ rxStr('poolNote') }}</p>
+              }
+            }
+
+          } @else if (prescriptionDiscipline() === 'bike') {
+
+            @if (rxTargetLine()) {
+              <p class="prescription-meta">Targets: {{ rxTargetLine() }}</p>
+            }
+            <div class="prescription-blocks">
+              @if (rxStr('warmUp')) {
+                <div class="prescription-block">
+                  <span class="block-label">Warm-up</span>
+                  <span class="block-text">{{ rxStr('warmUp') }}</span>
+                </div>
+              }
+              @if (rxStr('intervals')) {
+                <div class="prescription-block block-main">
+                  <span class="block-label">Main Set</span>
+                  <span class="block-text">{{ rxStr('intervals') }}</span>
+                </div>
+              } @else if (rxStr('raceSegments')) {
+                <div class="prescription-block block-main">
+                  <span class="block-label">Race Segments</span>
+                  <span class="block-text">{{ rxStr('raceSegments') }}</span>
+                </div>
+              }
+              @if (rxStr('coolDown')) {
+                <div class="prescription-block">
+                  <span class="block-label">Cool-down</span>
+                  <span class="block-text">{{ rxStr('coolDown') }}</span>
+                </div>
+              }
+            </div>
+            @if (rxStr('notes')) {
+              <p class="prescription-note">{{ rxStr('notes') }}</p>
+            }
+            @if (rxStr('calibrationPrompt')) {
+              <p class="prescription-calibration-prompt">{{ rxStr('calibrationPrompt') }}</p>
+            }
+            @if (rxStr('longRideCap')) {
+              <p class="prescription-note">Cap: {{ rxStr('longRideCap') }}</p>
+            }
+
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Workout Structure (run + non-prescription sessions) -->
+    @if (!showPrescriptionCard()) {
     <div class="content-pad">
       <div class="card">
         <p class="section-label">Your Session</p>
@@ -108,6 +202,7 @@
         </div>
       </div>
     </div>
+    }
 
     <!-- Coach's Notes -->
     @if (coachingNote(); as note) {
@@ -152,6 +247,11 @@
       </div>
     </div>
 
+  } @else if (notFound()) {
+    <div class="content-pad not-found-state">
+      <p class="page-subtitle">Workout not found.</p>
+      <a routerLink="/today" class="btn-secondary">Back to today</a>
+    </div>
   } @else {
     <div class="content-pad">
       <p class="page-subtitle">Loading workout…</p>
@@ -162,7 +262,7 @@
 </div>
 
 <!-- Fixed action button (pre-workout state only) -->
-@if (pageState() === 'pre') {
+@if (pageState() === 'pre' && !notFound()) {
   <div class="start-container">
     @if (startButtonState() === 'completed') {
       <button type="button" class="btn-primary btn-completed" disabled>Completed ✓</button>

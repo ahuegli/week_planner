@@ -27,8 +27,14 @@ export class SettingsPageComponent {
   protected readonly shiftUpdateMessage = signal<string | null>(null);
   protected readonly shiftConflictCount = signal(0);
   protected readonly showRescheduleChoice = signal(false);
+  protected readonly rescheduleContext = signal<'shift' | 'settings'>('shift');
 
   protected readonly currentPlan = computed(() => this.dataStore.currentPlan());
+
+  protected readonly hasTriathlonPlan = computed(() => {
+    const sport = this.currentPlan()?.sportType;
+    return sport === 'triathlon' || (!!sport && sport.startsWith('Triathlon'));
+  });
 
   protected readonly planPhase = computed(() => {
     const plan = this.currentPlan();
@@ -42,7 +48,7 @@ export class SettingsPageComponent {
     return Math.round((plan.currentWeek / plan.totalWeeks) * 100);
   });
 
-  protected readonly darkMode = signal(false);
+  protected readonly darkMode = signal(true);
   protected readonly workoutReminders = signal(true);
   protected readonly checkinPrompts = signal(true);
   protected readonly weeklySummary = signal(true);
@@ -80,6 +86,16 @@ export class SettingsPageComponent {
   protected readonly cyclingThresholdDistance = signal(40);
   protected readonly swimmingThresholdMinutes = signal(60);
   protected readonly swimmingThresholdDistance = signal(3);
+
+  protected readonly ftpWatts = signal<number | null>(null);
+  protected readonly lthrBpm = signal<number | null>(null);
+  protected readonly cssSecondsPer100m = signal<number | null>(null);
+  protected readonly poolAccess = signal<'25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none'>('25m');
+  protected readonly hasPowerMeter = signal(false);
+  protected readonly triathlonsCompleted = signal(0);
+  protected readonly endurancePedigree = signal<'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple'>('none');
+  protected readonly periodisationOverride = signal<'traditional' | 'reverse' | ''>('');
+  protected readonly triCalibSaveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
 
   protected readonly mealPrepPerWeek = signal('2');
   protected readonly mealPrepDuration = signal('1 hour');
@@ -196,6 +212,10 @@ export class SettingsPageComponent {
         enduranceWorkoutMinDuration: this.runningThresholdMinutes(),
         beforeShiftBufferMinutes: this.commuteMinutes(),
         afterShiftBufferMinutes: this.commuteMinutes(),
+        autoPlaceEarliestTime: this.wakeTime(),
+        autoPlaceLatestTime: this.bedtime(),
+        preferredWorkoutTimes: this.preferredTimes(),
+        maxTrainingDaysPerWeek: this.availableTrainingDays(),
       });
 
       await this.dataStore.updateMealprepSettings({
@@ -220,11 +240,18 @@ export class SettingsPageComponent {
       const affected = rescheduleResult?.workoutsRescheduled ?? 0;
       if (affected > 0) {
         this.shiftConflictCount.set(affected);
+        this.rescheduleContext.set('shift');
         this.showRescheduleChoice.set(true);
         this.shiftUpdateMessage.set(null);
       } else {
         this.shiftUpdateMessage.set('Shift updated — no workout conflicts found.');
         this.showRescheduleChoice.set(false);
+      }
+
+      if (this.dataStore.currentPlan()) {
+        this.rescheduleContext.set('settings');
+        this.showRescheduleChoice.set(true);
+        this.shiftUpdateMessage.set(null);
       }
 
       if (this.cycleTrackingEnabled()) {
@@ -241,6 +268,26 @@ export class SettingsPageComponent {
       console.error('[Settings] Failed to save settings', error);
       this.shiftUpdateMessage.set('Could not save shift updates. Please try again.');
       this.saveStatus.set('idle');
+    }
+  }
+
+  protected async saveTriathlonCalibration(): Promise<void> {
+    this.triCalibSaveStatus.set('saving');
+    try {
+      await this.dataStore.updateSchedulerSettings({
+        ftpWatts: this.ftpWatts(),
+        lthrBpm: this.lthrBpm(),
+        cssSecondsPer100m: this.cssSecondsPer100m(),
+        poolAccess: this.poolAccess(),
+        hasPowerMeter: this.hasPowerMeter(),
+        triathlonsCompleted: this.triathlonsCompleted(),
+        endurancePedigree: this.endurancePedigree(),
+        periodisationOverride: this.periodisationOverride() || null,
+      });
+      this.triCalibSaveStatus.set('saved');
+      setTimeout(() => this.triCalibSaveStatus.set('idle'), 1500);
+    } catch {
+      this.triCalibSaveStatus.set('idle');
     }
   }
 
@@ -286,8 +333,12 @@ export class SettingsPageComponent {
 
   protected dismissReschedule(): void {
     this.showRescheduleChoice.set(false);
-    this.shiftUpdateMessage.set(`Shift saved. ${this.shiftConflictCount()} workout(s) may overlap — adjust manually.`);
-    this.shiftConflictCount.set(0);
+    if (this.rescheduleContext() === 'settings') {
+      this.shiftUpdateMessage.set('Settings saved. New preferences apply to future plan generation.');
+    } else {
+      this.shiftUpdateMessage.set(`Shift saved. ${this.shiftConflictCount()} workout(s) may overlap — adjust manually.`);
+      this.shiftConflictCount.set(0);
+    }
   }
 
   protected editPlan(): void {
@@ -395,6 +446,18 @@ export class SettingsPageComponent {
 
     if (scheduler) {
       this.runningThresholdMinutes.set(scheduler.enduranceWorkoutMinDuration);
+      this.wakeTime.set(scheduler.autoPlaceEarliestTime ?? '06:00');
+      this.bedtime.set(scheduler.autoPlaceLatestTime ?? '22:00');
+      this.preferredTimes.set(scheduler.preferredWorkoutTimes ?? []);
+      this.availableTrainingDays.set(scheduler.maxTrainingDaysPerWeek ?? 7);
+      this.ftpWatts.set(scheduler.ftpWatts ?? null);
+      this.lthrBpm.set(scheduler.lthrBpm ?? null);
+      this.cssSecondsPer100m.set(scheduler.cssSecondsPer100m ?? null);
+      this.poolAccess.set(scheduler.poolAccess ?? '25m');
+      this.hasPowerMeter.set(scheduler.hasPowerMeter ?? false);
+      this.triathlonsCompleted.set(scheduler.triathlonsCompleted ?? 0);
+      this.endurancePedigree.set(scheduler.endurancePedigree ?? 'none');
+      this.periodisationOverride.set(scheduler.periodisationOverride ?? '');
     }
 
     if (mealprep) {

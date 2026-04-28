@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { CalendarEvent, DaySchedule } from '../../../mock-data';
 import { PlanMode } from '../../../core/models/app-data.models';
+import { workoutDisciplineBorderColor, workoutDisciplineBgColor } from '../../../shared/utils/discipline-colors.util';
 import { DataStoreService } from '../../../core/services/data-store.service';
 import { getWorkoutDescription, WorkoutDescription } from '../../../core/utils/workout-descriptions';
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
@@ -11,6 +12,13 @@ interface GroupedEvents {
   label: 'AM' | 'PM';
   events: CalendarEvent[];
 }
+
+type BrickEvent = CalendarEvent & {
+  discipline?: string | null;
+  linkedNextSessionId?: string | null;
+  linkedPriorSessionId?: string | null;
+  prescriptionData?: Record<string, unknown> | null;
+};
 
 @Component({
   selector: 'app-day-row',
@@ -82,7 +90,7 @@ export class DayRowComponent {
   protected eventColor(event: CalendarEvent): string {
     switch (event.type) {
       case 'workout':
-        return 'var(--color-workout)';
+        return workoutDisciplineBorderColor(event.sessionType);
       case 'shift':
         return 'var(--color-shift)';
       case 'mealprep':
@@ -102,7 +110,7 @@ export class DayRowComponent {
   protected eventBg(event: CalendarEvent): string {
     switch (event.type) {
       case 'workout':
-        return 'rgba(45, 77, 122, 0.15)';
+        return workoutDisciplineBgColor(event.sessionType);
       case 'shift':
         return 'rgba(139, 129, 120, 0.15)';
       case 'mealprep':
@@ -249,6 +257,45 @@ export class DayRowComponent {
 
   protected shouldShowSkippedState(event: CalendarEvent): boolean {
     return event.type === 'workout' && event.status === 'skipped';
+  }
+
+  protected isBrickLinked(event: CalendarEvent, events: CalendarEvent[]): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    return this.hasBrickPriorInList(event, events) || this.hasBrickNextInList(event, events);
+  }
+
+  protected hasBrickPriorInList(event: CalendarEvent, events: CalendarEvent[]): boolean {
+    const priorId = this.brickPriorId(event);
+    return !!priorId && events.some((candidate) => candidate.id === priorId);
+  }
+
+  protected hasBrickNextInList(event: CalendarEvent, events: CalendarEvent[]): boolean {
+    const nextId = this.brickNextId(event);
+    return !!nextId && events.some((candidate) => candidate.id === nextId);
+  }
+
+  protected isOffBikeRun(event: CalendarEvent): boolean {
+    if (event.type !== 'workout') {
+      return false;
+    }
+
+    const brick = event as BrickEvent;
+    const isRunDiscipline = brick.discipline === 'run';
+    const isOffBike = (brick.prescriptionData?.['isOffBike'] as boolean | undefined) === true;
+    return isRunDiscipline && (isOffBike || !!this.brickPriorId(event));
+  }
+
+  private brickNextId(event: CalendarEvent): string | null {
+    const value = (event as BrickEvent).linkedNextSessionId;
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private brickPriorId(event: CalendarEvent): string | null {
+    const value = (event as BrickEvent).linkedPriorSessionId;
+    return typeof value === 'string' && value.length > 0 ? value : null;
   }
 
   protected openEditor(event: CalendarEvent): void {

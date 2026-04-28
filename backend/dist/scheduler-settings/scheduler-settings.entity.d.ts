@@ -15,6 +15,15 @@ export declare class SchedulerSettings {
     swimmingDistanceThreshold: number;
     enduranceRestDays: number;
     cycleTrackingEnabled: boolean;
+    maxTrainingDaysPerWeek: number;
+    ftpWatts: number | null;
+    lthrBpm: number | null;
+    cssSecondsPer100m: number | null;
+    poolAccess: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none' | null;
+    hasPowerMeter: boolean;
+    triathlonsCompleted: number | null;
+    endurancePedigree: 'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple' | null;
+    periodisationOverride: 'traditional' | 'reverse' | null;
     userId: string;
     user: User;
 }

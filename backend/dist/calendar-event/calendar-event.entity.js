@@ -79,6 +79,26 @@ __decorate([
     __metadata("design:type", String)
 ], CalendarEvent.prototype, "priority", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', nullable: true }),
+    __metadata("design:type", Object)
+], CalendarEvent.prototype, "discipline", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', nullable: true }),
+    __metadata("design:type", Object)
+], CalendarEvent.prototype, "sessionType", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", String)
+], CalendarEvent.prototype, "linkedInvitationId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", Object)
+], CalendarEvent.prototype, "linkedNextSessionId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", Object)
+], CalendarEvent.prototype, "linkedPriorSessionId", void 0);
+__decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], CalendarEvent.prototype, "userId", void 0);

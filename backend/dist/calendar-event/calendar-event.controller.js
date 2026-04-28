@@ -17,15 +17,53 @@ const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const calendar_event_service_1 = require("./calendar-event.service");
 const calendar_event_dto_1 = require("./calendar-event.dto");
+const calendar_share_service_1 = require("../calendar-share/calendar-share.service");
+const event_invitation_service_1 = require("../event-invitation/event-invitation.service");
 let CalendarEventController = class CalendarEventController {
-    constructor(calendarEventService) {
+    constructor(calendarEventService, calendarShareService, eventInvitationService) {
         this.calendarEventService = calendarEventService;
+        this.calendarShareService = calendarShareService;
+        this.eventInvitationService = eventInvitationService;
     }
     async findAll(req, startDate, endDate) {
-        if (startDate && endDate) {
-            return this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate);
+        const events = startDate && endDate
+            ? await this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate)
+            : await this.calendarEventService.findAllByUser(req.user.userId);
+        const inviteesMap = await this.eventInvitationService.getAcceptedInviteesForEvents(events.map((e) => e.id));
+        return events.map((e) => ({
+            ...e,
+            acceptedInviteeEmails: inviteesMap.get(e.id) ?? [],
+        }));
+    }
+    async getSharedCalendar(ownerId, req, startDate, endDate) {
+        const share = await this.calendarShareService.findActiveShare(ownerId, req.user.userId);
+        if (!share) {
+            throw new common_1.ForbiddenException('No active share');
         }
-        return this.calendarEventService.findAllByUser(req.user.userId);
+        const raw = startDate && endDate
+            ? await this.calendarEventService.findByDateRange(ownerId, startDate, endDate)
+            : await this.calendarEventService.findAllByUser(ownerId);
+        return this.applyShareFilter(raw, share.shareLevel);
+    }
+    applyShareFilter(events, shareLevel) {
+        if (shareLevel === 'workouts_only') {
+            return events.filter((e) => e.type === 'workout');
+        }
+        if (shareLevel === 'busy_only') {
+            return events.map((e) => {
+                const isWorkout = e.type === 'workout';
+                return {
+                    id: e.id,
+                    date: e.date,
+                    startTime: e.startTime,
+                    endTime: e.endTime,
+                    durationMinutes: e.durationMinutes,
+                    type: isWorkout ? 'workout' : 'busy',
+                    title: isWorkout ? e.title : 'Busy',
+                };
+            });
+        }
+        return events;
     }
     async findOne(req, id) {
         return this.calendarEventService.findOne(id, req.user.userId);
@@ -57,6 +95,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], CalendarEventController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('shared/:ownerId'),
+    __param(0, (0, common_1.Param)('ownerId')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Query)('startDate')),
+    __param(3, (0, common_1.Query)('endDate')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, String, String]),
+    __metadata("design:returntype", Promise)
+], CalendarEventController.prototype, "getSharedCalendar", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Request)()),
@@ -109,6 +157,8 @@ __decorate([
 exports.CalendarEventController = CalendarEventController = __decorate([
     (0, common_1.Controller)('calendar-events'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [calendar_event_service_1.CalendarEventService])
+    __metadata("design:paramtypes", [calendar_event_service_1.CalendarEventService,
+        calendar_share_service_1.CalendarShareService,
+        event_invitation_service_1.EventInvitationService])
 ], CalendarEventController);
 //# sourceMappingURL=calendar-event.controller.js.map

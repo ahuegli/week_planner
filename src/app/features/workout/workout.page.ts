@@ -58,6 +58,13 @@ export class WorkoutPageComponent {
     return this.dataStore.calendarEvents().find((e) => e.id === id) ?? null;
   });
 
+  protected readonly notFound = computed(() => {
+    const id = this.eventId();
+    if (!id) return false;
+    if (this.dataStore.calendarEvents().length === 0) return false;
+    return this.event() === null;
+  });
+
   protected readonly linkedSession = computed(() => {
     const event = this.event();
     if (!event) return null;
@@ -101,6 +108,46 @@ export class WorkoutPageComponent {
       this.linkedSession()?.paceTarget ?? null,
     );
   });
+
+  protected readonly prescriptionDiscipline = computed(() =>
+    this.linkedSession()?.discipline ?? null,
+  );
+
+  protected readonly prescription = computed(() =>
+    this.linkedSession()?.prescriptionData ?? null,
+  );
+
+  protected readonly showPrescriptionCard = computed(() => {
+    const d = this.prescriptionDiscipline();
+    return this.prescription() !== null && (d === 'swim' || d === 'bike');
+  });
+
+  protected rxStr(key: string): string {
+    const rx = this.prescription();
+    if (!rx) return '';
+    const val = rx[key];
+    return typeof val === 'string' ? val : '';
+  }
+
+  protected rxArr(key: string): string[] {
+    const rx = this.prescription();
+    if (!rx) return [];
+    const val = rx[key];
+    return Array.isArray(val) ? (val as string[]) : [];
+  }
+
+  protected rxTargetLine(): string {
+    const rx = this.prescription();
+    if (!rx) return '';
+    const targets = rx['targets'] as Record<string, string> | undefined;
+    if (!targets) return '';
+    const parts: string[] = [];
+    if (targets['watts']) parts.push(targets['watts']);
+    if (targets['hrBpm']) parts.push(`HR ${targets['hrBpm']}`);
+    if (targets['rpe']) parts.push(`RPE ${targets['rpe']}`);
+    if (targets['descriptor']) parts.push(targets['descriptor']);
+    return parts.join(' · ');
+  }
 
   protected readonly coachingNote = computed(() => {
     const event = this.event();

@@ -27,6 +27,11 @@ let UserService = class UserService {
     async findById(id) {
         return this.userRepository.findOne({ where: { id } });
     }
+    async findByIds(ids) {
+        if (ids.length === 0)
+            return [];
+        return this.userRepository.find({ where: { id: (0, typeorm_2.In)(ids) } });
+    }
     async create(email, hashedPassword, name) {
         const user = this.userRepository.create({
             email,

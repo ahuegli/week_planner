@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { OnboardingData } from './onboarding.models';
 
 @Component({
@@ -11,10 +11,10 @@ import { OnboardingData } from './onboarding.models';
       <article class="summary-card">
         <div class="summary-row"><span>Goal:</span><span>{{ goalSummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(2)">Edit</button></div>
         <div class="summary-row"><span>Activities:</span><span>{{ activitySummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(3)">Edit</button></div>
-        <div class="summary-row"><span>Training days:</span><span>{{ data().trainingDays }} days/week</span><button type="button" class="edit-link" (click)="editStep.emit(4)">Edit</button></div>
-        <div class="summary-row"><span>Preferred times:</span><span>{{ data().preferredTimes.join(', ') }}</span><button type="button" class="edit-link" (click)="editStep.emit(4)">Edit</button></div>
-        <div class="summary-row"><span>Work:</span><span>{{ workSummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(5)">Edit</button></div>
-        <div class="summary-row"><span>Cycle tracking:</span><span>{{ cycleSummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(6)">Edit</button></div>
+        <div class="summary-row"><span>Training days:</span><span>{{ data().trainingDays }} days/week</span><button type="button" class="edit-link" (click)="editStep.emit(stepFor(4))">Edit</button></div>
+        <div class="summary-row"><span>Preferred times:</span><span>{{ data().preferredTimes.join(', ') }}</span><button type="button" class="edit-link" (click)="editStep.emit(stepFor(4))">Edit</button></div>
+        <div class="summary-row"><span>Work:</span><span>{{ workSummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(stepFor(5))">Edit</button></div>
+        <div class="summary-row"><span>Cycle tracking:</span><span>{{ cycleSummary() }}</span><button type="button" class="edit-link" (click)="editStep.emit(stepFor(6))">Edit</button></div>
       </article>
 
       <p class="settings-note">
@@ -60,6 +60,12 @@ export class OnboardingStepSummaryComponent {
   readonly loading = input(false);
   readonly editStep = output<number>();
   readonly generate = output<void>();
+
+  protected readonly isTriathlonPlan = computed(() => this.data().triathlonDistance !== '');
+
+  protected stepFor(base: number): number {
+    return this.isTriathlonPlan() ? base + 1 : base;
+  }
 
   protected goalSummary(): string {
     if (this.data().goal === 'race') {

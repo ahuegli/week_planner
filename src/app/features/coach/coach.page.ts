@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CoachApiService, ChatMessage, SuggestedAction } from '../../core/services/coach-api.service';
@@ -20,7 +20,7 @@ const STARTER_CHIPS = [
 @Component({
   selector: 'app-coach-page',
   standalone: true,
-  imports: [RouterLink, NgClass, FormsModule],
+  imports: [NgClass, FormsModule],
   templateUrl: './coach.page.html',
   styleUrl: './coach.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

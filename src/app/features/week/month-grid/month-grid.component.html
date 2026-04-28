@@ -76,16 +76,27 @@
 
     <div class="sheet-events">
       @if (selectedEvents().length === 0) {
-        <p class="sheet-empty">No events yet for this day.</p>
+        <p class="sheet-empty">Nothing scheduled. Tap + to add a workout, meeting, or note.</p>
       }
 
       @for (event of selectedEvents(); track event.id) {
-        <article class="event-card" [style.--event-color]="eventTypeColor(event)">
+        <article
+          class="event-card"
+          [class.is-brick]="isBrickLinked(event)"
+          [class.brick-has-prior]="hasBrickPriorInSelected(event)"
+          [class.brick-has-next]="hasBrickNextInSelected(event)"
+          [style.--event-color]="eventTypeColor(event)"
+        >
           <button type="button" class="event-summary" (click)="toggleEvent(event)" [attr.aria-expanded]="isExpanded(event)">
             <div class="event-body">
               <div class="event-top">
                 <p class="event-title">{{ event.title }}</p>
-                <span class="event-type">{{ eventTypeLabel(event) }}</span>
+                <div class="event-type-wrap">
+                  <span class="event-type">{{ eventTypeLabel(event) }}</span>
+                  @if (isBrickLinked(event)) {
+                    <span class="brick-badge">Brick</span>
+                  }
+                </div>
               </div>
               <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
 
@@ -111,6 +122,9 @@
 
           @if (hasExpandedDetails(event) && isExpanded(event)) {
             <div class="event-detail">
+              @if (isOffBikeRun(event)) {
+                <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
+              }
               <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationLabel(event) }}</p>
 
               @if (event.type === 'workout' && event.distanceTarget) {

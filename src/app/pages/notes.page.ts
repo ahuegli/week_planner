@@ -97,7 +97,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
 
       @if (sortedNotes().length === 0) {
         <article class="card empty-card">
-          <p class="empty-text">Nothing here yet — add a note above.</p>
+          <p class="empty-text">No notes yet. Capture a task, a thought, or something to remember.</p>
         </article>
       }
 
