@@ -1,5 +1,93 @@
 # Session notes
 
+## Tuesday session — WP12B + WP12C shipped
+
+Shipped:
+- WP12B Parts 1B+2B+3B (brick generation, scheduling, UI)
+- Bug fixes: volume progression, brick CalendarEvent links
+- WP12C Parts 1C+2C+3C (race-day plan entity, generator, UI)
+- Bundle 1 (settings persist) + Bundle 2 (load distribution + 
+  retroactive reschedule) verified
+
+Pending tomorrow:
+- WP12C Part 4C smoke test (manual browser walkthrough)
+- WP12B/12C polish: brick visual treatment, distance/pace targets 
+  for triathlon, true beginner volume calibration
+- runThresholdSecPerKm field for run race-day pacing
+
+Decision points:
+- WP10 task gamification next, or WP15 landing page first?
+- WP14 production hardening before or after public beta?
+
+
+## 2026-04-28 — WP12C Part 2C: Race-day plan generator
+
+### Files modified (3)
+- `backend/src/race-day-plan/race-day-plan.service.ts` — added `generateRaceDayPlan()` public method + 5 private builders: `buildPacingPlan`, `buildFuelingPlan` (with sprint duration-conditional logic), `buildHydrationPlan` (3-tier hot/neutral/cool), `buildTransitionPlan` (short vs long-course variants), `buildContingencyPlan` (if/then keyed rules, GI added for long course)
+- `backend/src/race-day-plan/race-day-plan.controller.ts` — added `POST /generate/:planId` endpoint with `@Res({ passthrough: true })` for dynamic 201/200 status; injected `TrainingPlanService` and `SchedulerSettingsService`
+- `backend/src/race-day-plan/race-day-plan.module.ts` — added `SchedulerSettingsModule` and `TrainingPlanModule` imports
+
+### Methodology decisions
+- Pace buffer: 15% (true_beginner) / 12% (tri_novice_but_fit) / 8% (intermediate) / 0% (experienced)
+- Sprint fueling: duration-conditional — <60min skip gels, 60–75min optional, >75min recommended. Estimated from pacing targets.
+- Hydration: 3-tier (hot >25°C → 750ml/h + electrolytes from start; neutral 15–25°C → 600ml/h + electrolytes after 90min; cool <15°C → 500ml/h + electrolytes after 90min + warning about suppressed thirst)
+- Contingency: structured `{ trigger, action[] }` keyed objects; long-course adds GI contingency
+- Auto-trigger: deferred to v2 — manual only via POST /generate/:planId
+- Run threshold: not a stored field on SchedulerSettings → RPE fallback for all users. v2 item to add `runThresholdSecPerKm` to settings.
+
+### Build
+- Two compile errors fixed: `FUELING_SPECS` changed from `Partial<Record>` to full `Record` with sprint entry
+- Final: clean, 0 TypeScript errors
+
+### Smoke tests
+- Test 1: POST /generate/:planId (Olympic, FTP=250W, CSS=95s/100m) → alreadyExisted=false; swim 1:46/100m (+12% CSS), bike 176W (70% FTP), run RPE, fueling 60g/h, hydration 600/750/500 ml/h, T1 6 steps, 4 contingency keys ✓
+- Test 2: POST again same plan → alreadyExisted=true, plan.id unchanged ✓
+- Test 3: Generate with no FTP/CSS/LTHR → swim RPE, bike RPE, run RPE — no numeric anchors ✓
+- Test 4: POST for non-triathlon plan → 400 "Race-day plan generation requires a triathlon plan with a distance set." ✓
+
+### Known gaps (v2)
+- `runThresholdSecPerKm` not in SchedulerSettings — run pacing is always RPE-based for now
+- Auto-trigger (2 weeks pre-race) deferred — would be a NestJS @Cron job ~30 min to add
+- Weather integration out of scope; user selects hot/neutral/cool tier manually
+
+### Pending
+- WP12C Part 3C: race-day plan UI page
+- WP12B Part 3B: frontend brick UI rendering
+
+## 2026-04-28 — WP12C Part 1C: Race-day plan data model
+
+### Files created (5)
+- `backend/src/race-day-plan/race-day-plan.entity.ts` — `race_day_plans` table: userId, planId, raceDate (DATE), 5 jsonb columns, generatedAt/lastModified; unique index on (userId, planId)
+- `backend/src/race-day-plan/race-day-plan.dto.ts` — CreateRaceDayPlanDto (planId + raceDate required, 5 optional jsonb fields); UpdateRaceDayPlanDto (all optional)
+- `backend/src/race-day-plan/race-day-plan.service.ts` — create (409 on duplicate), findAll, findByPlan, update, remove; all userId-scoped
+- `backend/src/race-day-plan/race-day-plan.controller.ts` — GET /, GET /plan/:planId, POST, PUT /:id, DELETE /:id; all under api/v1/race-day-plans
+- `backend/src/race-day-plan/race-day-plan.module.ts` — mirrors calendar-share pattern; no UserModule dependency
+
+### Files modified (2)
+- `backend/src/app.module.ts` — RaceDayPlanModule added to databaseImports
+- `src/app/core/models/app-data.models.ts` — RaceDayPlan, CreateRaceDayPlanPayload, UpdateRaceDayPlanPayload interfaces added
+
+### Build
+- Backend: clean (0 TypeScript errors, dist cleared before build)
+- Frontend: no changes, not rebuilt
+
+### Smoke tests
+- POST /api/v1/race-day-plans → 201, row returned with correct id/raceDate/pacingPlan ✓
+- POST again (same userId+planId) → 409 with message "A race-day plan already exists..." ✓
+- GET /api/v1/race-day-plans/plan/:planId → row returned with correct fields ✓
+- GET /api/v1/race-day-plans → count: 1 ✓
+- TypeORM synchronize: `race_day_plans` table auto-created on backend restart ✓
+
+### Notes
+- Global prefix `api/v1` confirmed in main.ts; `@Controller('race-day-plans')` produces correct paths
+- `raceDate` stored as Postgres DATE (string, no time-zone ambiguity)
+- Unique index on (userId, planId) — generator in Part 2C should upsert (PUT by id)
+
+### Pending
+- WP12C Part 2C: race-day plan generator in triathlon-plan-template.service.ts
+- WP12C Part 3C: race-day plan UI
+- WP12B Part 3B: frontend brick UI rendering
+
 ## 2026-04-28 — WP12B Bug Fixes: brick CalendarEvent links + volume progression
 
 ### Files modified (5 total)

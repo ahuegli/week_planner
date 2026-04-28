@@ -5,6 +5,7 @@ import { CurrentWeekCardComponent } from '../features/plan/current-week-card/cur
 import { PlanHeaderComponent } from '../features/plan/plan-header/plan-header.component';
 import { PlanWeekTimelineComponent } from '../features/plan/plan-week-timeline/plan-week-timeline.component';
 import { QuickPlanSwitchComponent } from '../features/plan/quick-plan-switch/quick-plan-switch.component';
+import { RaceDayPlanComponent } from '../features/race-day-plan/race-day-plan.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { PlannedSession, PlanWeekSummary, ScheduleEntirePlanResult } from '../core/models/app-data.models';
 
@@ -17,6 +18,7 @@ import { PlannedSession, PlanWeekSummary, ScheduleEntirePlanResult } from '../co
     PlanWeekTimelineComponent,
     QuickPlanSwitchComponent,
     CreatePlanCtaComponent,
+    RaceDayPlanComponent,
   ],
   templateUrl: './plan.page.html',
   styleUrl: './plan.page.scss',
@@ -112,6 +114,22 @@ export class PlanPageComponent {
   protected readonly showPlanCreatedHint = computed(() => {
     const hasPlan = !!this.dataStore.currentPlan();
     return hasPlan && this.dataStore.planWeeks().length === 0 && this.dataStore.currentWeekSessions().length === 0;
+  });
+
+  protected readonly showRaceDayPlanSection = computed(() => {
+    const plan = this.plan();
+    const sportType = plan?.sportType?.toLowerCase() ?? '';
+    return !!plan && sportType.includes('triathlon') && !!plan.goalDate;
+  });
+
+  protected readonly isRaceDayPlanWindowOpen = computed(() => {
+    const plan = this.plan();
+    if (!plan?.goalDate) {
+      return false;
+    }
+
+    const daysUntilRace = this.daysUntilDate(plan.goalDate);
+    return daysUntilRace !== null && daysUntilRace <= 14;
   });
 
   constructor() {
@@ -351,5 +369,17 @@ export class PlanPageComponent {
     const start = new Date(`${weekStartDate}T00:00:00`);
     start.setDate(start.getDate() + day);
     return start;
+  }
+
+  private daysUntilDate(value: string): number | null {
+    const target = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(target.getTime())) {
+      return null;
+    }
+
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.ceil((target.getTime() - todayStart.getTime()) / msPerDay);
   }
 }

@@ -99,4 +99,34 @@ manage-row UI fixes the visibility gap as a side effect.
 3. Triathlon sessions don't show distance/pace targets like run 
    plans do. Need swim meters, bike km, run km on event cards 
    and workout pages. See Bundle 3 in v2_roadmap.md.
-   
+
+
+   ## Run threshold pace not in scheduler settings
+
+Race-day plan generator falls back to RPE-only for run pacing 
+because `runThresholdSecPerKm` doesn't exist in SchedulerSettings 
+entity. Swim (CSS) and bike (FTP/LTHR) work correctly with numeric 
+anchors.
+
+Fix in v2 / WP12 polish: one column on entity, one DTO field, one 
+generator check. Estimated 30 min CC.
+
+
+## Triathlon plan creation doesn't always set triathlonDistance
+
+Plans created via "quick goal switch" flow may have:
+- sportType: "Triathlon (Olympic)" (display label, not enum)
+- triathlonDistance: null
+
+This breaks race-day plan generation (backend correctly rejects 
+with 400 "triathlonDistance required").
+
+Found Tuesday evening. Fix tomorrow:
+- Audit plan creation paths for triathlon (onboarding flow vs quick 
+  switch vs settings flow)
+- Normalize sportType to enum 'triathlon' and persist 
+  triathlonDistance reliably
+- Possibly migrate existing rows where sportType matches 
+  /^triathlon/i but distance is null
+
+CC territory — multi-file logic + data migration consideration.

@@ -1,0 +1,52 @@
+<section class="race-day-card">
+  <div class="race-day-head">
+    <h3 class="race-day-title">Race-day plan</h3>
+    @if (raceDayPlan()?.generatedAt; as generatedAt) {
+      <span class="generated-at">Generated {{ generatedAtLabel(generatedAt) }}</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="race-day-hint">Loading race-day plan...</p>
+  } @else {
+    @if (error()) {
+      <div class="error-row">
+        <p class="race-day-error">{{ error() }}</p>
+        <button type="button" class="race-day-btn secondary" (click)="retryLoad()">Retry</button>
+      </div>
+    }
+
+    @if (raceDayPlan(); as plan) {
+      <div class="section-grid">
+        @for (section of sections(); track section.key) {
+          <article class="section-card">
+            <h4>{{ section.title }}</h4>
+            @if (section.rows.length > 0) {
+              <dl>
+                @for (row of section.rows; track row.label + row.value) {
+                  <div class="kv-row">
+                    <dt>{{ row.label }}</dt>
+                    <dd>{{ row.value }}</dd>
+                  </div>
+                }
+              </dl>
+            } @else {
+              <p class="empty-copy">No details yet.</p>
+            }
+          </article>
+        }
+      </div>
+
+      <div class="action-row">
+        <button type="button" class="race-day-btn" [disabled]="generating()" (click)="generatePlan()">
+          {{ generating() ? 'Generating...' : 'Regenerate race-day plan' }}
+        </button>
+      </div>
+    } @else {
+      <p class="race-day-hint">Create a full pacing, fueling, hydration, transitions, and contingency brief for race day.</p>
+      <button type="button" class="race-day-btn" [disabled]="generating()" (click)="generatePlan()">
+        {{ generating() ? 'Generating...' : 'Generate race-day plan' }}
+      </button>
+    }
+  }
+</section>

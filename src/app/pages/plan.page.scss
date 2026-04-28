@@ -149,6 +149,19 @@
   gap: 8px;
 }
 
+.race-day-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.race-day-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 .back-to-plan {
   align-self: flex-start;
   border: none;

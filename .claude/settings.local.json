@@ -63,7 +63,18 @@
       "PowerShell(cd C:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend; Remove-Item backend.out -ErrorAction SilentlyContinue; $env:USE_DATABASE=\"true\"; Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c npm run start:dev > backend.out 2>&1\" -WindowStyle Hidden; Start-Sleep -Seconds 28; Get-Content backend.out | Select-Object -Last 10)",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue | ForEach-Object { Write-Host \"Killing node PID $\\($_.Id\\)\"; Stop-Process -Id $_.Id -Force }; Start-Sleep -Seconds 3; Write-Host \"All node processes killed\")",
       "PowerShell(cd C:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend; Remove-Item backend.out -ErrorAction SilentlyContinue; $env:USE_DATABASE=\"true\"; Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c npm run start:dev > backend.out 2>&1\" -WindowStyle Hidden; Start-Sleep -Seconds 30; Get-Content backend.out | Select-Object -Last 12)",
-      "PowerShell($login = Invoke-RestMethod -Method Post -Uri \"http://localhost:3000/api/v1/auth/login\" -ContentType \"application/json\" -Body '{\"email\":\"me@test.com\",\"password\":\"test1234\"}'; $token = $login.access_token; Write-Host \"Token: $\\($token.Substring\\(0,30\\)\\)...\")"
+      "PowerShell($login = Invoke-RestMethod -Method Post -Uri \"http://localhost:3000/api/v1/auth/login\" -ContentType \"application/json\" -Body '{\"email\":\"me@test.com\",\"password\":\"test1234\"}'; $token = $login.access_token; Write-Host \"Token: $\\($token.Substring\\(0,30\\)\\)...\")",
+      "PowerShell($proc = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($proc\\) { Stop-Process -Id $proc.OwningProcess -Force; Write-Host \"Killed PID $\\($proc.OwningProcess\\)\" } else { Write-Host \"No process on 3000\" })",
+      "PowerShell(cd c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend; $env:USE_DATABASE=\"true\"; Start-Process -FilePath \"node\" -ArgumentList \"dist/main.js\" -WorkingDirectory \"c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend\" -PassThru | Select-Object Id)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3000/api/v1\" -Method GET -ErrorAction SilentlyContinue)",
+      "PowerShell($login = Invoke-RestMethod -Uri \"http://localhost:3000/api/v1/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"me@test.com\",\"password\":\"test1234\"}'; $login.access_token)",
+      "PowerShell($proc = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($proc\\) { Stop-Process -Id $proc.OwningProcess -Force; Write-Host \"Killed PID $\\($proc.OwningProcess\\)\" } else { Write-Host \"Port 3000 clear\" })",
+      "PowerShell($env:USE_DATABASE=\"true\"; Start-Process -FilePath \"node\" -ArgumentList \"dist/main.js\" -WorkingDirectory \"c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend\" -PassThru | Select-Object Id; Start-Sleep -Seconds 5; Write-Host \"Backend started\")",
+      "PowerShell($proc = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($proc\\) { Stop-Process -Id $proc.OwningProcess -Force }; $env:USE_DATABASE=\"true\"; Start-Process -FilePath \"node\" -ArgumentList \"dist/main.js\" -WorkingDirectory \"c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend\"; Start-Sleep -Seconds 5; Write-Host \"Backend ready\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)",
+      "PowerShell($env:USE_DATABASE=\"true\"; cd c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend; node dist/main.js 2>&1 | Select-Object -First 40)",
+      "PowerShell($env:USE_DATABASE=\"true\"; cd c:\\\\Users\\\\68023\\\\Downloads\\\\week_planner\\\\backend; node dist/main.js 2>&1 | Select-Object -Last 20)",
+      "Bash(git rm *)"
     ]
   }
 }

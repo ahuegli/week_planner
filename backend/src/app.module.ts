@@ -20,6 +20,7 @@ import { StatsModule } from './stats/stats.module';
 import { AiModule } from './ai/ai.module';
 import { CalendarShareModule } from './calendar-share/calendar-share.module';
 import { EventInvitationModule } from './event-invitation/event-invitation.module';
+import { RaceDayPlanModule } from './race-day-plan/race-day-plan.module';
 
 const USE_DATABASE = process.env.USE_DATABASE !== 'false';
 
@@ -54,6 +55,7 @@ const databaseImports = USE_DATABASE
       AiModule,
       CalendarShareModule,
       EventInvitationModule,
+      RaceDayPlanModule,
     ]
   : [MockDataModule];
 

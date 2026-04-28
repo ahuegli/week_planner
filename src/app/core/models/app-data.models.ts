@@ -600,3 +600,31 @@ export interface CreateEventInvitationPayload {
 export interface RespondToInvitationPayload {
   response: 'accepted' | 'declined';
 }
+
+// ── Race-Day Plan ──────────────────────────────────────────────────────────
+
+export interface RaceDayPlan {
+  id: string;
+  userId: string;
+  planId: string;
+  raceDate: string;
+  pacingPlan?: Record<string, any> | null;
+  fuelingPlan?: Record<string, any> | null;
+  hydrationPlan?: Record<string, any> | null;
+  transitionPlan?: Record<string, any> | null;
+  contingencyPlan?: Record<string, any> | null;
+  generatedAt?: string;
+  lastModified?: string;
+}
+
+export interface CreateRaceDayPlanPayload {
+  planId: string;
+  raceDate: string;
+  pacingPlan?: Record<string, any>;
+  fuelingPlan?: Record<string, any>;
+  hydrationPlan?: Record<string, any>;
+  transitionPlan?: Record<string, any>;
+  contingencyPlan?: Record<string, any>;
+}
+
+export type UpdateRaceDayPlanPayload = Partial<Omit<CreateRaceDayPlanPayload, 'planId'>>;

@@ -76,6 +76,17 @@
       (weekToggleRequested)="onTimelineWeekToggle($event)"
     />
 
+    @if (showRaceDayPlanSection()) {
+      <section class="race-day-section">
+        <h2 class="race-day-section-title">Race-day plan</h2>
+        @if (!isRaceDayPlanWindowOpen()) {
+          <p class="plan-created-message">Race-day plan available 2 weeks before race.</p>
+        } @else {
+          <app-race-day-plan [planId]="plan()!.id" />
+        }
+      </section>
+    }
+
     <div class="bottom-spacer"></div>
 
   } @else {
