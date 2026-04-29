@@ -1,0 +1,187 @@
+2026-04-19 20:51:16.303 CEST [25188] LOG:  PostgreSQL 17.9 on x86_64-windows, compiled by msvc-19.44.35225, 64-bit startet
+2026-04-19 20:51:16.336 CEST [25188] LOG:  erwarte Verbindungen auf IPv6-Adresse »::1«, Port 5432
+2026-04-19 20:51:16.337 CEST [25188] LOG:  erwarte Verbindungen auf IPv4-Adresse »127.0.0.1«, Port 5432
+2026-04-19 20:51:16.805 CEST [43876] LOG:  Datenbanksystem wurde am 2026-04-19 20:50:59 CEST heruntergefahren
+2026-04-19 20:51:17.177 CEST [25188] LOG:  Datenbanksystem ist bereit, um Verbindungen anzunehmen
+2026-04-19 20:52:28.861 CEST [36700] FEHLER:  Datenbank »myapp« existiert bereits
+2026-04-19 20:52:28.861 CEST [36700] ANWEISUNG:  CREATE DATABASE myapp;
+2026-04-19 20:56:16.618 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 20:58:09.146 CEST [11496] LOG:  Checkpoint komplett: 1034 Puffer geschrieben (6.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=111,696 s, Sync=0,769 s, gesamt=112,538 s; sync. Dateien=350, längste=0,017 s, Durchschnitt=0.003 s; Entfernung=5031 kB, Schätzung=5031 kB; LSN=0/1A57A60, Redo-LSN=0/1A579D0
+2026-04-19 21:16:16.910 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 21:16:21.946 CEST [11496] LOG:  Checkpoint komplett: 46 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,915 s, Sync=0,057 s, gesamt=5,037 s; sync. Dateien=27, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=68 kB, Schätzung=4534 kB; LSN=0/1A68B68, Redo-LSN=0/1A68B10
+2026-04-19 21:26:16.027 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 21:26:18.181 CEST [11496] LOG:  Checkpoint komplett: 20 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,072 s, Sync=0,037 s, gesamt=2,155 s; sync. Dateien=14, längste=0,012 s, Durchschnitt=0.003 s; Entfernung=59 kB, Schätzung=4087 kB; LSN=0/1A77990, Redo-LSN=0/1A77938
+2026-04-19 21:36:16.217 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 21:36:17.114 CEST [11496] LOG:  Checkpoint komplett: 9 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,863 s, Sync=0,013 s, gesamt=0,898 s; sync. Dateien=7, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=2 kB, Schätzung=3678 kB; LSN=0/1A78560, Redo-LSN=0/1A78508
+2026-04-19 21:46:16.130 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 21:46:16.487 CEST [11496] LOG:  Checkpoint komplett: 4 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,326 s, Sync=0,008 s, gesamt=0,357 s; sync. Dateien=4, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=3 kB, Schätzung=3311 kB; LSN=0/1A79408, Redo-LSN=0/1A793B0
+2026-04-19 21:56:16.488 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 21:56:16.846 CEST [11496] LOG:  Checkpoint komplett: 4 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,325 s, Sync=0,009 s, gesamt=0,359 s; sync. Dateien=4, längste=0,005 s, Durchschnitt=0.003 s; Entfernung=4 kB, Schätzung=2980 kB; LSN=0/1A7A7A8, Redo-LSN=0/1A7A750
+2026-04-19 22:01:16.839 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 22:01:18.411 CEST [11496] LOG:  Checkpoint komplett: 15 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,523 s, Sync=0,028 s, gesamt=1,572 s; sync. Dateien=13, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=1 kB, Schätzung=2682 kB; LSN=0/1A7ACF8, Redo-LSN=0/1A7ACA0
+2026-04-19 22:21:16.402 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 22:21:17.807 CEST [11496] LOG:  Checkpoint komplett: 14 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,365 s, Sync=0,019 s, gesamt=1,406 s; sync. Dateien=11, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=48 kB, Schätzung=2419 kB; LSN=0/1A870B8, Redo-LSN=0/1A87060
+2026-04-19 22:31:16.824 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 22:31:19.115 CEST [11496] LOG:  Checkpoint komplett: 22 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,252 s, Sync=0,024 s, gesamt=2,291 s; sync. Dateien=15, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=85 kB, Schätzung=2185 kB; LSN=0/1A9C680, Redo-LSN=0/1A9C628
+2026-04-19 22:36:16.107 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 22:36:18.564 CEST [11496] LOG:  Checkpoint komplett: 23 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,395 s, Sync=0,037 s, gesamt=2,458 s; sync. Dateien=19, längste=0,011 s, Durchschnitt=0.002 s; Entfernung=57 kB, Schätzung=1973 kB; LSN=0/1AAABB8, Redo-LSN=0/1AAAB60
+2026-04-19 22:41:16.583 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-19 22:41:18.738 CEST [11496] LOG:  Checkpoint komplett: 20 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,095 s, Sync=0,029 s, gesamt=2,156 s; sync. Dateien=15, längste=0,005 s, Durchschnitt=0.002 s; Entfernung=83 kB, Schätzung=1784 kB; LSN=0/1ABFB60, Redo-LSN=0/1ABFB08
+2026-04-20 12:52:59.476 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 12:53:02.096 CEST [11496] LOG:  Checkpoint komplett: 25 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,575 s, Sync=0,023 s, gesamt=2,621 s; sync. Dateien=15, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=124 kB, Schätzung=1618 kB; LSN=0/1ADEB90, Redo-LSN=0/1ADEB38
+2026-04-20 12:57:59.125 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 12:57:59.687 CEST [11496] LOG:  Checkpoint komplett: 5 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,534 s, Sync=0,004 s, gesamt=0,562 s; sync. Dateien=2, längste=0,002 s, Durchschnitt=0.002 s; Entfernung=9 kB, Schätzung=1457 kB; LSN=0/1AE1010, Redo-LSN=0/1AE0FB8
+2026-04-20 13:02:06.511 CEST [57116] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 13:12:59.712 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:13:00.174 CEST [11496] LOG:  Checkpoint komplett: 5 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,429 s, Sync=0,010 s, gesamt=0,462 s; sync. Dateien=5, längste=0,005 s, Durchschnitt=0.002 s; Entfernung=18 kB, Schätzung=1313 kB; LSN=0/1AE5A90, Redo-LSN=0/1AE5A38
+2026-04-20 13:17:59.184 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:18:00.539 CEST [11496] LOG:  Checkpoint komplett: 13 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,298 s, Sync=0,030 s, gesamt=1,356 s; sync. Dateien=15, längste=0,012 s, Durchschnitt=0.002 s; Entfernung=183 kB, Schätzung=1200 kB; LSN=0/1B13828, Redo-LSN=0/1B137D0
+2026-04-20 13:22:59.555 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:23:00.912 CEST [11496] LOG:  Checkpoint komplett: 13 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,297 s, Sync=0,025 s, gesamt=1,358 s; sync. Dateien=11, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=43 kB, Schätzung=1084 kB; LSN=0/1B1E4F8, Redo-LSN=0/1B1E4A0
+2026-04-20 13:27:59.945 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:28:02.926 CEST [11496] LOG:  Checkpoint komplett: 28 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,919 s, Sync=0,035 s, gesamt=2,982 s; sync. Dateien=16, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=121 kB, Schätzung=988 kB; LSN=0/1B3CBF8, Redo-LSN=0/1B3CBA0
+2026-04-20 13:32:59.941 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:33:02.805 CEST [11496] LOG:  Checkpoint komplett: 27 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,809 s, Sync=0,033 s, gesamt=2,865 s; sync. Dateien=16, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=173 kB, Schätzung=906 kB; LSN=0/1B681C0, Redo-LSN=0/1B68168
+2026-04-20 13:57:59.837 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 13:58:01.813 CEST [11496] LOG:  Checkpoint komplett: 19 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,926 s, Sync=0,027 s, gesamt=1,976 s; sync. Dateien=14, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=41 kB, Schätzung=820 kB; LSN=0/1B72770, Redo-LSN=0/1B726E0
+2026-04-20 14:02:59.839 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 14:03:02.277 CEST [11496] LOG:  Checkpoint komplett: 23 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,388 s, Sync=0,030 s, gesamt=2,438 s; sync. Dateien=12, längste=0,012 s, Durchschnitt=0.003 s; Entfernung=104 kB, Schätzung=748 kB; LSN=0/1B8C910, Redo-LSN=0/1B8C8B8
+2026-04-20 15:09:43.390 CEST [12260] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 15:47:59.397 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 15:48:02.843 CEST [11496] LOG:  Checkpoint komplett: 32 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,392 s, Sync=0,028 s, gesamt=3,448 s; sync. Dateien=16, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=137 kB, Schätzung=687 kB; LSN=0/1BAEFD0, Redo-LSN=0/1BAEF78
+2026-04-20 16:29:24.275 CEST [50708] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 16:29:34.801 CEST [56796] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 16:32:59.907 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 16:33:00.472 CEST [11496] LOG:  Checkpoint komplett: 6 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,531 s, Sync=0,011 s, gesamt=0,566 s; sync. Dateien=6, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=24 kB, Schätzung=621 kB; LSN=0/1BB5298, Redo-LSN=0/1BB5208
+2026-04-20 16:49:18.969 CEST [25188] LOG:  could not reserve shared memory region (addr=000001CE0A1D0000) for child 0000000000001370: error code 487
+2026-04-20 16:57:59.510 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 16:58:00.637 CEST [11496] LOG:  Checkpoint komplett: 11 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,085 s, Sync=0,012 s, gesamt=1,128 s; sync. Dateien=7, längste=0,002 s, Durchschnitt=0.002 s; Entfernung=10 kB, Schätzung=560 kB; LSN=0/1BB7DF8, Redo-LSN=0/1BB7DA0
+2026-04-20 17:01:03.462 CEST [33356] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 17:01:03.463 CEST [57312] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 17:01:03.463 CEST [51972] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 17:01:03.464 CEST [56872] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 17:07:59.666 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 17:08:02.987 CEST [11496] LOG:  Checkpoint komplett: 31 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,251 s, Sync=0,031 s, gesamt=3,321 s; sync. Dateien=14, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=185 kB, Schätzung=522 kB; LSN=0/1BE6388, Redo-LSN=0/1BE6330
+2026-04-20 17:22:59.049 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 17:23:01.402 CEST [11496] LOG:  Checkpoint komplett: 21 Puffer geschrieben (0.1%); 1 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,157 s, Sync=0,021 s, gesamt=2,354 s; sync. Dateien=12, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=111 kB, Schätzung=481 kB; LSN=0/1C01F98, Redo-LSN=0/1C01F40
+2026-04-20 17:52:59.470 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 17:53:01.434 CEST [11496] LOG:  Checkpoint komplett: 18 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,900 s, Sync=0,028 s, gesamt=1,964 s; sync. Dateien=9, längste=0,012 s, Durchschnitt=0.004 s; Entfernung=75 kB, Schätzung=441 kB; LSN=0/1C14D18, Redo-LSN=0/1C14CC0
+2026-04-20 17:53:30.155 CEST [46788] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 17:55:13.925 CEST [37160] FEHLER:  ungültige Eingabesyntax für Typ uuid: »«
+2026-04-20 17:55:13.925 CEST [37160] ZUSAMMENHANG:  unbenanntes Portal Parameter $1 = ''
+2026-04-20 17:55:13.925 CEST [37160] ANWEISUNG:  SELECT DISTINCT "distinctAlias"."TrainingPlan_id" AS "ids_TrainingPlan_id", "distinctAlias"."TrainingPlan__TrainingPlan_weeks_weekNumber" FROM (SELECT "TrainingPlan"."id" AS "TrainingPlan_id", "TrainingPlan"."userId" AS "TrainingPlan_userId", "TrainingPlan"."mode" AS "TrainingPlan_mode", "TrainingPlan"."sportType" AS "TrainingPlan_sportType", "TrainingPlan"."goalDate" AS "TrainingPlan_goalDate", "TrainingPlan"."goalDistance" AS "TrainingPlan_goalDistance", "TrainingPlan"."goalTime" AS "TrainingPlan_goalTime", "TrainingPlan"."totalWeeks" AS "TrainingPlan_totalWeeks", "TrainingPlan"."currentWeek" AS "TrainingPlan_currentWeek", "TrainingPlan"."status" AS "TrainingPlan_status", "TrainingPlan"."createdAt" AS "TrainingPlan_createdAt", "TrainingPlan"."updatedAt" AS "TrainingPlan_updatedAt", "TrainingPlan__TrainingPlan_weeks"."id" AS "TrainingPlan__TrainingPlan_weeks_id", "TrainingPlan__TrainingPlan_weeks"."userId" AS "TrainingPlan__TrainingPlan_weeks_userId", "TrainingPlan__TrainingPlan_weeks"."planId" AS "TrainingPlan__TrainingPlan_weeks_planId", "TrainingPlan__TrainingPlan_weeks"."weekNumber" AS "TrainingPlan__TrainingPlan_weeks_weekNumber", "TrainingPlan__TrainingPlan_weeks"."phase" AS "TrainingPlan__TrainingPlan_weeks_phase", "TrainingPlan__TrainingPlan_weeks"."isDeload" AS "TrainingPlan__TrainingPlan_weeks_isDeload", "TrainingPlan__TrainingPlan_weeks"."volumeTarget" AS "TrainingPlan__TrainingPlan_weeks_volumeTarget", "TrainingPlan__TrainingPlan_weeks"."startDate" AS "TrainingPlan__TrainingPlan_weeks_startDate", "TrainingPlan__TrainingPlan_weeks"."endDate" AS "TrainingPlan__TrainingPlan_weeks_endDate", "74e854fa1e201e6b3b51eb0f673020b946805863"."id" AS "74e854fa1e201e6b3b51eb0f673020b946805863_id", "74e854fa1e201e6b3b51eb0f673020b946805863"."userId" AS "74e854fa1e201e6b3b51eb0f673020b946805863_userId", "74e854fa1e201e6b3b51eb0f673020b946805863"."planWeekId" AS "74e854fa1e201e6b3b51eb0f673020b946805863_planWeekId", "74e854fa1e201e6b3b51eb0f673020b946805863"."sessionType" AS "74e854fa1e201e6b3b51eb0f673020b946805863_sessionType", "74e854fa1e201e6b3b51eb0f673020b946805863"."purpose" AS "74e854fa1e201e6b3b51eb0f673020b946805863_purpose", "74e854fa1e201e6b3b51eb0f673020b946805863"."priority" AS "74e854fa1e201e6b3b51eb0f673020b946805863_priority", "74e854fa1e201e6b3b51eb0f673020b946805863"."duration" AS "74e854fa1e201e6b3b51eb0f673020b946805863_duration", "74e854fa1e201e6b3b51eb0f673020b946805863"."intensity" AS "74e854fa1e201e6b3b51eb0f673020b946805863_intensity", "74e854fa1e201e6b3b51eb0f673020b946805863"."distanceTarget" AS "74e854fa1e201e6b3b51eb0f673020b946805863_distanceTarget", "74e854fa1e201e6b3b51eb0f673020b946805863"."paceTarget" AS "74e854fa1e201e6b3b51eb0f673020b946805863_paceTarget", "74e854fa1e201e6b3b51eb0f673020b946805863"."skippable" AS "74e854fa1e201e6b3b51eb0f673020b946805863_skippable", "74e854fa1e201e6b3b51eb0f673020b946805863"."shortenable" AS "74e854fa1e201e6b3b51eb0f673020b946805863_shortenable", "74e854fa1e201e6b3b51eb0f673020b946805863"."minimumDuration" AS "74e854fa1e201e6b3b51eb0f673020b946805863_minimumDuration", "74e854fa1e201e6b3b51eb0f673020b946805863"."substituteOptions" AS "74e854fa1e201e6b3b51eb0f673020b946805863_substituteOptions", "74e854fa1e201e6b3b51eb0f673020b946805863"."missImpact" AS "74e854fa1e201e6b3b51eb0f673020b946805863_missImpact", "74e854fa1e201e6b3b51eb0f673020b946805863"."cyclePhaseRules" AS "74e854fa1e201e6b3b51eb0f673020b946805863_cyclePhaseRules", "74e854fa1e201e6b3b51eb0f673020b946805863"."status" AS "74e854fa1e201e6b3b51eb0f673020b946805863_status", "74e854fa1e201e6b3b51eb0f673020b946805863"."completedAt" AS "74e854fa1e201e6b3b51eb0f673020b946805863_completedAt", "74e854fa1e201e6b3b51eb0f673020b946805863"."energyRating" AS "74e854fa1e201e6b3b51eb0f673020b946805863_energyRating", "74e854fa1e201e6b3b51eb0f673020b946805863"."linkedCalendarEventId" AS "74e854fa1e201e6b3b51eb0f673020b946805863_linkedCalendarEventId", "74e854fa1e201e6b3b51eb0f673020b946805863"."notes" AS "74e854fa1e201e6b3b51eb0f673020b946805863_notes" FROM "training_plans" "TrainingPlan" LEFT JOIN "plan_weeks" "TrainingPlan__TrainingPlan_weeks" ON "TrainingPlan__TrainingPlan_weeks"."planId"="TrainingPlan"."id"  LEFT JOIN "planned_sessions" "74e854fa1e201e6b3b51eb0f673020b946805863" ON "74e854fa1e201e6b3b51eb0f673020b946805863"."planWeekId"="TrainingPlan__TrainingPlan_weeks"."id" WHERE (("TrainingPlan"."id" = $1) AND ("TrainingPlan"."userId" = $2))) "distinctAlias" ORDER BY "distinctAlias"."TrainingPlan__TrainingPlan_weeks_weekNumber" ASC, "TrainingPlan_id" ASC LIMIT 1
+2026-04-20 17:57:59.463 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 17:58:02.889 CEST [11496] LOG:  Checkpoint komplett: 32 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,377 s, Sync=0,025 s, gesamt=3,426 s; sync. Dateien=13, längste=0,005 s, Durchschnitt=0.002 s; Entfernung=160 kB, Schätzung=412 kB; LSN=0/1C3D038, Redo-LSN=0/1C3CFE0
+2026-04-20 18:02:59.915 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:03:03.568 CEST [11496] LOG:  Checkpoint komplett: 35 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,600 s, Sync=0,030 s, gesamt=3,653 s; sync. Dateien=13, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=175 kB, Schätzung=389 kB; LSN=0/1C68F70, Redo-LSN=0/1C68F18
+2026-04-20 18:12:41.026 CEST [2128] FEHLER:  Bezeichner in Anführungszeichen nicht abgeschlossen bei »" isRepeatingWeekly\« bei Zeichen 35
+2026-04-20 18:12:41.026 CEST [2128] ANWEISUNG:  DELETE FROM calendar_events WHERE " isRepeatingWeekly\
+2026-04-20 18:12:41.663 CEST [33452] FEHLER:  Bezeichner in Anführungszeichen nicht abgeschlossen bei »" isRepeatingWeekly\« bei Zeichen 74
+2026-04-20 18:12:41.663 CEST [33452] ANWEISUNG:  SELECT COUNT(*) AS remaining_recurring_shifts FROM calendar_events WHERE " isRepeatingWeekly\
+2026-04-20 18:12:50.331 CEST [8324] FEHLER:  Spalte »isrepeatingweekly« existiert nicht bei Zeichen 35
+2026-04-20 18:12:50.331 CEST [8324] TIPP:  Vielleicht wurde beabsichtigt, auf die Spalte »calendar_events.isRepeatingWeekly« zu verweisen.
+2026-04-20 18:12:50.331 CEST [8324] ANWEISUNG:  DELETE FROM calendar_events
+	WHERE isRepeatingWeekly = true
+	  AND type = 'shift'
+	  AND userId = (SELECT id FROM users WHERE email = 'demo@example.com');
+2026-04-20 18:12:50.733 CEST [40324] FEHLER:  Spalte »isrepeatingweekly« existiert nicht bei Zeichen 74
+2026-04-20 18:12:50.733 CEST [40324] TIPP:  Vielleicht wurde beabsichtigt, auf die Spalte »calendar_events.isRepeatingWeekly« zu verweisen.
+2026-04-20 18:12:50.733 CEST [40324] ANWEISUNG:  SELECT COUNT(*) AS remaining_recurring_shifts
+	FROM calendar_events
+	WHERE isRepeatingWeekly = true
+	  AND type = 'shift'
+	  AND userId = (SELECT id FROM users WHERE email = 'demo@example.com');
+2026-04-20 18:13:02.270 CEST [41456] FEHLER:  Syntaxfehler bei »shift« bei Zeichen 75
+2026-04-20 18:13:02.270 CEST [41456] ANWEISUNG:  DELETE FROM calendar_events
+	WHERE isRepeatingWeekly = true
+	  AND type = ''shift''
+	  AND userId = (SELECT id FROM users WHERE email = ''demo@example.com'');
+2026-04-20 18:13:02.710 CEST [55404] FEHLER:  Syntaxfehler bei »shift« bei Zeichen 114
+2026-04-20 18:13:02.710 CEST [55404] ANWEISUNG:  SELECT COUNT(*) AS remaining_recurring_shifts
+	FROM calendar_events
+	WHERE isRepeatingWeekly = true
+	  AND type = ''shift''
+	  AND userId = (SELECT id FROM users WHERE email = ''demo@example.com'');
+2026-04-20 18:13:10.546 CEST [40376] FEHLER:  Spalte »isrepeatingweekly« existiert nicht bei Zeichen 35
+2026-04-20 18:13:10.546 CEST [40376] TIPP:  Vielleicht wurde beabsichtigt, auf die Spalte »calendar_events.isRepeatingWeekly« zu verweisen.
+2026-04-20 18:13:10.546 CEST [40376] ANWEISUNG:  DELETE FROM calendar_events WHERE isRepeatingWeekly = true AND type = 'shift' AND userId = (SELECT id FROM users WHERE email = 'demo@example.com');
+2026-04-20 18:13:10.923 CEST [41648] FEHLER:  Spalte »isrepeatingweekly« existiert nicht bei Zeichen 74
+2026-04-20 18:13:10.923 CEST [41648] TIPP:  Vielleicht wurde beabsichtigt, auf die Spalte »calendar_events.isRepeatingWeekly« zu verweisen.
+2026-04-20 18:13:10.923 CEST [41648] ANWEISUNG:  SELECT COUNT(*) AS remaining_recurring_shifts FROM calendar_events WHERE isRepeatingWeekly = true AND type = 'shift' AND userId = (SELECT id FROM users WHERE email = 'demo@example.com');
+2026-04-20 18:17:59.587 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:18:02.413 CEST [11496] LOG:  Checkpoint komplett: 27 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,780 s, Sync=0,020 s, gesamt=2,826 s; sync. Dateien=12, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=110 kB, Schätzung=361 kB; LSN=0/1C84900, Redo-LSN=0/1C848A8
+2026-04-20 18:22:59.434 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:23:01.557 CEST [11496] LOG:  Checkpoint komplett: 20 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,068 s, Sync=0,030 s, gesamt=2,124 s; sync. Dateien=14, längste=0,012 s, Durchschnitt=0.003 s; Entfernung=60 kB, Schätzung=331 kB; LSN=0/1C939D0, Redo-LSN=0/1C93940
+2026-04-20 18:27:59.571 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:28:02.423 CEST [11496] LOG:  Checkpoint komplett: 27 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=2,812 s, Sync=0,019 s, gesamt=2,853 s; sync. Dateien=13, längste=0,002 s, Durchschnitt=0.002 s; Entfernung=156 kB, Schätzung=313 kB; LSN=0/1CBAD78, Redo-LSN=0/1CBAD20
+2026-04-20 18:37:59.441 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:37:59.812 CEST [11496] LOG:  Checkpoint komplett: 4 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,337 s, Sync=0,008 s, gesamt=0,371 s; sync. Dateien=4, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=12 kB, Schätzung=283 kB; LSN=0/1CBDFF8, Redo-LSN=0/1CBDFA0
+2026-04-20 18:42:59.820 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:43:00.396 CEST [11496] LOG:  Checkpoint komplett: 6 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,545 s, Sync=0,012 s, gesamt=0,577 s; sync. Dateien=5, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=13 kB, Schätzung=256 kB; LSN=0/1CC1660, Redo-LSN=0/1CC1608
+2026-04-20 18:47:59.409 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:47:59.792 CEST [11496] LOG:  Checkpoint komplett: 4 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,332 s, Sync=0,019 s, gesamt=0,383 s; sync. Dateien=4, längste=0,011 s, Durchschnitt=0.005 s; Entfernung=6 kB, Schätzung=231 kB; LSN=0/1CC3098, Redo-LSN=0/1CC3040
+2026-04-20 18:52:59.808 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 18:53:00.824 CEST [11496] LOG:  Checkpoint komplett: 9 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,982 s, Sync=0,014 s, gesamt=1,017 s; sync. Dateien=3, längste=0,011 s, Durchschnitt=0.005 s; Entfernung=5 kB, Schätzung=209 kB; LSN=0/1CC45E8, Redo-LSN=0/1CC4590
+2026-04-20 19:45:14.389 CEST [45076] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 19:48:46.966 CEST [2232] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-20 20:12:59.868 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 20:13:03.735 CEST [11496] LOG:  Checkpoint komplett: 37 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,813 s, Sync=0,028 s, gesamt=3,869 s; sync. Dateien=19, längste=0,002 s, Durchschnitt=0.002 s; Entfernung=194 kB, Schätzung=207 kB; LSN=0/1CF4E78, Redo-LSN=0/1CF4E20
+2026-04-20 20:37:59.796 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 20:38:07.142 CEST [11496] LOG:  Checkpoint komplett: 69 Puffer geschrieben (0.4%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=7,274 s, Sync=0,037 s, gesamt=7,347 s; sync. Dateien=19, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=579 kB, Schätzung=579 kB; LSN=0/1D9FC10, Redo-LSN=0/1D85C70
+2026-04-20 20:42:59.185 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 20:43:06.539 CEST [11496] LOG:  Checkpoint komplett: 70 Puffer geschrieben (0.4%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=7,301 s, Sync=0,032 s, gesamt=7,355 s; sync. Dateien=20, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=427 kB, Schätzung=564 kB; LSN=0/1DF0B80, Redo-LSN=0/1DF0AF0
+2026-04-20 22:17:59.691 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:18:02.967 CEST [11496] LOG:  Checkpoint komplett: 31 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,211 s, Sync=0,041 s, gesamt=3,277 s; sync. Dateien=25, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=140 kB, Schätzung=521 kB; LSN=0/1E13BD8, Redo-LSN=0/1E13B80
+2026-04-20 22:22:59.025 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:23:05.205 CEST [11496] LOG:  Checkpoint komplett: 59 Puffer geschrieben (0.4%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=6,109 s, Sync=0,042 s, gesamt=6,181 s; sync. Dateien=22, längste=0,011 s, Durchschnitt=0.002 s; Entfernung=396 kB, Schätzung=509 kB; LSN=0/1E76D30, Redo-LSN=0/1E76CA0
+2026-04-20 22:27:59.219 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:28:03.820 CEST [11496] LOG:  Checkpoint komplett: 43 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,537 s, Sync=0,033 s, gesamt=4,601 s; sync. Dateien=15, längste=0,006 s, Durchschnitt=0.003 s; Entfernung=274 kB, Schätzung=485 kB; LSN=0/1EBB788, Redo-LSN=0/1EBB6F8
+2026-04-20 22:32:59.857 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:33:04.010 CEST [11496] LOG:  Checkpoint komplett: 40 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,088 s, Sync=0,029 s, gesamt=4,154 s; sync. Dateien=13, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=182 kB, Schätzung=455 kB; LSN=0/1EF31A8, Redo-LSN=0/1EE9100
+2026-04-20 22:37:59.036 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:38:04.496 CEST [11496] LOG:  Checkpoint komplett: 51 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=5,397 s, Sync=0,022 s, gesamt=5,460 s; sync. Dateien=13, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=259 kB, Schätzung=435 kB; LSN=0/1F29DE8, Redo-LSN=0/1F29D58
+2026-04-20 22:42:59.529 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 22:43:04.088 CEST [11496] LOG:  Checkpoint komplett: 43 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,498 s, Sync=0,036 s, gesamt=4,560 s; sync. Dateien=15, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=262 kB, Schätzung=418 kB; LSN=0/1F6B5C8, Redo-LSN=0/1F6B570
+2026-04-20 23:07:59.138 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:08:03.161 CEST [11496] LOG:  Checkpoint komplett: 37 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=3,914 s, Sync=0,034 s, gesamt=4,023 s; sync. Dateien=18, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=116 kB, Schätzung=388 kB; LSN=0/1F887C8, Redo-LSN=0/1F88770
+2026-04-20 23:12:59.190 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:12:59.674 CEST [11496] LOG:  Checkpoint komplett: 5 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,435 s, Sync=0,009 s, gesamt=0,484 s; sync. Dateien=3, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=20 kB, Schätzung=351 kB; LSN=0/1F8D8D8, Redo-LSN=0/1F8D880
+2026-04-20 23:32:59.737 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:33:06.481 CEST [11496] LOG:  Checkpoint komplett: 62 Puffer geschrieben (0.4%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=6,681 s, Sync=0,034 s, gesamt=6,745 s; sync. Dateien=20, längste=0,003 s, Durchschnitt=0.002 s; Entfernung=439 kB, Schätzung=439 kB; LSN=0/1FFB610, Redo-LSN=0/1FFB580
+2026-04-20 23:37:59.548 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:38:03.948 CEST [11496] LOG:  Checkpoint komplett: 41 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 1 wiederverwendet; Schreiben=4,307 s, Sync=0,046 s, gesamt=4,401 s; sync. Dateien=17, längste=0,012 s, Durchschnitt=0.003 s; Entfernung=198 kB, Schätzung=415 kB; LSN=0/202CE08, Redo-LSN=0/202CDB0
+2026-04-20 23:48:00.070 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:48:05.358 CEST [11496] LOG:  Checkpoint komplett: 47 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=5,088 s, Sync=0,039 s, gesamt=5,289 s; sync. Dateien=13, längste=0,012 s, Durchschnitt=0.003 s; Entfernung=346 kB, Schätzung=408 kB; LSN=0/20837C8, Redo-LSN=0/2083770
+2026-04-20 23:58:00.432 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-20 23:58:01.837 CEST [11496] LOG:  Checkpoint komplett: 13 Puffer geschrieben (0.1%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=1,347 s, Sync=0,014 s, gesamt=1,405 s; sync. Dateien=6, längste=0,003 s, Durchschnitt=0.003 s; Entfernung=11 kB, Schätzung=368 kB; LSN=0/2086618, Redo-LSN=0/20865C0
+2026-04-21 08:47:50.612 CEST [33292] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-21 08:49:16.988 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 08:49:21.302 CEST [11496] LOG:  Checkpoint komplett: 40 Puffer geschrieben (0.2%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,261 s, Sync=0,027 s, gesamt=4,314 s; sync. Dateien=12, längste=0,005 s, Durchschnitt=0.003 s; Entfernung=289 kB, Schätzung=360 kB; LSN=0/20CEBD0, Redo-LSN=0/20CEB40
+2026-04-21 08:54:16.324 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 08:54:21.498 CEST [11496] LOG:  Checkpoint komplett: 47 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=5,115 s, Sync=0,028 s, gesamt=5,175 s; sync. Dateien=14, längste=0,004 s, Durchschnitt=0.002 s; Entfernung=306 kB, Schätzung=355 kB; LSN=0/211B5A0, Redo-LSN=0/211B548
+2026-04-21 09:12:29.247 CEST [7212] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2026-04-21 09:19:16.545 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 09:19:21.420 CEST [11496] LOG:  Checkpoint komplett: 45 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=4,796 s, Sync=0,036 s, gesamt=4,876 s; sync. Dateien=14, längste=0,011 s, Durchschnitt=0.003 s; Entfernung=304 kB, Schätzung=350 kB; LSN=0/2167718, Redo-LSN=0/21676C0
+2026-04-21 09:24:16.473 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 09:24:23.016 CEST [11496] LOG:  Checkpoint komplett: 54 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=5,948 s, Sync=0,546 s, gesamt=6,544 s; sync. Dateien=16, längste=0,175 s, Durchschnitt=0.035 s; Entfernung=360 kB, Schätzung=360 kB; LSN=0/21C1B48, Redo-LSN=0/21C1AB8
+2026-04-21 09:29:16.140 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 09:29:17.116 CEST [11496] LOG:  Checkpoint komplett: 8 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=0,909 s, Sync=0,014 s, gesamt=0,977 s; sync. Dateien=1, längste=0,013 s, Durchschnitt=0.013 s; Entfernung=2 kB, Schätzung=325 kB; LSN=0/21C24D0, Redo-LSN=0/21C2478
+2026-04-21 09:34:16.117 CEST [11496] LOG:  Checkpoint beginnt: time
+2026-04-21 09:34:21.519 CEST [11496] LOG:  Checkpoint komplett: 50 Puffer geschrieben (0.3%); 0 WAL-Datei(en) hinzugefügt, 0 entfernt, 0 wiederverwendet; Schreiben=5,319 s, Sync=0,034 s, gesamt=5,403 s; sync. Dateien=16, längste=0,004 s, Durchschnitt=0.003 s; Entfernung=315 kB, Schätzung=324 kB; LSN=0/2211288, Redo-LSN=0/2211230
+2026-04-21 09:38:09.132 CEST [25188] LOG:  Background-Worker »logical replication launcher« (PID 46944) wurde durch Ausnahme 0xC000013A beendet
+2026-04-21 09:38:09.132 CEST [25188] TIPP:  Sehen Sie die Beschreibung des Hexadezimalwerts in der C-Include-Datei »ntstatus.h« nach.
+2026-04-21 09:38:09.134 CEST [25188] LOG:  aktive Serverprozesse werden abgebrochen
+^C

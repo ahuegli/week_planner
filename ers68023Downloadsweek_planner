@@ -1,0 +1,35 @@
+[33mcommit c5ae60437960b1c6bf8d32b7ee6dca68da5d4318[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mgiant-overhaul-branch[m[33m)[m
+Author: Yannic Obermeyer <yannic.obermeyer@gmail.com>
+Date:   Sat Apr 25 18:48:43 2026 +0200
+
+    WP2 complete + frontend port fix
+
+ backend/dist/app.module.js                         |   4 [32m+[m
+ backend/dist/app.module.js.map                     |   2 [32m+[m[31m-[m
+ backend/dist/tsconfig.tsbuildinfo                  |   2 [32m+[m[31m-[m
+ backend/src/api/scheduler/scheduler.controller.ts  |  20 [32m++[m[31m-[m
+ backend/src/api/scheduler/scheduler.module.ts      |   2 [32m+[m
+ backend/src/app.module.ts                          |   4 [32m+[m
+ backend/src/cycle-profile/cycle-profile.module.ts  |   3 [32m+[m[31m-[m
+ backend/src/cycle-profile/cycle-profile.service.ts |  49 [32m++++++++[m
+ backend/src/domain/scoring-engine.service.ts       |  52 [32m++++++++[m
+ .../energy-check-in/energy-check-in.controller.ts  |  48 [32m++++++++[m
+ backend/src/energy-check-in/energy-check-in.dto.ts |  35 [32m++++++[m
+ .../src/energy-check-in/energy-check-in.entity.ts  |  26 [32m++++[m
+ .../src/energy-check-in/energy-check-in.module.ts  |  13 [32m++[m
+ .../src/energy-check-in/energy-check-in.service.ts |  60 [32m+++++++++[m
+ backend/src/shared/models/week-context.model.ts    |   6 [32m+[m
+ backend/src/symptom-log/symptom-log.controller.ts  |  48 [32m++++++++[m
+ backend/src/symptom-log/symptom-log.dto.ts         |  29 [32m+++++[m
+ backend/src/symptom-log/symptom-log.entity.ts      |  23 [32m++++[m
+ backend/src/symptom-log/symptom-log.module.ts      |  13 [32m++[m
+ backend/src/symptom-log/symptom-log.service.ts     |  59 [32m+++++++++[m
+ src/app/core/models/app-data.models.ts             |  39 [32m++++++[m
+ src/app/core/services/data-store.service.ts        |  89 [32m+++++++++++++[m[31m-[m
+ .../core/services/energy-check-in-api.service.ts   |  34 [32m++++++[m
+ src/app/core/services/symptom-log-api.service.ts   |  34 [32m++++++[m
+ src/app/pages/cycle.page.ts                        | 134 [32m+++++++++++++++[m[31m------[m
+ src/app/pages/onboarding.page.ts                   |  25 [32m+++[m[31m-[m
+ src/app/pages/settings.page.html                   |  10 [32m++[m
+ src/app/pages/settings.page.ts                     |  15 [32m++[m[31m-[m
+ 28 files changed, 833 insertions(+), 45 deletions(-)

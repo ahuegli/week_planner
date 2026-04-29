@@ -1,26 +1,93 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Put,
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CalendarEventService } from './calendar-event.service';
+import { CalendarEvent } from './calendar-event.entity';
 import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event.dto';
+import { CalendarShareService } from '../calendar-share/calendar-share.service';
+import { EventInvitationService } from '../event-invitation/event-invitation.service';
 
 @Controller('calendar-events')
 @UseGuards(JwtAuthGuard)
 export class CalendarEventController {
-  constructor(private readonly calendarEventService: CalendarEventService) {}
+  constructor(
+    private readonly calendarEventService: CalendarEventService,
+    private readonly calendarShareService: CalendarShareService,
+    private readonly eventInvitationService: EventInvitationService,
+  ) {}
 
   @Get()
-  async findAll(@Request() req) {
-    return this.calendarEventService.findAllByUser(req.user.userId);
+  async findAll(
+    @Request() req,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const events = startDate && endDate
+      ? await this.calendarEventService.findByDateRange(req.user.userId, startDate, endDate)
+      : await this.calendarEventService.findAllByUser(req.user.userId);
+
+    const inviteesMap = await this.eventInvitationService.getAcceptedInviteesForEvents(
+      events.map((e) => e.id),
+    );
+
+    return events.map((e) => ({
+      ...e,
+      acceptedInviteeEmails: inviteesMap.get(e.id) ?? [],
+    }));
+  }
+
+  @Get('shared/:ownerId')
+  async getSharedCalendar(
+    @Param('ownerId') ownerId: string,
+    @Request() req,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const share = await this.calendarShareService.findActiveShare(ownerId, req.user.userId);
+    if (!share) {
+      throw new ForbiddenException('No active share');
+    }
+
+    const raw = startDate && endDate
+      ? await this.calendarEventService.findByDateRange(ownerId, startDate, endDate)
+      : await this.calendarEventService.findAllByUser(ownerId);
+
+    return this.applyShareFilter(raw, share.shareLevel);
+  }
+
+  private applyShareFilter(events: CalendarEvent[], shareLevel: string): object[] {
+    if (shareLevel === 'workouts_only') {
+      return events.filter((e) => e.type === 'workout');
+    }
+
+    if (shareLevel === 'busy_only') {
+      return events.map((e) => {
+        const isWorkout = e.type === 'workout';
+        return {
+          id: e.id,
+          date: e.date,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          durationMinutes: e.durationMinutes,
+          type: isWorkout ? 'workout' : 'busy',
+          title: isWorkout ? e.title : 'Busy',
+        };
+      });
+    }
+
+    // full — return as-is
+    return events;
   }
 
   @Get(':id')

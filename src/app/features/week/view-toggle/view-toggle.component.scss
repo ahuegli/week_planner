@@ -1,0 +1,27 @@
+.toggle {
+  width: 200px;
+  height: 36px;
+  margin: 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px;
+  background: transparent;
+}
+
+.segment {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segment.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}

@@ -1,0 +1,262 @@
+<div class="stats-page">
+
+  <header class="stats-header">
+    <button type="button" class="back-btn" (click)="goBack()" aria-label="Back">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+    </button>
+    <div>
+      <h1 class="page-title">My Progress</h1>
+      @if (summary()?.activeSince; as since) {
+        <p class="page-subtitle">Since {{ formatSince(since) }}</p>
+      }
+    </div>
+  </header>
+
+  @if (loading()) {
+
+    <div class="content-pad">
+      <div class="skeleton skeleton-streak"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+
+  } @else {
+
+    <!-- Streak banner -->
+    @if (streaks(); as st) {
+      <div class="streak-banner" [class.on-fire]="st.currentWeekStreak >= 4">
+        <div class="streak-main">
+          <span class="streak-number">{{ st.currentWeekStreak }}</span>
+          <div class="streak-labels">
+            <span class="streak-label">week streak</span>
+            @if (st.currentWeekStreak >= 4) {
+              <span class="streak-fire" aria-hidden="true">🔥</span>
+            }
+          </div>
+        </div>
+        <div class="streak-secondary">
+          <span class="streak-stat">Best: {{ st.bestWeekStreak }}w</span>
+          @if (st.currentDayStreak > 0) {
+            <span class="streak-stat">{{ st.currentDayStreak }}-day run</span>
+          }
+        </div>
+      </div>
+    } @else if (streaksError()) {
+      <div class="content-pad"><p class="error-text">Couldn't load streak data.</p></div>
+    }
+
+    <!-- This Week -->
+    @if (summary(); as s) {
+      <div class="content-pad">
+        <p class="section-label">This Week</p>
+        <div class="card this-week-card">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 96 96" class="ring-svg" aria-hidden="true">
+              <circle cx="48" cy="48" r="36" class="ring-track"/>
+              <circle cx="48" cy="48" r="36" class="ring-progress"
+                      [attr.stroke-dasharray]="ringCircumference"
+                      [attr.stroke-dashoffset]="ringOffset()"
+                      transform="rotate(-90 48 48)"/>
+            </svg>
+            <div class="ring-label">
+              <span class="ring-pct">{{ s.thisWeek.total > 0 ? (s.thisWeek.completed / s.thisWeek.total * 100 | number:'1.0-0') : 0 }}%</span>
+              <span class="ring-sub">done</span>
+            </div>
+          </div>
+          <div class="this-week-detail">
+            <p class="tw-sessions">{{ s.thisWeek.completed }}/{{ s.thisWeek.total }} sessions</p>
+            @if (s.thisWeek.keySessionsTotal > 0) {
+              <p class="tw-key">{{ s.thisWeek.keySessionsHit }}/{{ s.thisWeek.keySessionsTotal }} key sessions</p>
+            }
+            @if (s.currentPlan; as plan) {
+              <p class="tw-plan">Week {{ plan.weekNumber }}/{{ plan.totalWeeks }} · {{ plan.phase | titlecase }}</p>
+            }
+          </div>
+        </div>
+      </div>
+    } @else if (summaryError()) {
+      <div class="content-pad"><p class="error-text">Couldn't load summary.</p></div>
+    }
+
+    <!-- Weekly Volume -->
+    @if (weekly(); as w) {
+      <div class="content-pad">
+        <div class="section-row">
+          <p class="section-label">Weekly Volume</p>
+          <div class="metric-pills">
+            <button type="button" class="pill" [class.active]="volumeMetric() === 'duration'"
+                    (click)="volumeMetric.set('duration')">Time</button>
+            <button type="button" class="pill" [class.active]="volumeMetric() === 'distance'"
+                    (click)="volumeMetric.set('distance')">Distance</button>
+          </div>
+        </div>
+        <div class="card chart-card">
+          @if (weeklyChartData().length > 0) {
+            <app-mini-bar-chart [data]="weeklyChartData()" />
+            <p class="chart-unit">{{ volumeMetric() === 'duration' ? 'minutes' : 'km' }}</p>
+          } @else {
+            <p class="empty-text">Stats start showing up after your first workout. The graphs build themselves.</p>
+          }
+        </div>
+      </div>
+    } @else if (weeklyError()) {
+      <div class="content-pad"><p class="error-text">Couldn't load weekly data.</p></div>
+    }
+
+    <!-- Completion Rate -->
+    @if (summary(); as s) {
+      <div class="content-pad">
+        <p class="section-label">Completion Rate</p>
+        <div class="card rate-card">
+          <div class="rate-main">
+            <span class="rate-pct" [style.color]="completionRateColor(s.completionRate, s.totalWorkoutsCompleted > 0)">{{ s.completionRate }}%</span>
+            <span class="rate-label">overall</span>
+          </div>
+          <div class="rate-rows">
+            <div class="rate-row">
+              <span class="rate-name">Key</span>
+              <div class="rate-bar-wrap">
+                <div class="rate-bar-fill" [style.width.%]="s.keyCompletionRate" [style.background]="completionRateColor(s.keyCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+              </div>
+              <span class="rate-val">{{ s.keyCompletionRate }}%</span>
+            </div>
+            <div class="rate-row">
+              <span class="rate-name">Supporting</span>
+              <div class="rate-bar-wrap">
+                <div class="rate-bar-fill" [style.width.%]="s.supportingCompletionRate" [style.background]="completionRateColor(s.supportingCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+              </div>
+              <span class="rate-val">{{ s.supportingCompletionRate }}%</span>
+            </div>
+            <div class="rate-row">
+              <span class="rate-name">Optional</span>
+              <div class="rate-bar-wrap">
+                <div class="rate-bar-fill" [style.width.%]="s.optionalCompletionRate" [style.background]="completionRateColor(s.optionalCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+              </div>
+              <span class="rate-val">{{ s.optionalCompletionRate }}%</span>
+            </div>
+          </div>
+          <div class="totals-row">
+            <div class="total-chip">
+              <span class="total-num">{{ s.totalWorkoutsCompleted }}</span>
+              <span class="total-lbl">workouts</span>
+            </div>
+            <div class="total-chip">
+              <span class="total-num">{{ formatDuration(s.totalDurationMinutes) }}</span>
+              <span class="total-lbl">total time</span>
+            </div>
+            @if (s.totalDistanceKm > 0) {
+              <div class="total-chip">
+                <span class="total-num">{{ s.totalDistanceKm | number:'1.0-1' }} km</span>
+                <span class="total-lbl">distance</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Sport Breakdown -->
+    @if (activeSports().length > 0) {
+      <div class="content-pad">
+        <p class="section-label">By Sport</p>
+        @for (sport of activeSports(); track sport.sportType) {
+          <div class="card sport-card" [class.expanded]="expandedSport() === sport.sportType">
+            <button type="button" class="sport-header" (click)="toggleSport(sport.sportType)">
+              <span class="sport-name">{{ sportLabel(sport.sportType) }}</span>
+              <div class="sport-meta">
+                <span class="sport-sessions">{{ sport.totalSessions }} sessions</span>
+                <span class="sport-trend" [attr.data-trend]="sportTrend(sport)">
+                  @if (sportTrend(sport) === 'up') { ↑ }
+                  @else if (sportTrend(sport) === 'down') { ↓ }
+                  @else { — }
+                </span>
+                <svg class="chevron-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                     [class.flipped]="expandedSport() === sport.sportType">
+                  <path d="m6 9 6 6 6-6"/>
+                </svg>
+              </div>
+            </button>
+            @if (expandedSport() === sport.sportType) {
+              <div class="sport-detail">
+                <div class="sport-stats-grid">
+                  <div class="sport-stat">
+                    <span class="sstat-val">{{ formatDuration(sport.totalDurationMinutes) }}</span>
+                    <span class="sstat-lbl">total time</span>
+                  </div>
+                  @if (sport.totalDistanceKm > 0) {
+                    <div class="sport-stat">
+                      @if (sport.sportType === 'swimming') {
+                        <span class="sstat-val">{{ (sport.totalDistanceKm * 1000) | number:'1.0-0' }} m</span>
+                      } @else {
+                        <span class="sstat-val">{{ sport.totalDistanceKm | number:'1.0-1' }} km</span>
+                      }
+                      <span class="sstat-lbl">distance</span>
+                    </div>
+                  }
+                  @if (sport.averagePaceMinPerKm) {
+                    <div class="sport-stat">
+                      <span class="sstat-val">{{ sport.averagePaceMinPerKm }}/km</span>
+                      <span class="sstat-lbl">avg pace</span>
+                    </div>
+                  }
+                  @if (sport.longestSessionKm) {
+                    <div class="sport-stat">
+                      <span class="sstat-val">{{ sport.longestSessionKm | number:'1.0-1' }} km</span>
+                      <span class="sstat-lbl">longest</span>
+                    </div>
+                  }
+                </div>
+                @if (sportChartData(sport).length > 0) {
+                  <div class="sport-chart">
+                    <app-mini-bar-chart [data]="sportChartData(sport)" />
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Achievements -->
+    <div class="content-pad">
+      <p class="section-label">Achievements</p>
+      <div class="badges-scroll">
+        @for (badge of badges(); track badge.id) {
+          <div class="badge-card" [class.earned]="badge.earned" (click)="toggleBadge(badge.id)">
+            <div class="badge-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path [attr.d]="badge.iconPath"/>
+              </svg>
+            </div>
+            <p class="badge-name">{{ badge.name }}</p>
+            @if (expandedBadgeId() === badge.id) {
+              <p class="badge-desc">{{ badge.description }}</p>
+              @if (badge.progress && !badge.earned) {
+                <p class="badge-progress">{{ badge.progress }}</p>
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Motivational message -->
+    @if (motivationalMessage()) {
+      <div class="content-pad">
+        <p class="motivational">{{ motivationalMessage() }}</p>
+      </div>
+    }
+
+  }
+
+</div>

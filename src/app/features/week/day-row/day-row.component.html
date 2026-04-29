@@ -1,0 +1,205 @@
+<section class="day-row" [class.is-today]="day().isToday" aria-label="Day schedule row">
+  <button type="button" class="day-col" (click)="navigateToDay()" aria-label="Open {{ day().dayLabel }} {{ day().dayNumber }}">
+    <p class="day-label">{{ day().dayLabel }}</p>
+    <p class="day-number" [class.today-number]="day().isToday">{{ day().dayNumber }}</p>
+    @if (isFreeDay()) {
+      <p class="free-label">Free</p>
+    }
+  </button>
+
+  <div class="events-col">
+    @if (groupedEvents().length === 0) {
+      <p class="empty-text">Free</p>
+    }
+
+    @for (group of groupedEvents(); track group.label) {
+      <div class="event-group">
+        <p class="group-label">{{ group.label }}</p>
+        <div class="group-events">
+          @for (event of group.events; track event.id) {
+            <article
+              class="event-pill"
+              [class.is-expanded]="isExpanded(event)"
+              [class.is-completed]="event.status === 'completed'"
+              [class.is-skipped]="event.status === 'skipped'"
+              [class.is-brick]="isBrickLinked(event, group.events)"
+              [class.brick-has-prior]="hasBrickPriorInList(event, group.events)"
+              [class.brick-has-next]="hasBrickNextInList(event, group.events)"
+              [style.background]="eventBg(event)"
+              [style.border-left-color]="eventColor(event)"
+            >
+              <button type="button" class="event-summary" (click)="onEventTap(event)" [attr.aria-expanded]="isExpanded(event)">
+                <div class="event-main">
+                  <div class="event-title-row">
+                    @if (event.type === 'workout' && event.status === 'completed') {
+                      <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    }
+                    @if (conflictingEventIds().has(event.id)) {
+                      <svg class="conflict-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-label="Scheduling conflict" role="img">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    }
+                    @if (event.linkedInvitationId) {
+                      <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    }
+                    <p class="event-title">{{ event.type === 'workout' ? sessionTypeLabel(event) : event.title }}</p>
+                    @if (event.type === 'workout' && event.intensity) {
+                      <span class="intensity-dot" [style.background]="intensityColor(event)"></span>
+                    }
+                    @if (event.priority === 'key') {
+                      <span class="key-badge">Key</span>
+                    }
+                    @if (isBrickLinked(event, group.events)) {
+                      <span class="brick-badge">Brick</span>
+                    }
+                    @if (inviteeBubbles(event).length > 0) {
+                      <span class="invitee-bubbles">
+                        @for (email of inviteeBubbles(event); track email) {
+                          <span class="invitee-bubble" [style.background]="bubbleColor(email)" [title]="email">
+                            {{ email[0].toUpperCase() }}
+                          </span>
+                        }
+                        @if (inviteeOverflow(event) > 0) {
+                          <span class="invitee-overflow">+{{ inviteeOverflow(event) }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                  <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+                </div>
+                @if (event.type !== 'busy') {
+                  <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                }
+              </button>
+
+              @if (hasExpandedDetails(event)) {
+                <div
+                  class="event-expand-wrap"
+                  [class.is-expanded]="isExpanded(event)"
+                  [attr.aria-hidden]="!isExpanded(event)"
+                  [attr.inert]="isExpanded(event) ? null : ''"
+                >
+                  <div class="event-expand-inner">
+                    <div class="detail-list">
+                      @if (event.type === 'workout') {
+                        @if (isOffBikeRun(event)) {
+                          <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
+                        }
+                        <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationLabel(event) }}</p>
+                        @if (event.distanceTarget) {
+                          <p class="detail-row"><span class="detail-label">Distance:</span> {{ event.distanceTarget }} km</p>
+                        }
+                        @if (event.intensity) {
+                          <p class="detail-row intensity-row">
+                            <span class="detail-label">Intensity:</span>
+                            <span class="detail-inline">
+                              <span class="detail-intensity-dot" [style.background]="intensityColor(event)"></span>
+                              {{ intensityLabel(event) }}
+                            </span>
+                          </p>
+                        }
+                        <p class="detail-row"><span class="detail-label">Priority:</span> {{ priorityLabel(event) }}</p>
+                        @if (workoutDescription(event); as description) {
+                          <div class="description-block">
+                            <p class="description-row">
+                              <span class="description-label">What to do:</span>
+                              <span>{{ description.whatToDo }}</span>
+                            </p>
+                            <button
+                              type="button"
+                              class="why-toggle"
+                              [attr.aria-expanded]="isWhyExpanded(event.id)"
+                              (click)="$event.stopPropagation(); toggleWhy(event.id)"
+                            >
+                              Why?
+                            </button>
+                            @if (isWhyExpanded(event.id)) {
+                              <p class="description-row description-why">
+                                <span class="description-label">Why it helps:</span>
+                                <span>{{ description.whyItHelps }}</span>
+                              </p>
+                            }
+                          </div>
+                        }
+                      } @else if (event.type === 'shift') {
+                        <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationLabel(event) }}</p>
+                        @if (event.commuteMinutes) {
+                          <p class="detail-row"><span class="detail-label">Commute:</span> {{ event.commuteMinutes }} min each way</p>
+                        }
+                      } @else if (event.type === 'personal') {
+                        <p class="detail-row"><span class="detail-label">Event:</span> {{ event.title }}</p>
+                      } @else if (event.type === 'mealprep') {
+                        <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationLabel(event) }}</p>
+                      }
+                    </div>
+
+                    @if (event.type === 'workout') {
+                      <div class="detail-divider"></div>
+
+                      @if (shouldShowActionButtons(event)) {
+                        <div class="action-row">
+                          <button type="button" class="btn-primary action-primary" (click)="$event.stopPropagation(); markDone(event)">Mark as done</button>
+                          <button type="button" class="action-text" (click)="$event.stopPropagation(); skipEvent(event)">Skip</button>
+                        </div>
+                      } @else if (shouldShowCompletedLabel(event)) {
+                        <p class="status-label is-complete">Completed ✓</p>
+                      } @else if (shouldShowSkippedState(event)) {
+                        <div class="action-row skipped-row">
+                          <p class="status-label is-skipped">Skipped</p>
+                          <button type="button" class="action-text" (click)="$event.stopPropagation(); undoSkip(event)">Undo</button>
+                        </div>
+                      }
+                    }
+
+                    <div class="manage-row">
+                      <button type="button" class="action-text" (click)="$event.stopPropagation(); openEditor(event)">Edit</button>
+                      <button type="button" class="action-text action-danger" (click)="$event.stopPropagation(); requestDelete(event)">Delete</button>
+                    </div>
+
+                    @if (confirmingDeleteEventId() === event.id) {
+                      <div class="delete-confirm" role="alertdialog" aria-label="Delete this event">
+                        <p class="confirm-copy">{{ deletePrompt(event) }}</p>
+                        <div class="confirm-actions">
+                          <button type="button" class="confirm-btn confirm-delete" (click)="$event.stopPropagation(); deleteFromModal(event.id)">{{ deleteButtonLabel(event) }}</button>
+                          <button type="button" class="confirm-btn" (click)="$event.stopPropagation(); cancelDelete()">Cancel</button>
+                        </div>
+                      </div>
+                    }
+
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<app-event-detail-modal
+  [open]="editingEvent() !== null"
+  [event]="editingEvent()"
+  [showSuggestedSlotNote]="showSuggestedSlotHint()"
+  (closeRequested)="closeEditor()"
+  (saveRequested)="saveEvent($event)"
+  (deleteRequested)="handleEditorDelete($event)"
+/>
+
+<app-delete-workout-dialog
+  [open]="workoutDeleteEvent() !== null"
+  [event]="workoutDeleteEvent()"
+  [findingBestTime]="findingBestTime()"
+  (closeRequested)="closeWorkoutDeleteDialog()"
+  (rescheduleRequested)="rescheduleWorkout($event)"
+  (skipRequested)="skipWorkout($event)"
+  (removeRequested)="removeWorkoutFromPlan($event)"
+/>

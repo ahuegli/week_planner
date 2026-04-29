@@ -56,7 +56,7 @@ export class ConstraintCheckerService {
 
     if (
       type === 'workout' &&
-      this.previousDayIsIntensiveWorkout(day, ctx.alreadyPlaced, ctx.settings)
+      this.previousDayIsIntensiveWorkout(day, ctx.alreadyPlaced, ctx.settings, ctx.weekContext)
     ) {
       return true;
     }
@@ -102,9 +102,6 @@ export class ConstraintCheckerService {
 
   private isMorningAfterNightShift(day: number, shifts: CalendarEvent[]): boolean {
     const previousDay = day - 1;
-    if (previousDay < 0) {
-      return false;
-    }
     return shifts.some((s) => s.day === previousDay && s.shiftType === 'night');
   }
 
@@ -215,14 +212,16 @@ export class ConstraintCheckerService {
     day: number,
     alreadyPlaced: CalendarEvent[],
     settings: SchedulerSettings,
+    weekContext: WeekContext,
   ): boolean {
+    if (day === 0 && (weekContext.previousWeekEndedWithWorkout ?? false)) {
+      return true;
+    }
+
     const restDays = settings.enduranceRestDays ?? 1;
 
     for (let i = 1; i <= restDays; i++) {
       const checkDay = day - i;
-      if (checkDay < 0) {
-        continue;
-      }
       const checkDayWorkouts = alreadyPlaced.filter(
         (e) => e.day === checkDay && e.type === 'workout',
       );
@@ -315,9 +314,15 @@ export class ConstraintCheckerService {
       return false;
     }
 
+    const candidateIsStrength = workout.workoutType === 'strength' || workout.workoutType === 'yoga';
     const candidateIsLongEndurance = this.isEnduranceNeedingRestDay(workout, ctx.settings);
+
     if (candidateIsLongEndurance) {
-      return true;
+      // Long endurance can share the day only with strength/yoga — not with other endurance sessions.
+      const hasNonStrength = sameDayWorkouts.some(
+        (e) => e.workoutType !== 'strength' && e.workoutType !== 'yoga',
+      );
+      if (hasNonStrength) return true;
     }
 
     const isLongEndurance = (event: CalendarEvent): boolean => {
@@ -338,7 +343,8 @@ export class ConstraintCheckerService {
     };
 
     for (const event of sameDayWorkouts) {
-      if (isLongEndurance(event)) {
+      if (isLongEndurance(event) && !candidateIsStrength) {
+        // Strength/yoga may share the day with a long endurance session; other types may not.
         return true;
       }
     }

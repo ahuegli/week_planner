@@ -1,0 +1,80 @@
+.tip-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #d4d0cc;
+  }
+}
+
+.tip-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tip-icon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  margin-top: 1px;
+}
+
+.tip-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tip-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.tip-summary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.tip-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform 0.25s ease;
+
+  .is-expanded & {
+    transform: rotate(180deg);
+  }
+}
+
+.tip-detail-wrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+
+  &.is-open {
+    max-height: 300px;
+  }
+}
+
+.tip-detail {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.tip-learn {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+}

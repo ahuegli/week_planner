@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsIn, Min, Max } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsIn, Min, Max, IsBoolean } from 'class-validator';
 import { WorkoutType } from './workout.entity';
 
 export class CreateWorkoutDto {
@@ -22,6 +22,10 @@ export class CreateWorkoutDto {
   @IsNumber()
   @Min(0)
   distanceKm?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  distanceCountsAsLong?: boolean;
 }
 
 export class UpdateWorkoutDto {
@@ -49,4 +53,8 @@ export class UpdateWorkoutDto {
   @IsNumber()
   @Min(0)
   distanceKm?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  distanceCountsAsLong?: boolean;
 }

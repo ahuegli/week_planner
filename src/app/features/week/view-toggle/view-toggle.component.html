@@ -1,0 +1,22 @@
+<div class="toggle" role="tablist" aria-label="Choose schedule view">
+  <button
+    type="button"
+    role="tab"
+    class="segment"
+    [class.is-active]="value() === 'week'"
+    [attr.aria-selected]="value() === 'week'"
+    (click)="setValue('week')"
+  >
+    Week
+  </button>
+  <button
+    type="button"
+    role="tab"
+    class="segment"
+    [class.is-active]="value() === 'month'"
+    [attr.aria-selected]="value() === 'month'"
+    (click)="setValue('month')"
+  >
+    Month
+  </button>
+</div>

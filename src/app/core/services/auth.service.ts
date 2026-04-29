@@ -1,133 +1,74 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
-export interface User {
+export interface AuthUser {
   id: string;
   email: string;
-  name?: string;
+  name: string;
 }
 
-export interface AuthResponse {
+interface AuthResponse {
   access_token: string;
-  user: User;
+  user: AuthUser;
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+const AUTH_API_BASE = `${environment.apiBaseUrl}/auth`;
+const AUTH_TOKEN_KEY = 'auth_token';
+const AUTH_USER_KEY = 'auth_user';
 
-export interface RegisterCredentials extends LoginCredentials {
-  name?: string;
-}
-
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
-
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiUrl = 'http://localhost:3000/api/v1/auth';
+  readonly token = signal<string | null>(null);
+  readonly currentUser = signal<AuthUser | null>(null);
+  readonly isAuthenticated = computed(() => !!this.token());
 
-  private readonly _token = signal<string | null>(this.getStoredToken());
-  private readonly _user = signal<User | null>(this.getStoredUser());
-  private readonly _loading = signal(false);
-  private readonly _error = signal<string | null>(null);
-
-  readonly token = this._token.asReadonly();
-  readonly user = this._user.asReadonly();
-  readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
-  readonly isAuthenticated = computed(() => !!this._token());
-
-  constructor(
-    private readonly http: HttpClient,
-    private readonly router: Router,
-  ) {}
-
-  login(credentials: LoginCredentials): Observable<AuthResponse> {
-    this._loading.set(true);
-    this._error.set(null);
-
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
-      tap((response) => {
-        this.handleAuthSuccess(response);
-        this._loading.set(false);
-      }),
-      catchError((error) => {
-        this._loading.set(false);
-        const message = error.error?.message || 'Login failed. Please try again.';
-        this._error.set(message);
-        return throwError(() => error);
-      }),
-    );
+  constructor(private readonly http: HttpClient) {
+    this.restoreSession();
   }
 
-  register(credentials: RegisterCredentials): Observable<AuthResponse> {
-    this._loading.set(true);
-    this._error.set(null);
+  register(email: string, password: string, name: string) {
+    return this.http
+      .post<AuthResponse>(`${AUTH_API_BASE}/register`, { email, password, name })
+      .pipe(tap((response) => this.persistSession(response)));
+  }
 
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, credentials).pipe(
-      tap((response) => {
-        this.handleAuthSuccess(response);
-        this._loading.set(false);
-      }),
-      catchError((error) => {
-        this._loading.set(false);
-        const message = error.error?.message || 'Registration failed. Please try again.';
-        this._error.set(message);
-        return throwError(() => error);
-      }),
-    );
+  login(email: string, password: string) {
+    return this.http
+      .post<AuthResponse>(`${AUTH_API_BASE}/login`, { email, password })
+      .pipe(tap((response) => this.persistSession(response)));
   }
 
   logout(): void {
-    this._token.set(null);
-    this._user.set(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this.router.navigate(['/login']);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+    this.token.set(null);
+    this.currentUser.set(null);
   }
 
-  loginOffline(): void {
-    // Create a fake offline session for when backend is unavailable
-    const offlineUser: User = {
-      id: 'offline-user',
-      email: 'offline@local',
-      name: 'Offline User',
-    };
-    this._token.set('offline-token');
-    this._user.set(offlineUser);
-    // Don't persist offline session to localStorage
-  }
+  private restoreSession(): void {
+    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    const storedUser = localStorage.getItem(AUTH_USER_KEY);
 
-  clearError(): void {
-    this._error.set(null);
-  }
-
-  private handleAuthSuccess(response: AuthResponse): void {
-    this._token.set(response.access_token);
-    this._user.set(response.user);
-    localStorage.setItem(TOKEN_KEY, response.access_token);
-    localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-  }
-
-  private getStoredToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
-  private getStoredUser(): User | null {
-    const userJson = localStorage.getItem(USER_KEY);
-    if (userJson) {
-      try {
-        return JSON.parse(userJson);
-      } catch {
-        return null;
-      }
+    if (!storedToken || !storedUser) {
+      this.logout();
+      return;
     }
-    return null;
+
+    try {
+      const parsedUser = JSON.parse(storedUser) as AuthUser;
+      this.token.set(storedToken);
+      this.currentUser.set(parsedUser);
+    } catch {
+      this.logout();
+    }
+  }
+
+  private persistSession(response: AuthResponse): void {
+    localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user));
+    this.token.set(response.access_token);
+    this.currentUser.set(response.user);
   }
 }

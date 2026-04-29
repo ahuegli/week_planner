@@ -86,6 +86,11 @@ export class ScheduleGeneratorService {
   private readonly UNPLACED_WORKOUT_PENALTY = 2;
   private readonly LONG_FEASIBLE_TOLERANCE = 1;
   private readonly WIDEST_WINDOW_BONUS_CAP = 0.45;
+  private readonly WORKOUT_PRIORITY_ORDER: Record<string, number> = {
+    key: 0,
+    supporting: 1,
+    optional: 2,
+  };
 
   constructor(
     private readonly constraintChecker: ConstraintCheckerService,
@@ -102,10 +107,24 @@ export class ScheduleGeneratorService {
       ...weekContext.personalEvents.flatMap((e) => eventIntervals(e)),
     ];
 
-    const workoutSessions = input.workouts.flatMap((workout) => {
-      const alreadyPlaced = input.existingEvents.filter(
-        (e) => e.type === 'workout' && e.title === workout.name,
-      ).length;
+    const workouts = [...input.workouts].sort((a, b) => {
+      const aPriority = this.WORKOUT_PRIORITY_ORDER[a.priority ?? 'supporting'] ?? 1;
+      const bPriority = this.WORKOUT_PRIORITY_ORDER[b.priority ?? 'supporting'] ?? 1;
+      return aPriority - bPriority;
+    });
+
+    const workoutSessions = workouts.flatMap((workout) => {
+      const alreadyPlaced = input.existingEvents.filter((event) => {
+        if (event.type !== 'workout') {
+          return false;
+        }
+
+        if (event.plannedSessionId) {
+          return event.plannedSessionId === workout.id;
+        }
+
+        return event.title === workout.name;
+      }).length;
       const remainingFrequency = Math.max(0, workout.frequencyPerWeek - alreadyPlaced);
 
       return Array.from({ length: remainingFrequency }, (_, index) => ({
@@ -166,14 +185,7 @@ export class ScheduleGeneratorService {
         totalWorkoutsNeeded,
       });
 
-      const orderedCandidates = this.orderCandidatesForSession(
-        session,
-        candidates,
-        alreadyPlacedForConstraints,
-        settings,
-      );
-
-      for (const candidate of orderedCandidates.slice(0, this.MAX_CANDIDATES_PER_SESSION)) {
+        for (const candidate of candidates.slice(0, this.MAX_CANDIDATES_PER_SESSION)) {
         const event = this.createEventFromSession(session, candidate);
         const eventWeight =
           session.kind === 'workout' ? this.getWorkoutValue(session.workout, settings) : 0;
@@ -232,36 +244,6 @@ export class ScheduleGeneratorService {
       placedLongWorkoutCount: resolved.placedLongWorkoutCount,
       weightedWorkoutScore: resolved.weightedWorkoutScore,
     };
-  }
-
-  private orderCandidatesForSession(
-    session: Session,
-    candidates: Candidate[],
-    alreadyPlaced: CalendarEvent[],
-    settings: SchedulerSettings,
-  ): Candidate[] {
-    if (session.kind !== 'workout' || this.isIntensiveWorkout(session.workout, settings)) {
-      return candidates;
-    }
-
-    return [...candidates].sort((a, b) => {
-      const aScarcity = this.longCapacityPreservationScore(a.day, alreadyPlaced);
-      const bScarcity = this.longCapacityPreservationScore(b.day, alreadyPlaced);
-      if (aScarcity !== bScarcity) {
-        return bScarcity - aScarcity;
-      }
-      return b.score - a.score;
-    });
-  }
-
-  private longCapacityPreservationScore(day: number, alreadyPlaced: CalendarEvent[]): number {
-    const dayEvents = alreadyPlaced.filter((event) => event.day === day);
-    const workoutsOnDay = dayEvents.filter((event) => event.type === 'workout').length;
-    const blockingEventsOnDay = dayEvents.filter(
-      (event) => event.type === 'shift' || event.type === 'custom-event',
-    ).length;
-
-    return blockingEventsOnDay * 2 - workoutsOnDay * 3;
   }
 
   private determineUnplacedReason(
@@ -335,7 +317,11 @@ export class ScheduleGeneratorService {
       candidateWorkout: {
         workoutType: workout?.workoutType,
         isLongEndurance: workout ? this.isIntensiveWorkout(workout, settings) : false,
+        durationMinutes: duration,
+        sessionType: session.kind === 'workout' ? session.title : undefined,
         type,
+        intensity: workout?.intensity,
+        cyclePhaseRules: workout?.cyclePhaseRules,
       },
       totalWorkoutsNeeded,
     };
@@ -345,7 +331,46 @@ export class ScheduleGeneratorService {
     const latestMin = safeTimeToMinutes(settings.autoPlaceLatestTime, 22 * 60);
     const normalizedLatestMin = latestMin > earliestMin ? latestMin : earliestMin + 60;
 
+    // Brick-run coupling: must land on the same day as its bike partner, immediately after bike end + T2 gap.
+    // Returns early with at most one candidate, bypassing the normal day-loop entirely.
+    if (session.kind === 'workout' && session.workout.linkedPriorSessionId) {
+      const linkedEvent = alreadyPlaced.find(
+        (e) => e.plannedSessionId === session.workout.linkedPriorSessionId,
+      );
+      if (!linkedEvent) {
+        // Bike partner not placed yet (or was skipped) — no valid slot for the brick run.
+        return [];
+      }
+      const T2_GAP_MIN = 5;
+      const bikeEndMin = safeTimeToMinutes(linkedEvent.endTime, 0);
+      const brickDay = linkedEvent.day;
+      const startMin = bikeEndMin + T2_GAP_MIN;
+      const endMin = startMin + duration;
+
+      if (endMin <= normalizedLatestMin) {
+        const dayOccupied = occupied.filter((s) => s.day === brickDay);
+        const slotFree = !dayOccupied.some((s) =>
+          overlaps({ day: brickDay, start: startMin, end: endMin }, s),
+        );
+        // Brick runs intentionally skip the 180-min same-day rest constraint — T2 is by design.
+        // Physical slot overlap (above) is sufficient; shift/night-shift constraints are
+        // already satisfied by the bike which was placed on the same day.
+        if (slotFree) {
+          const score = this.scoringEngine.score(brickDay, startMin, endMin, type, scoringCtx);
+          candidates.push({ day: brickDay, startMin, score });
+        }
+      }
+      return candidates;
+    }
+
+    const maxDays = settings.maxTrainingDaysPerWeek ?? 7;
+    const daysWithWorkouts = new Set(alreadyPlaced.filter((e) => e.type === 'workout').map((e) => e.day));
+
     for (let day = 0; day < 7; day++) {
+      if (type === 'workout' && !daysWithWorkouts.has(day) && daysWithWorkouts.size >= maxDays) {
+        continue;
+      }
+
       const dayOccupied = occupied.filter((s) => s.day === day);
 
       for (let startMin = earliestMin; startMin <= normalizedLatestMin; startMin += 30) {
@@ -398,7 +423,7 @@ export class ScheduleGeneratorService {
       if (a.score !== b.score) {
         return b.score - a.score;
       }
-      return b.startMin - a.startMin;
+      return a.startMin - b.startMin;
     });
     return candidates;
   }
@@ -416,6 +441,7 @@ export class ScheduleGeneratorService {
     };
 
     if (session.kind === 'workout') {
+      event.plannedSessionId = session.workout.id;
       event.workoutType = session.workout.workoutType;
       event.distanceKm = session.workout.distanceKm;
       event.distanceCountsAsLong = session.workout.distanceCountsAsLong;
@@ -432,6 +458,12 @@ export class ScheduleGeneratorService {
 
       if (a.kind === 'mealprep' && b.kind === 'mealprep') {
         return 0;
+      }
+
+      const priorityA = this.WORKOUT_PRIORITY_ORDER[(a as WorkoutSession).workout.priority ?? 'supporting'] ?? 1;
+      const priorityB = this.WORKOUT_PRIORITY_ORDER[(b as WorkoutSession).workout.priority ?? 'supporting'] ?? 1;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
       }
 
       const weightA = this.getWorkoutWeight((a as WorkoutSession).workout, settings);
@@ -452,10 +484,22 @@ export class ScheduleGeneratorService {
 
   private getWorkoutValue(workout: Workout, settings: SchedulerSettings): number {
     if (this.isIntensiveWorkout(workout, settings)) {
-      return 2;
+      return (settings.enduranceWeight / 100) * 2;
     }
 
-    return getWorkoutFamily(workout.workoutType) === 'endurance' ? 1.05 : 1.05;
+    if (getWorkoutFamily(workout.workoutType) === 'endurance') {
+      return settings.enduranceWeight / 100;
+    }
+
+    if (workout.workoutType === 'strength') {
+      return settings.strengthWeight / 100;
+    }
+
+    if (workout.workoutType === 'yoga') {
+      return settings.yogaWeight / 100;
+    }
+
+    return 0.3;
   }
 
   private isCalendarEventLongEndurance(event: CalendarEvent, settings: SchedulerSettings): boolean {

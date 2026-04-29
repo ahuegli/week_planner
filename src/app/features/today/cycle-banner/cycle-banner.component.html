@@ -1,0 +1,5 @@
+<div class="cycle-banner" role="status" aria-label="Cycle phase information">
+  <span class="cycle-dot" [style.background]="phaseColor()" aria-hidden="true"></span>
+  <span class="cycle-text">{{ phaseLabel() }} phase · Day {{ cycleInfo().day }}</span>
+  <a class="cycle-learn" href="#" role="button" aria-label="Learn more about this cycle phase">Learn more</a>
+</div>

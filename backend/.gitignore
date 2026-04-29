@@ -23,3 +23,7 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+backend.err
+backend.out
+

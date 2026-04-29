@@ -1,51 +1,28 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Workout, WorkoutType } from '../models/workout.model';
+import { Workout } from '../models/app-data.models';
+import { environment } from '../../../environments/environment';
 
-export interface CreateWorkoutDto {
-  name: string;
-  workoutType: WorkoutType;
-  duration: number;
-  frequencyPerWeek: number;
-  distanceKm?: number;
-  notes?: string;
-}
+const API_BASE = environment.apiBaseUrl;
 
-export interface UpdateWorkoutDto {
-  name?: string;
-  workoutType?: WorkoutType;
-  duration?: number;
-  frequencyPerWeek?: number;
-  distanceKm?: number;
-  notes?: string;
-}
-
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class WorkoutApiService {
-  private readonly apiUrl = 'http://localhost:3000/api/v1/workouts';
-
   constructor(private readonly http: HttpClient) {}
 
   getAll(): Observable<Workout[]> {
-    return this.http.get<Workout[]>(this.apiUrl);
+    return this.http.get<Workout[]>(`${API_BASE}/workouts`);
   }
 
-  getOne(id: string): Observable<Workout> {
-    return this.http.get<Workout>(`${this.apiUrl}/${id}`);
+  create(workout: Partial<Workout>): Observable<Workout> {
+    return this.http.post<Workout>(`${API_BASE}/workouts`, workout);
   }
 
-  create(dto: CreateWorkoutDto): Observable<Workout> {
-    return this.http.post<Workout>(this.apiUrl, dto);
-  }
-
-  update(id: string, dto: UpdateWorkoutDto): Observable<Workout> {
-    return this.http.put<Workout>(`${this.apiUrl}/${id}`, dto);
+  update(id: string, patch: Partial<Workout>): Observable<Workout> {
+    return this.http.put<Workout>(`${API_BASE}/workouts/${id}`, patch);
   }
 
   delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${API_BASE}/workouts/${id}`);
   }
 }

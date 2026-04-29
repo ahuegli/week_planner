@@ -1,0 +1,86 @@
+.plan-header-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+.sport-type {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.goal-row {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.week-phase-label {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.progress-bar-wrap {
+  position: relative;
+  height: 6px;
+}
+
+.progress-segments {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+
+.progress-segment {
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.progress-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.countdown {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

@@ -8,6 +8,7 @@ export interface CalendarEvent {
   title: string;
   type: CalendarEventType;
   day: number;
+  date?: string;
   startTime: string;
   endTime: string;
   durationMinutes?: number;
@@ -15,6 +16,8 @@ export interface CalendarEvent {
   workoutType?: WorkoutType;
   distanceKm?: number;
   distanceCountsAsLong?: boolean;
+  sessionType?: string;
+  plannedSessionId?: string;
   isLocked?: boolean;
   isPersonal?: boolean;
   notes?: string;

@@ -1,0 +1,175 @@
+<div
+  class="event-card"
+  [class.is-dimmed]="isDimmed()"
+  [class.is-brick]="brickLinked()"
+  [style.--bar-color]="barColor()"
+  role="article"
+  [attr.aria-label]="displayEvent().title"
+>
+  <button
+    type="button"
+    class="event-summary"
+    [class.expandable]="canExpand()"
+    [attr.aria-expanded]="expanded()"
+    (click)="canExpand() && toggleRequested.emit()"
+  >
+    <div class="summary-main">
+      <div class="event-time">{{ displayEvent().startTime }} — {{ displayEvent().endTime }}</div>
+
+      <div class="event-header">
+        <span class="event-title">{{ displayEvent().title }}</span>
+        @if (event().linkedInvitationId) {
+          <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        }
+        @if (effectiveStatus() === 'completed') {
+          <span class="status-icon status-done" aria-label="Completed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m5 12 5 5L20 7"/>
+            </svg>
+          </span>
+        }
+        @if (effectiveStatus() === 'skipped') {
+          <span class="status-label status-skipped">Skipped</span>
+        }
+        @if (effectiveStatus() === 'moved') {
+          <span class="status-label status-moved">Moved</span>
+        }
+        @if (inviteeBubbles().length > 0) {
+          <span class="invitee-bubbles">
+            @for (email of inviteeBubbles(); track email) {
+              <span class="invitee-bubble" [style.background]="bubbleColor(email)" [title]="email">
+                {{ email[0].toUpperCase() }}
+              </span>
+            }
+            @if (inviteeOverflow() > 0) {
+              <span class="invitee-overflow">+{{ inviteeOverflow() }}</span>
+            }
+          </span>
+        }
+      </div>
+
+      @if (detailsText()) {
+        <div class="event-details">
+          <span class="details-text">{{ detailsText() }}</span>
+          @if (brickLinked()) {
+            <span class="brick-badge">Brick</span>
+          }
+          @if (displayEvent().type === 'workout' && displayEvent().priority === 'key') {
+            <span class="key-badge">Key</span>
+          }
+        </div>
+      }
+    </div>
+
+    @if (canExpand()) {
+      <svg class="expand-icon" [class.is-open]="expanded()" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    }
+  </button>
+
+  <div class="expand-wrap" [class.is-open]="expanded()">
+    <div class="expand-inner">
+      <div class="check-in-divider" aria-hidden="true"></div>
+
+      @if (displayEvent().type === 'workout') {
+        @if (offBikeRun()) {
+          <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
+        }
+        <p class="detail-row"><span class="detail-label">Duration:</span> {{ displayEvent().duration || (durationHours() * 60) }} min</p>
+        @if (displayEvent().distanceTarget) {
+          <p class="detail-row"><span class="detail-label">Distance:</span> {{ displayEvent().distanceTarget }} km</p>
+        }
+        @if (displayEvent().intensity) {
+          <p class="detail-row"><span class="detail-label">Intensity:</span> {{ intensityLabel() }}</p>
+        }
+        @if (displayEvent().priority) {
+          <p class="detail-row"><span class="detail-label">Priority:</span> {{ displayEvent().priority }}</p>
+        }
+        @if (coachingNote(); as description) {
+          <div class="description-block">
+            <p class="description-row">
+              <span class="description-label">What to do:</span>
+              <span>{{ description.whatToDo }}</span>
+            </p>
+            <button
+              type="button"
+              class="why-toggle"
+              [attr.aria-expanded]="isWhyExpanded()"
+              (click)="$event.stopPropagation(); toggleWhy()"
+            >
+              Why?
+            </button>
+            @if (isWhyExpanded()) {
+              <p class="description-row description-why">
+                <span class="description-label">Why it helps:</span>
+                <span>{{ description.whyItHelps }}</span>
+              </p>
+            }
+          </div>
+        }
+
+        @if (effectiveStatus() === 'completed') {
+          <p class="status-inline is-complete">Completed ✓</p>
+        } @else if (effectiveStatus() === 'skipped') {
+          <p class="status-inline is-skipped">Skipped</p>
+        } @else {
+          <div class="action-row">
+            <button class="check-btn check-start" (click)="$event.stopPropagation(); navigateToWorkout()" type="button">▶ Start</button>
+            <button class="check-btn check-done" (click)="$event.stopPropagation(); setStatus('completed')" type="button">Mark as done</button>
+            <button class="check-btn check-skipped" (click)="$event.stopPropagation(); setStatus('skipped')" type="button">Skip</button>
+          </div>
+        }
+      }
+
+      @if (displayEvent().type === 'shift') {
+        <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationHours() }}h</p>
+        @if (displayEvent().commuteMinutes) {
+          <p class="detail-row"><span class="detail-label">Commute:</span> {{ displayEvent().commuteMinutes }} min</p>
+        }
+      }
+
+      @if (displayEvent().type === 'mealprep') {
+        <p class="detail-row"><span class="detail-label">Duration:</span> {{ displayEvent().duration || (durationHours() * 60) }} min</p>
+      }
+
+      <div class="manage-row">
+        <button type="button" class="action-link" (click)="$event.stopPropagation(); openEditor()">Edit</button>
+        <button type="button" class="action-link action-danger" (click)="$event.stopPropagation(); requestDelete()">Delete</button>
+      </div>
+
+      @if (showDeleteConfirm()) {
+        <div class="delete-confirm" role="alertdialog" aria-label="Delete this event">
+          <p class="confirm-copy">Delete this event?</p>
+          <div class="confirm-actions">
+            <button type="button" class="confirm-btn confirm-delete" (click)="$event.stopPropagation(); confirmDelete()">Delete</button>
+            <button type="button" class="confirm-btn" (click)="$event.stopPropagation(); cancelDelete()">Cancel</button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<app-event-detail-modal
+  [open]="isEditorOpen()"
+  [event]="editingEventDraft() ?? displayEvent()"
+  [showSuggestedSlotNote]="showSuggestedSlotHint()"
+  (closeRequested)="closeEditor()"
+  (saveRequested)="saveEvent($event)"
+  (deleteRequested)="handleEditorDelete()"
+/>
+
+<app-delete-workout-dialog
+  [open]="showWorkoutDeleteDialog()"
+  [event]="displayEvent()"
+  [findingBestTime]="findingBestTime()"
+  (closeRequested)="closeWorkoutDeleteDialog()"
+  (rescheduleRequested)="rescheduleWorkout($event)"
+  (skipRequested)="skipWorkout()"
+  (removeRequested)="removeWorkoutFromPlan()"
+/>

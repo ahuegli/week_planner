@@ -1,0 +1,99 @@
+<div class="coach-page">
+
+  <!-- Header -->
+  <header class="coach-header">
+    <button type="button" class="nav-btn back-btn" (click)="goBack()" aria-label="Go back">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m15 18-6-6 6-6"/>
+      </svg>
+    </button>
+    <div class="header-title">
+      <span class="coach-icon-wrap" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+        </svg>
+      </span>
+      <span>AI Coach</span>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <div class="messages-area" role="log" aria-live="polite" aria-label="Coach conversation">
+    @for (msg of messages(); track $index) {
+      <div class="message-row" [ngClass]="'message-' + msg.role">
+        <div class="bubble">
+          {{ msg.content }}
+        </div>
+
+        @if (msg.suggestedAction) {
+          <div class="suggestion-card">
+            <p class="suggestion-label">Suggested action</p>
+            <p class="suggestion-desc">{{ msg.suggestedAction.description }}</p>
+            <div class="suggestion-actions">
+              <button type="button" class="suggestion-btn accept" (click)="acceptSuggestion($index)">
+                Do it
+              </button>
+              <button type="button" class="suggestion-btn dismiss" (click)="dismissSuggestion($index)">
+                No thanks
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="message-row message-assistant">
+        <div class="bubble typing-indicator" aria-label="Coach is typing">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Starter chips -->
+  @if (showChips()) {
+    <div class="chips-row" role="list" aria-label="Suggested questions">
+      @for (chip of chips; track chip) {
+        <button
+          type="button"
+          class="chip"
+          role="listitem"
+          (click)="sendChip(chip)">
+          {{ chip }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Input -->
+  <div class="input-row">
+    <textarea
+      class="chat-input"
+      rows="1"
+      placeholder="Ask your coach…"
+      aria-label="Message to coach"
+      [value]="inputText()"
+      (input)="setInput($any($event.target).value)"
+      (keydown)="onKeydown($event)">
+    </textarea>
+    <button
+      type="button"
+      class="send-btn"
+      [disabled]="!inputText().trim() || isLoading()"
+      (click)="send()"
+      aria-label="Send message">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m22 2-7 20-4-9-9-4Z"/>
+        <path d="M22 2 11 13"/>
+      </svg>
+    </button>
+  </div>
+
+</div>

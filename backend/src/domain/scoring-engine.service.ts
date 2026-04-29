@@ -17,7 +17,11 @@ export interface ScoringContext {
   candidateWorkout?: {
     workoutType?: WorkoutType;
     isLongEndurance?: boolean;
+    durationMinutes?: number;
+    sessionType?: string;
     type: 'workout' | 'mealprep';
+    intensity?: string;
+    cyclePhaseRules?: Record<string, unknown>;
   };
   totalWorkoutsNeeded?: number;
 }
@@ -38,27 +42,119 @@ export class ScoringEngineService {
     type: CalendarEventType,
     ctx: ScoringContext,
   ): number {
-    let total = 0;
+    const isLongRun = type === 'workout' && (
+      ctx.candidateWorkout?.isLongEndurance === true ||
+      (ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '').replace(/\s+/g, '_').includes('long_run')
+    );
 
-    total += this.offDayBonus(day, type, ctx.shifts);
-    total -= this.fatiguePenalty(day, ctx.weekContext.exhaustionByDay);
-    total += this.mealPrepSpacingBonus(day, type, ctx.alreadyPlaced);
-    total += this.timeOfDayBonus(startMin, type);
-    total += this.shiftAwareTimePreference(day, startMin, endMin, type, ctx);
-    total -= this.eventDayPenalty(day, type, ctx.alreadyPlaced);
-    total += this.diversityComboBonus(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
-    total -= this.stackingPenalty(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
-    total -= this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
-    total += this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
+    const offDay       =  this.offDayBonus(day, type, ctx.shifts, ctx.alreadyPlaced);
+    const fatigue      = -this.fatiguePenalty(day, ctx.weekContext.exhaustionByDay);
+    const mealPrep     =  this.mealPrepSpacingBonus(day, type, ctx.alreadyPlaced);
+    const timeOfDay    =  this.timeOfDayBonus(day, startMin, type, ctx.shifts, ctx.settings);
+    const shiftAware   =  this.shiftAwareTimePreference(day, startMin, endMin, type, ctx);
+    const freeDay      =  this.longSessionFreeDayBonus(day, startMin, endMin, type, ctx);
+    const eventDay     = -this.eventDayPenalty(day, type, ctx.alreadyPlaced);
+    const diversity    =  this.diversityComboBonus(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
+    const stacking     = -this.stackingPenalty(day, type, ctx.alreadyPlaced, ctx.candidateWorkout);
+    const concentration= -this.dayConcentrationPenalty(day, type, ctx.alreadyPlaced);
+    const spread       =  this.spreadBonus(day, type, ctx.alreadyPlaced, ctx.weekContext, ctx.shifts);
+    const completion   =  this.completionBonus(type, ctx.alreadyPlaced, ctx.totalWorkoutsNeeded);
+    const cycle        =  this.cyclePhaseAdjustment(day, type, ctx);
+
+    const laterDay   =  this.laterFreeWeekdayBonus(day, type, ctx);
+
+    const total = offDay + fatigue + mealPrep + timeOfDay + shiftAware + freeDay +
+                  eventDay + diversity + stacking + concentration + spread + completion + cycle +
+                  laterDay;
+
+    if (isLongRun) {
+      const phase = ctx.weekContext.cyclePhasesByDay?.[day] ?? 'n/a';
+      console.log('[LongRunScore]', JSON.stringify({
+        day, startMin, phase,
+        offDay, fatigue, mealPrep, timeOfDay, shiftAware, freeDay,
+        eventDay, diversity, stacking, concentration, spread, completion, cycle,
+        laterDay,
+        total: Number(total.toFixed(4)),
+      }));
+    }
 
     return total;
   }
 
-  private offDayBonus(day: number, type: CalendarEventType, shifts: CalendarEvent[]): number {
+  private offDayBonus(
+    day: number,
+    type: CalendarEventType,
+    shifts: CalendarEvent[],
+    alreadyPlaced: CalendarEvent[],
+  ): number {
     if (type !== 'workout') {
       return 0;
     }
+
+    const dayShifts = shifts.filter((shift) => shift.day === day);
+    if (dayShifts.length === 0) {
+      const hasOtherEvents = alreadyPlaced.some(
+        (event) => event.day === day && event.type !== 'shift',
+      );
+      return hasOtherEvents ? 0 : 0.6;
+    }
+
+    const hasFreeTimeWindows = dayShifts.some((shift) => {
+      const shiftStart = this.toMinutes(shift.startTime);
+      const shiftEnd = this.toMinutes(shift.endTime);
+      return shiftStart > 0 || shiftEnd < 24 * 60;
+    });
+
+    if (hasFreeTimeWindows) {
+      return 0.1;
+    }
+
     return 0;
+  }
+
+  private spreadBonus(
+    day: number,
+    type: CalendarEventType,
+    alreadyPlaced: CalendarEvent[],
+    weekContext: WeekContext,
+    shifts: CalendarEvent[],
+  ): number {
+    if (type !== 'workout') {
+      return 0;
+    }
+
+    const inWeekWorkouts = alreadyPlaced.filter(
+      (event) => event.type === 'workout' && event.day >= 0 && event.day <= 6,
+    );
+
+    const hasPrevInWeek = day > 0 && inWeekWorkouts.some((event) => event.day === day - 1);
+    const hasPrevAcrossWeekBoundary = day === 0 && (weekContext.previousWeekEndedWithWorkout ?? false);
+    const hasPrev = hasPrevInWeek || hasPrevAcrossWeekBoundary;
+    const hasNext = day < 6 && inWeekWorkouts.some((event) => event.day === day + 1);
+
+    let bonus = 0;
+
+    if (hasPrev && hasNext) {
+      bonus -= 0.3;
+    } else if (!(hasPrev || hasNext)) {
+      bonus += 0.2;
+    }
+
+    // Avoid stacking workouts on shift days when shift-free days are unused.
+    // A "shift day" is any day that has at least one shift event.
+    const shiftDayNumbers = new Set(shifts.map((s) => s.day));
+    const dayHasShift = shiftDayNumbers.has(day);
+    if (dayHasShift) {
+      const allWeekDays = [0, 1, 2, 3, 4, 5, 6];
+      const freeDays = allWeekDays.filter((d) => !shiftDayNumbers.has(d));
+      const shiftDayWorkouts = inWeekWorkouts.filter((event) => shiftDayNumbers.has(event.day)).length;
+      const freeDayWorkouts = inWeekWorkouts.filter((event) => freeDays.includes(event.day)).length;
+      if (shiftDayWorkouts + 1 >= 3 && freeDayWorkouts === 0 && freeDays.length > 0) {
+        bonus -= 0.4;
+      }
+    }
+
+    return bonus;
   }
 
   private fatiguePenalty(day: number, exhaustionByDay: number[]): number {
@@ -87,10 +183,30 @@ export class ScoringEngineService {
     return 0;
   }
 
-  private timeOfDayBonus(startMin: number, type: CalendarEventType): number {
+  private timeOfDayBonus(
+    day: number,
+    startMin: number,
+    type: CalendarEventType,
+    shifts: CalendarEvent[],
+    settings: SchedulerSettings,
+  ): number {
     if (type === 'workout') {
-      if (startMin >= 7 * 60 && startMin <= 9 * 60) return 0.2;
-      if (startMin >= 17 * 60 && startMin <= 19 * 60) return 0.2;
+      const preferred = settings.preferredWorkoutTimes ?? [];
+
+      // If no preference set or 'Flexible' selected, fall back to a mild morning default.
+      if (preferred.length === 0 || preferred.some((p) => p.toLowerCase() === 'flexible')) {
+        return startMin >= 7 * 60 && startMin <= 10 * 60 ? 0.2 : 0;
+      }
+
+      // Check each preferred window in priority order.
+      for (const pref of preferred) {
+        const normalized = pref.toLowerCase();
+        if (normalized.includes('late evening') && startMin >= 19 * 60 && startMin < 21 * 60) return 0.2;
+        if (normalized.includes('early morning') && startMin >= 5 * 60 && startMin < 7 * 60) return 0.2;
+        if (normalized.includes('morning') && !normalized.includes('early') && startMin >= 7 * 60 && startMin < 9 * 60) return 0.2;
+        if (normalized.includes('afternoon') && startMin >= 12 * 60 && startMin < 14 * 60) return 0.2;
+        if (normalized.includes('evening') && !normalized.includes('late') && startMin >= 17 * 60 && startMin < 19 * 60) return 0.2;
+      }
       return 0;
     }
 
@@ -262,7 +378,7 @@ export class ScoringEngineService {
 
       if (hasUsableAfterWorkWindow) {
         if (isAfterWorkCandidate) {
-          score += 0.45;
+          score += 0.35;
         } else if (isBeforeWorkCandidate) {
           score -= 0.35;
         }
@@ -272,8 +388,180 @@ export class ScoringEngineService {
     return score;
   }
 
+  private longSessionFreeDayBonus(
+    day: number,
+    startMin: number,
+    endMin: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout' || !this.isLongOrIntensiveCandidate(ctx.candidateWorkout)) {
+      return 0;
+    }
+
+    let bonus = 0;
+    const dayHasShift = ctx.shifts.some((shift) => shift.day === day);
+    if (!dayHasShift) {
+      bonus += 0.5;
+    }
+
+    const contiguousWindowMinutes = this.calculateContiguousWindowMinutes(
+      day,
+      startMin,
+      endMin,
+      ctx,
+    );
+    if (contiguousWindowMinutes >= 180) {
+      bonus += 0.2;
+    }
+
+    return bonus;
+  }
+
+  private isLongOrIntensiveCandidate(
+    candidateWorkout?: {
+      workoutType?: WorkoutType;
+      isLongEndurance?: boolean;
+      durationMinutes?: number;
+      sessionType?: string;
+      type: 'workout' | 'mealprep';
+    },
+  ): boolean {
+    if (!candidateWorkout || candidateWorkout.type !== 'workout') {
+      return false;
+    }
+
+    const duration = candidateWorkout.durationMinutes ?? 0;
+    const sessionType = candidateWorkout.sessionType?.toLowerCase() ?? '';
+    const workoutType = candidateWorkout.workoutType;
+    const isBikeOrSwimLongish =
+      (workoutType === 'biking' || workoutType === 'swimming') && duration >= 45;
+
+    return (
+      duration >= 60 ||
+      candidateWorkout.isLongEndurance === true ||
+      sessionType.includes('long') ||
+      isBikeOrSwimLongish
+    );
+  }
+
+  private calculateContiguousWindowMinutes(
+    day: number,
+    startMin: number,
+    endMin: number,
+    ctx: ScoringContext,
+  ): number {
+    const earliestMin = this.toMinutes(ctx.settings.autoPlaceEarliestTime);
+    const latestMin = this.toMinutes(ctx.settings.autoPlaceLatestTime);
+    const timelineStart = Number.isNaN(earliestMin) ? 6 * 60 : earliestMin;
+    const timelineEnd = Number.isNaN(latestMin) || latestMin <= timelineStart ? 22 * 60 : latestMin;
+
+    const occupiedForDay = [...ctx.alreadyPlaced, ...ctx.shifts]
+      .filter((event) => event.day === day)
+      .map((event) => ({
+        start: this.toMinutes(event.startTime),
+        end: this.toMinutes(event.endTime),
+      }))
+      .filter((interval) => !Number.isNaN(interval.start) && !Number.isNaN(interval.end))
+      .sort((a, b) => a.start - b.start);
+
+    let windowStart = timelineStart;
+    let windowEnd = timelineEnd;
+
+    for (const interval of occupiedForDay) {
+      if (interval.end <= startMin) {
+        windowStart = Math.max(windowStart, interval.end);
+        continue;
+      }
+
+      if (interval.start >= endMin) {
+        windowEnd = Math.min(windowEnd, interval.start);
+        break;
+      }
+    }
+
+    return Math.max(0, windowEnd - windowStart);
+  }
+
   private toMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  private laterFreeWeekdayBonus(
+    day: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout' || !this.isLongOrIntensiveCandidate(ctx.candidateWorkout)) return 0;
+    const dayHasShift = ctx.shifts.some((s) => s.day === day);
+    if (dayHasShift) return 0;
+    // Later free days score higher for long sessions: day 6 → +0.4, day 0 → +0.0.
+    // Keeps long sessions away from Monday and toward the natural weekend rest window.
+    return (day / 6) * 0.4;
+  }
+
+  private cyclePhaseAdjustment(
+    day: number,
+    type: CalendarEventType,
+    ctx: ScoringContext,
+  ): number {
+    if (type !== 'workout') return 0;
+    if (!ctx.weekContext.cycleTrackingEnabled) return 0;
+
+    const phasesByDay = ctx.weekContext.cyclePhasesByDay;
+    const confidence = ctx.weekContext.cycleConfidence ?? 0;
+    if (!phasesByDay || phasesByDay.length !== 7 || confidence === 0) return 0;
+
+    const phase = phasesByDay[day];
+    if (phase === 'unknown') return 0;
+
+    const sessionType = (ctx.candidateWorkout?.sessionType?.toLowerCase() ?? '').replace(/\s+/g, '_');
+    const workoutType = ctx.candidateWorkout?.workoutType;
+
+    // Classify the candidate as endurance vs strength, hard vs not
+    const isEndurance = workoutType === 'running' || workoutType === 'biking' || workoutType === 'swimming';
+    const isStrength = workoutType === 'strength';
+    const isHardEndurance = isEndurance && (
+      sessionType.includes('intervals') ||
+      sessionType.includes('tempo') ||
+      sessionType.includes('hill') ||
+      sessionType.includes('long_run') ||
+      (ctx.candidateWorkout?.isLongEndurance === true)
+    );
+    const isHardStrength = isStrength && (sessionType === 'strength' || sessionType === 'hiit');
+    const isExplosive = sessionType.includes('hiit') || sessionType.includes('plyo');
+
+    // Penalty matrix from research-backed methodology
+    let raw = 0;
+
+    if (phase === 'luteal') {
+      if (isHardEndurance) raw = -0.6;
+      else if (isHardStrength) raw = -0.3;
+    } else if (phase === 'menstrual') {
+      if (isHardEndurance) raw = -0.5;
+      else if (isHardStrength) raw = -0.2;
+    } else if (phase === 'follicular') {
+      if (isHardEndurance) raw = +0.2;
+      else if (isHardStrength) raw = +0.2;
+    } else if (phase === 'ovulation') {
+      if (isExplosive) raw = -0.1; // injury caution flag, soft penalty
+      else if (isHardEndurance) raw = +0.1;
+    }
+
+    // Apply per-session cyclePhaseRules on top of phase defaults
+    const phaseRules = ctx.candidateWorkout?.cyclePhaseRules;
+    if (phaseRules) {
+      const rules = phaseRules[phase] as Record<string, unknown> | undefined;
+      if (rules) {
+        const isHardByIntensity = ctx.candidateWorkout?.intensity === 'hard';
+        const isHard = isHardEndurance || isHardStrength || isHardByIntensity;
+        if (rules['maxIntensity'] === 'moderate' && isHard) raw -= 0.2;
+        if (rules['preferred'] === true) raw += 0.2;
+        if (rules['priorityOverride'] === 'supporting') raw -= 0.1;
+      }
+    }
+
+    return raw * confidence;
   }
 }

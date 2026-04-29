@@ -1,0 +1,77 @@
+@if (open() && result()?.hasConflicts) {
+  <div class="crd-backdrop" (click)="onCancel()" aria-hidden="true"></div>
+
+  <div class="crd-sheet" role="dialog" aria-modal="true" aria-label="Schedule conflict">
+
+    @if (isSimple()) {
+      <!-- Simplified single-conflict view -->
+      <div class="crd-header">
+        <p class="crd-title">Schedule Conflict</p>
+      </div>
+      <p class="crd-body">
+        Your new event overlaps with
+        <strong>{{ conflicts()[0].title }}</strong>
+        at {{ conflicts()[0].startTime }}.
+        Move it to {{ conflicts()[0].suggestion.suggestedStartTime }}?
+      </p>
+      <div class="crd-actions crd-actions--simple">
+        <button type="button" class="btn-primary" (click)="onApply()">Move it</button>
+        <button type="button" class="btn-ghost" (click)="onKeep()">Keep both</button>
+        <button type="button" class="btn-ghost" (click)="onCancel()">Cancel</button>
+      </div>
+
+    } @else {
+      <!-- Full conflict list view -->
+      <div class="crd-header">
+        <p class="crd-title">Schedule Conflict</p>
+        <p class="crd-subtitle">
+          Your new event overlaps with {{ conflicts().length }} workout{{ conflicts().length > 1 ? 's' : '' }}:
+        </p>
+      </div>
+
+      <div class="crd-list">
+        @for (conflict of conflicts(); track conflict.eventId) {
+          <div class="conflict-card" [class.rejected]="!isAccepted(conflict.eventId)">
+            <div class="conflict-top">
+              <div class="conflict-info">
+                <p class="conflict-name">{{ conflict.title }}</p>
+                <p class="conflict-time">{{ dayName(conflict.day) }} {{ conflict.startTime }}–{{ conflict.endTime }}</p>
+                <span class="priority-badge" [attr.data-priority]="conflict.priority">
+                  {{ priorityLabel(conflict.priority) }}
+                </span>
+              </div>
+              @if (conflict.suggestion.action !== 'cannot_resolve') {
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.accepted]="isAccepted(conflict.eventId)"
+                  (click)="toggleAccepted(conflict.eventId)"
+                  [attr.aria-pressed]="isAccepted(conflict.eventId)"
+                  aria-label="Toggle suggestion"
+                >
+                  <span></span>
+                </button>
+              }
+            </div>
+            <p class="conflict-suggestion" [class.dimmed]="!isAccepted(conflict.eventId)">
+              @if (conflict.suggestion.action === 'cannot_resolve') {
+                <span class="suggestion-warn">{{ conflict.suggestion.reason }}</span>
+              } @else {
+                → {{ conflict.suggestion.reason }}
+              }
+            </p>
+          </div>
+        }
+      </div>
+
+      <div class="crd-actions">
+        <button type="button" class="btn-primary" (click)="onApply()" [disabled]="acceptedMoves().length === 0">
+          Apply Changes
+        </button>
+        <button type="button" class="btn-ghost" (click)="onKeep()">Keep Everything</button>
+        <button type="button" class="btn-ghost" (click)="onCancel()">Cancel</button>
+      </div>
+    }
+
+  </div>
+}

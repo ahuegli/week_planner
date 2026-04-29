@@ -1,4 +1,5 @@
 export type WorkoutType = 'swimming' | 'running' | 'biking' | 'strength' | 'yoga';
+export type WorkoutPriority = 'key' | 'supporting' | 'optional';
 
 export type WorkoutFamily = 'endurance' | 'strength';
 
@@ -34,6 +35,10 @@ export interface Workout {
   workoutType: WorkoutType;
   duration: number;
   frequencyPerWeek: number;
+  priority?: WorkoutPriority;
   distanceKm?: number;
   distanceCountsAsLong?: boolean;
+  intensity?: string;
+  cyclePhaseRules?: Record<string, unknown>;
+  linkedPriorSessionId?: string;
 }

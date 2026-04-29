@@ -1,0 +1,30 @@
+<div class="week-snapshot" aria-label="Week overview" role="img">
+  @for (day of days(); track day.label) {
+    <button
+      type="button"
+      class="day-item"
+      [class.is-today]="day.isToday"
+      [class.is-selected]="day.isSelected"
+      (click)="onSelect(day)"
+    >
+      <span class="day-label">{{ day.label }}</span>
+      <div class="day-circle" [class.is-today]="day.isToday">
+        @if (day.isCompleted) {
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m5 12 5 5L20 7"/>
+          </svg>
+        }
+      </div>
+      <div class="day-dots" aria-hidden="true">
+        @if (day.hasWorkout) {
+          <span class="dot dot-workout"></span>
+        }
+        @if (day.hasShift) {
+          <span class="dot dot-shift"></span>
+        }
+      </div>
+    </button>
+  }
+</div>

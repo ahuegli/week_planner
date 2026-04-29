@@ -1,0 +1,92 @@
+<nav class="tab-nav" aria-label="Primary navigation">
+  <a
+    routerLink="/today"
+    routerLinkActive="is-active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    class="tab-link"
+  >
+    <span class="tab-icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+        <line x1="16" x2="16" y1="2" y2="6"/>
+        <line x1="8" x2="8" y1="2" y2="6"/>
+        <line x1="3" x2="21" y1="10" y2="10"/>
+        <path d="M8 14h.01"/>
+        <path d="M12 14h.01"/>
+        <path d="M16 14h.01"/>
+        <path d="M8 18h.01"/>
+        <path d="M12 18h.01"/>
+        <path d="M16 18h.01"/>
+      </svg>
+      @if (hasPendingInvitations()) {
+        <span class="notif-dot" aria-hidden="true"></span>
+      }
+    </span>
+    <span>Today</span>
+  </a>
+
+  <a
+    routerLink="/week"
+    routerLinkActive="is-active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    class="tab-link"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+      <line x1="16" x2="16" y1="2" y2="6"/>
+      <line x1="8" x2="8" y1="2" y2="6"/>
+      <line x1="3" x2="21" y1="10" y2="10"/>
+      <path d="M17 14h-6"/>
+      <path d="M13 18H7"/>
+      <path d="M7 14h.01"/>
+      <path d="M17 18h.01"/>
+    </svg>
+    <span>Week</span>
+  </a>
+
+  <a
+    routerLink="/plan"
+    routerLinkActive="is-active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    class="tab-link"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="6"/>
+      <circle cx="12" cy="12" r="2"/>
+    </svg>
+    <span>Plan</span>
+  </a>
+
+  <a
+    routerLink="/notes"
+    routerLinkActive="is-active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    class="tab-link"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="9" y1="6" x2="20" y2="6"/>
+      <line x1="9" y1="12" x2="20" y2="12"/>
+      <line x1="9" y1="18" x2="20" y2="18"/>
+      <polyline points="4 6 5 7 7 5"/>
+      <polyline points="4 12 5 13 7 11"/>
+      <polyline points="4 18 5 19 7 17"/>
+    </svg>
+    <span>Notes</span>
+  </a>
+
+  @if (cycleTrackingEnabled()) {
+    <a
+      routerLink="/cycle"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="tab-link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12c1.5-3 3-4.5 4.5-4.5S9 9 10.5 9s3-1.5 4.5-1.5S18 9 19.5 9 21 7.5 22 6"/>
+        <path d="M2 18c1.5-2 3-3 4.5-3s3 1.5 4.5 1.5 3-1.5 4.5-1.5S18 18 19.5 18 21 16.5 22 15"/>
+      </svg>
+      <span>Cycle</span>
+    </a>
+  }
+</nav>

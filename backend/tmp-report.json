@@ -1,0 +1,17 @@
+﻿{
+    "planId":  "ba674ccf-c7dd-4d4e-b6be-ec4bd5ad7f32",
+    "sessions":  [
+
+                 ],
+    "longRunChecks":  [
+
+                      ],
+    "mondayChecks":  [
+                         {
+                             "week":  null,
+                             "priorSundayHadWorkout":  false,
+                             "mondayHasWorkout":  false,
+                             "mondayWorkoutCount":  0
+                         }
+                     ]
+}

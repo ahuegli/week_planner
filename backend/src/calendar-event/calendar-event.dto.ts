@@ -13,6 +13,10 @@ export class CreateCalendarEventDto {
   @Max(6)
   day: number;
 
+  @IsOptional()
+  @IsString()
+  date?: string;
+
   @IsString()
   startTime: string;
 
@@ -34,6 +38,38 @@ export class CreateCalendarEventDto {
   @IsOptional()
   @IsBoolean()
   isPersonal?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isRepeatingWeekly?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isManuallyPlaced?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  commuteMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @IsOptional()
+  @IsIn(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'])
+  discipline?: string;
+
+  @IsOptional()
+  @IsString()
+  sessionType?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedNextSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedPriorSessionId?: string;
 }
 
 export class UpdateCalendarEventDto {
@@ -50,6 +86,10 @@ export class UpdateCalendarEventDto {
   @Min(0)
   @Max(6)
   day?: number;
+
+  @IsOptional()
+  @IsString()
+  date?: string;
 
   @IsOptional()
   @IsString()
@@ -74,4 +114,36 @@ export class UpdateCalendarEventDto {
   @IsOptional()
   @IsBoolean()
   isPersonal?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isRepeatingWeekly?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isManuallyPlaced?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  commuteMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @IsOptional()
+  @IsIn(['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'])
+  discipline?: string;
+
+  @IsOptional()
+  @IsString()
+  sessionType?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedNextSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedPriorSessionId?: string;
 }
