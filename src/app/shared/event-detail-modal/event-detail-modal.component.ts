@@ -28,6 +28,7 @@ export class EventDetailModalComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly uiFeedback = inject(UiFeedbackService);
   private readonly weekDayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  private lastStartTime: string | null = null;
 
   readonly open = input(false);
   readonly event = input<CalendarEvent | null>(null);
@@ -104,6 +105,32 @@ export class EventDetailModalComponent {
   });
 
   constructor() {
+    this.form.controls.startTime.valueChanges.subscribe((newStartTime) => {
+      const previousStartTime = this.lastStartTime;
+      this.lastStartTime = newStartTime;
+
+      if (!previousStartTime) {
+        return;
+      }
+
+      const currentEndTime = this.form.controls.endTime.value;
+      const previousStartMinutes = this.toMinutes(previousStartTime);
+      const currentEndMinutes = this.toMinutes(currentEndTime);
+      const newStartMinutes = this.toMinutes(newStartTime);
+
+      if (previousStartMinutes == null || currentEndMinutes == null || newStartMinutes == null) {
+        return;
+      }
+
+      const durationMinutes = currentEndMinutes - previousStartMinutes;
+      if (durationMinutes <= 0) {
+        return;
+      }
+
+      const cappedEndMinutes = Math.min(newStartMinutes + durationMinutes, (23 * 60) + 59);
+      this.form.controls.endTime.setValue(this.toTime(cappedEndMinutes), { emitEvent: false });
+    });
+
     effect(() => {
       const activeEvent = this.event();
       if (!this.open() || !activeEvent) {
@@ -111,6 +138,7 @@ export class EventDetailModalComponent {
       }
 
       this.form.reset(this.toFormValue(activeEvent), { emitEvent: false });
+      this.lastStartTime = activeEvent.startTime;
       this.selectedDay.set(this.resolveEventDay(activeEvent));
       this.showInviteDialog.set(this.openTo() === 'invite' && this.canInvite());
     });
@@ -314,6 +342,26 @@ export class EventDetailModalComponent {
     const hour12 = ((hours + 11) % 12) + 1;
     const minute = String(minutes).padStart(2, '0');
     return `${hour12}:${minute}${suffix}`;
+  }
+
+  private toMinutes(time: string): number | null {
+    const [hoursText, minutesText] = time.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  }
+
+  private toTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   private diffEvent(original: CalendarEvent, updated: CalendarEvent): Partial<CalendarEvent> {

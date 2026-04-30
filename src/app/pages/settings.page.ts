@@ -90,6 +90,7 @@ export class SettingsPageComponent {
   protected readonly ftpWatts = signal<number | null>(null);
   protected readonly lthrBpm = signal<number | null>(null);
   protected readonly cssSecondsPer100m = signal<number | null>(null);
+  protected readonly runThresholdSecPerKm = signal<number | null>(null);
   protected readonly poolAccess = signal<'25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none'>('25m');
   protected readonly hasPowerMeter = signal(false);
   protected readonly triathlonsCompleted = signal(0);
@@ -278,6 +279,7 @@ export class SettingsPageComponent {
         ftpWatts: this.ftpWatts(),
         lthrBpm: this.lthrBpm(),
         cssSecondsPer100m: this.cssSecondsPer100m(),
+        runThresholdSecPerKm: this.runThresholdSecPerKm(),
         poolAccess: this.poolAccess(),
         hasPowerMeter: this.hasPowerMeter(),
         triathlonsCompleted: this.triathlonsCompleted(),
@@ -453,6 +455,7 @@ export class SettingsPageComponent {
       this.ftpWatts.set(scheduler.ftpWatts ?? null);
       this.lthrBpm.set(scheduler.lthrBpm ?? null);
       this.cssSecondsPer100m.set(scheduler.cssSecondsPer100m ?? null);
+      this.runThresholdSecPerKm.set(scheduler.runThresholdSecPerKm ?? null);
       this.poolAccess.set(scheduler.poolAccess ?? '25m');
       this.hasPowerMeter.set(scheduler.hasPowerMeter ?? false);
       this.triathlonsCompleted.set(scheduler.triathlonsCompleted ?? 0);

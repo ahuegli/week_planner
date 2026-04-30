@@ -28,7 +28,31 @@
         <p class="session-context">{{ phaseLabel() }}</p>
       }
       @if (cyclePhaseLabel()) {
-        <p class="cycle-phase-chip" [attr.data-phase]="cyclePhaseInfo()?.phase">{{ cyclePhaseLabel() }}</p>
+        <div
+          class="cycle-phase-tooltip"
+          (mouseenter)="showCyclePhaseTooltipOnHover()"
+          (mouseleave)="hideCyclePhaseTooltipOnHover()"
+        >
+          <p class="cycle-phase-chip" [attr.data-phase]="cyclePhaseInfo()?.phase">
+            <span>{{ cyclePhaseLabel() }}</span>
+            <button
+              type="button"
+              class="cycle-phase-info-btn"
+              aria-label="Explain cycle phase"
+              aria-haspopup="dialog"
+              [attr.aria-expanded]="cyclePhaseTooltipOpen()"
+              (click)="toggleCyclePhaseTooltip($event)"
+            >
+              ⓘ
+            </button>
+          </p>
+
+          @if (cyclePhaseTooltipOpen() && cyclePhaseTooltipText(); as tooltipText) {
+            <div class="cycle-phase-tooltip-popover" role="note">
+              {{ tooltipText }}
+            </div>
+          }
+        </div>
       }
       <div class="badge-row">
         @if (ev.priority === 'key') {

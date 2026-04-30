@@ -15,7 +15,8 @@ import { WeekSnapshotComponent } from '../features/today/week-snapshot/week-snap
 import { IHaveTimeComponent } from '../features/today/i-have-time/i-have-time.component';
 import { DidYouKnowComponent } from '../features/today/did-you-know/did-you-know.component';
 import { DataStoreService } from '../core/services/data-store.service';
-import { WeekDay } from '../core/models/app-data.models';
+import { AuthService } from '../core/services/auth.service';
+import { CalendarEvent, WeekDay } from '../core/models/app-data.models';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
 
 function timeToMinutes(time: string): number {
@@ -43,6 +44,7 @@ function timeToMinutes(time: string): number {
 })
 export class TodayPageComponent {
   private readonly dataStore = inject(DataStoreService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly uiFeedback = inject(UiFeedbackService);
   private readonly today = signal(new Date());
@@ -62,6 +64,35 @@ export class TodayPageComponent {
       year: 'numeric',
     }).format(this.selectedDate()),
   );
+
+  protected readonly greeting = computed(() => {
+    const hours = this.today().getHours();
+    if (hours < 12) {
+      return 'Good morning';
+    }
+    if (hours < 18) {
+      return 'Good afternoon';
+    }
+    if (hours < 22) {
+      return 'Good evening';
+    }
+    return 'Late night';
+  });
+
+  protected readonly firstName = computed(() => {
+    const name = this.authService.currentUser()?.name?.trim();
+    if (!name) {
+      return null;
+    }
+
+    const [firstName] = name.split(/\s+/);
+    return firstName || null;
+  });
+
+  protected readonly pageGreeting = computed(() => {
+    const firstName = this.firstName();
+    return firstName ? `${this.greeting()}, ${firstName}` : this.greeting();
+  });
 
   protected readonly reminder = MOCK_REMINDER;
   protected readonly tip = MOCK_TIP;
@@ -91,6 +122,11 @@ export class TodayPageComponent {
   });
 
   protected readonly selectedDateString = computed(() => this.toDateString(this.selectedDate()));
+  protected readonly tomorrowDateString = computed(() => {
+    const tomorrow = new Date(this.today());
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return this.toDateString(tomorrow);
+  });
   protected readonly currentPlan = computed(() => this.dataStore.currentPlan());
   protected readonly showCoachAdjustmentPrompt = computed(() => this.dataStore.showCoachAdjustmentPrompt());
   protected readonly recentSkippedKeyCount = computed(() => this.dataStore.recentSkippedKeyCount());
@@ -144,6 +180,21 @@ export class TodayPageComponent {
   protected readonly hasAnyEvents = computed(
     () => this.pastEvents().length > 0 || this.futureEvents().length > 0,
   );
+
+  protected readonly tomorrowWorkoutEvents = computed(() =>
+    this.dataStore
+      .eventsForDay(this.tomorrowDateString())
+      .filter((event) => event.type === 'workout')
+      .slice()
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)),
+  );
+
+  protected readonly tomorrowFirstWorkout = computed(() => this.tomorrowWorkoutEvents()[0] ?? null);
+
+  protected readonly tomorrowAdditionalCount = computed(() => {
+    const count = this.tomorrowWorkoutEvents().length;
+    return count > 1 ? count - 1 : 0;
+  });
 
   constructor() {
     this.load();
@@ -200,6 +251,60 @@ export class TodayPageComponent {
 
   protected async declineInvitation(id: string): Promise<void> {
     await this.dataStore.respondToInvitation(id, 'declined');
+  }
+
+  protected async openTomorrowInWeekView(): Promise<void> {
+    if (!this.tomorrowFirstWorkout()) {
+      return;
+    }
+
+    await this.router.navigate(['/week'], { queryParams: { date: this.tomorrowDateString() } });
+  }
+
+  protected previewDuration(event: CalendarEvent): string | null {
+    const fromEvent = event.duration ?? event.durationMinutes;
+    if (fromEvent && fromEvent > 0) {
+      return this.formatDuration(fromEvent);
+    }
+
+    const start = timeToMinutes(event.startTime);
+    const end = timeToMinutes(event.endTime);
+    const diff = end - start;
+    if (diff > 0) {
+      return this.formatDuration(diff);
+    }
+
+    return null;
+  }
+
+  protected previewDistance(event: CalendarEvent): string | null {
+    const distance = event.distanceTarget ?? event.distanceKm;
+    if (!distance || distance <= 0) {
+      return null;
+    }
+
+    return `${distance % 1 === 0 ? distance.toFixed(0) : distance.toFixed(1)} km`;
+  }
+
+  protected previewMeta(event: CalendarEvent): string | null {
+    const duration = this.previewDuration(event);
+    const distance = this.previewDistance(event);
+
+    if (duration && distance) {
+      return `${duration} · ${distance}`;
+    }
+
+    return duration ?? distance;
+  }
+
+  private formatDuration(minutes: number): string {
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
   }
 
   private toDateString(date: Date): string {

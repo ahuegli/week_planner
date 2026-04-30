@@ -32,7 +32,10 @@ import { GoalMode } from './onboarding.models';
         </button>
       </div>
 
-      <button type="button" class="btn-primary step-cta" [disabled]="!goal()" (click)="next.emit()">Next</button>
+      <div class="footer-row">
+        <button type="button" class="text-link" (click)="skipForNow()">Skip for now</button>
+        <button type="button" class="btn-primary step-cta" [disabled]="!goal()" (click)="next.emit()">Next</button>
+      </div>
     </section>
   `,
   styles: `
@@ -50,7 +53,9 @@ import { GoalMode } from './onboarding.models';
     .option-card.selected { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
     .option-title { font-size: 15px; font-weight: 600; color: var(--color-text); }
     .option-subtitle { margin-top: 4px; font-size: 12px; color: var(--color-text-secondary); }
-    .step-cta { margin-top: 6px; }
+    .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+    .text-link { border: none; background: transparent; color: var(--color-primary); font-size: 13px; cursor: pointer; padding: 0; }
+    .step-cta { width: auto; min-width: 120px; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -61,5 +66,11 @@ export class OnboardingStepGoalComponent {
 
   protected select(mode: GoalMode): void {
     this.goalChange.emit(mode);
+  }
+
+  protected skipForNow(): void {
+    // Default skip to general fitness to avoid falling through to weight-loss mode.
+    this.goalChange.emit('fitness');
+    this.next.emit();
   }
 }

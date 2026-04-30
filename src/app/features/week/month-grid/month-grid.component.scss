@@ -233,35 +233,28 @@
 }
 
 .event-card.is-brick {
-  border-color: rgba(124, 95, 168, 0.3);
-  box-shadow: inset 0 0 0 1px rgba(124, 95, 168, 0.08);
+  border-left-color: #7c5fa8;
+  border-color: rgba(124, 95, 168, 0.32);
+  box-shadow: inset 0 0 0 999px rgba(124, 95, 168, 0.08);
 }
 
-.event-card.is-brick::after {
+.event-card.is-brick.brick-has-prior::before,
+.event-card.is-brick.brick-has-next::after {
   content: '';
   position: absolute;
-  left: 8px;
-  width: 2px;
-  background: rgba(124, 95, 168, 0.42);
-  border-radius: 2px;
+  left: -4px;
+  width: 4px;
+  height: 10px;
+  background: #7c5fa8;
   pointer-events: none;
 }
 
-.event-card.is-brick.brick-has-prior::after {
-  top: -9px;
-  height: calc(50% + 9px);
+.event-card.is-brick.brick-has-prior::before {
+  top: -10px;
 }
 
-.event-card.is-brick.brick-has-next::before {
-  content: '';
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  width: 2px;
-  height: calc(50% + 9px);
-  background: rgba(124, 95, 168, 0.42);
-  border-radius: 2px;
-  pointer-events: none;
+.event-card.is-brick.brick-has-next::after {
+  bottom: -10px;
 }
 
 .event-summary {
@@ -313,13 +306,39 @@
 }
 
 .brick-badge {
-  font-size: 10px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
   color: #7c5fa8;
-  background: rgba(124, 95, 168, 0.14);
+  background: rgba(124, 95, 168, 0.16);
+  border: 1px solid rgba(124, 95, 168, 0.25);
   border-radius: 999px;
-  padding: 2px 7px;
+  padding: 2px 8px;
+  line-height: 1;
   flex-shrink: 0;
+}
+
+.brick-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.off-bike-inline {
+  margin: 1px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.off-bike-icon {
+  color: #7c5fa8;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .event-time {
@@ -377,8 +396,8 @@
 }
 
 .off-bike-row {
-  color: #7c5fa8;
-  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-style: italic;
 }
 
 .detail-label {

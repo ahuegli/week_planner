@@ -141,6 +141,7 @@ export class EventCardComponent {
       this.weekNumber(),
       this.planMode(),
       this.sportType(),
+      this.durationForDescription(e),
     );
   });
 
@@ -336,6 +337,19 @@ export class EventCardComponent {
     }
 
     return sessions.find((session) => this.normalizeSessionType(session.sessionType) === targetSessionType) ?? null;
+  }
+
+  private durationForDescription(event: CalendarEvent): number {
+    const [sh, sm] = event.startTime.split(':').map(Number);
+    const [eh, em] = event.endTime.split(':').map(Number);
+    const fromTimes = (eh * 60 + em) - (sh * 60 + sm);
+    if (fromTimes > 0) {
+      return fromTimes;
+    }
+    if (typeof event.duration === 'number' && Number.isFinite(event.duration)) {
+      return event.duration;
+    }
+    return 0;
   }
 
   protected navigateToWorkout(): void {

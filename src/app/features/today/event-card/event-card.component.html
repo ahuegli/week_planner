@@ -14,10 +14,11 @@
     (click)="canExpand() && toggleRequested.emit()"
   >
     <div class="summary-main">
-      <div class="event-time">{{ displayEvent().startTime }} — {{ displayEvent().endTime }}</div>
-
       <div class="event-header">
         <span class="event-title">{{ displayEvent().title }}</span>
+        @if (brickLinked()) {
+          <span class="brick-badge"><span class="brick-icon" aria-hidden="true">&rarr;</span>Brick</span>
+        }
         @if (event().linkedInvitationId) {
           <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -52,12 +53,15 @@
         }
       </div>
 
+      @if (offBikeRun()) {
+        <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
+      }
+
+      <div class="event-time">{{ displayEvent().startTime }} — {{ displayEvent().endTime }}</div>
+
       @if (detailsText()) {
         <div class="event-details">
           <span class="details-text">{{ detailsText() }}</span>
-          @if (brickLinked()) {
-            <span class="brick-badge">Brick</span>
-          }
           @if (displayEvent().type === 'workout' && displayEvent().priority === 'key') {
             <span class="key-badge">Key</span>
           }

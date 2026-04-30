@@ -162,8 +162,9 @@ export class StatsPageComponent {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
-  protected completionRateColor(rate: number, hasWorkouts = true): string {
-    if (rate === 0 && !hasWorkouts) return 'var(--color-text-secondary)';
+  protected completionRateColor(rate: number, hasWorkouts?: boolean): string {
+    const hasAnyWorkouts = hasWorkouts ?? ((this.summary()?.totalWorkoutsCompleted ?? 0) > 0);
+    if (rate === 0 && !hasAnyWorkouts) return 'var(--color-text-secondary)';
     if (rate >= 80) return 'var(--color-success)';
     if (rate >= 60) return 'var(--color-warning)';
     return 'var(--color-error)';

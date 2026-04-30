@@ -60,6 +60,9 @@ export class SchedulerSettings {
   @Column({ type: 'int', nullable: true })
   cssSecondsPer100m: number | null;
 
+  @Column({ type: 'int', nullable: true })
+  runThresholdSecPerKm: number | null;
+
   @Column({ type: 'enum', enum: ['25m', '50m', 'open_water', 'pool_and_open_water', 'none'], nullable: true })
   poolAccess: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none' | null;
 

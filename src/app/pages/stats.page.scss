@@ -87,6 +87,23 @@
 .skeleton-streak { height: 80px; }
 .skeleton-card   { height: 120px; }
 
+.stats-number-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-number-lg {
+  height: 28px;
+  width: 42%;
+}
+
+.skeleton-number-sm {
+  height: 12px;
+  width: 32%;
+}
+
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

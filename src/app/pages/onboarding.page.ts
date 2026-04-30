@@ -97,66 +97,69 @@ export class OnboardingPageComponent {
   protected async generatePlan(): Promise<void> {
     this.loading.set(true);
 
-    const data = this.onboardingData();
-    const isTriathlon = this.isTriathlonPlan();
-    const mode = this.resolvePlanMode(data.goal);
+    try {
+      const data = this.onboardingData();
+      const isTriathlon = this.isTriathlonPlan();
+      const mode = this.resolvePlanMode(data.goal);
 
-    await this.persistOnboardingShifts(data);
+      await this.persistOnboardingShifts(data);
 
-    const createdPlan = await this.dataStore.createPlan({
-      mode,
-      sportType: this.resolveSportType(data),
-      goalDate: (isTriathlon && data.isGeneralTriTraining) ? undefined : (data.raceDate || undefined),
-      goalDistance: data.raceEvent || undefined,
-      goalTime: data.targetTime || undefined,
-      ...(isTriathlon
-        ? { triathlonDistance: data.triathlonDistance as 'sprint' | 'olympic' | '70_3' | '140_6', totalWeeks: 0 }
-        : { totalWeeks: mode === 'race' ? 12 : 8 }),
-      currentWeek: 1,
-      status: 'active',
-    });
+      const createdPlan = await this.dataStore.createPlan({
+        mode,
+        sportType: this.resolveSportType(data),
+        goalDate: (isTriathlon && data.isGeneralTriTraining) ? undefined : (data.raceDate || undefined),
+        goalDistance: data.raceEvent || undefined,
+        goalTime: data.targetTime || undefined,
+        ...(isTriathlon
+          ? { triathlonDistance: data.triathlonDistance as 'sprint' | 'olympic' | '70_3' | '140_6', totalWeeks: 0 }
+          : { totalWeeks: mode === 'race' ? 12 : 8 }),
+        currentWeek: 1,
+        status: 'active',
+      });
 
-    if (!createdPlan) {
+      if (!createdPlan) {
+        return;
+      }
+
+      if (isTriathlon) {
+        await this.dataStore.updateSchedulerSettings({
+          triathlonsCompleted: data.triathlonsCompleted,
+          endurancePedigree: data.endurancePedigree,
+          poolAccess: data.poolAccess,
+          hasPowerMeter: data.hasPowerMeter,
+          ftpWatts: data.knowsFtp ? data.ftpWatts : null,
+          lthrBpm: data.knowsLthr ? data.lthrBpm : null,
+          cssSecondsPer100m: data.knowsCss ? data.cssSecondsPer100m : null,
+          runThresholdSecPerKm: data.knowsRunThreshold ? data.runThresholdSecPerKm : null,
+        });
+        // generate-plan handles both template generation and scheduling for triathlon
+        await this.dataStore.scheduleEntirePlan(createdPlan.id);
+      } else {
+        await this.dataStore.generatePlanTemplate(createdPlan.id);
+        await this.dataStore.scheduleEntirePlan(createdPlan.id);
+      }
+
+      await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
+      if (data.cycleEnabled) {
+        const cycleBackendData = this.mapCycleStatusToBackendMode(data.cycleStatus);
+        await this.dataStore.updateCycleProfile({
+          mode: cycleBackendData.mode,
+          variability: cycleBackendData.variability,
+          averageCycleLength: data.cycleLength,
+          lastPeriodStart: data.lastPeriodDate || null,
+        });
+      }
+
+      this.sharedCycleTrackingEnabled.set(data.cycleEnabled);
+
+      if (!this.dataStore.currentPlan()) {
+        return;
+      }
+
+      await this.router.navigateByUrl('/plan');
+    } finally {
       this.loading.set(false);
-      return;
     }
-
-    if (isTriathlon) {
-      await this.dataStore.updateSchedulerSettings({
-        triathlonsCompleted: data.triathlonsCompleted,
-        endurancePedigree: data.endurancePedigree,
-        poolAccess: data.poolAccess,
-        hasPowerMeter: data.hasPowerMeter,
-        ftpWatts: data.knowsFtp ? data.ftpWatts : null,
-        lthrBpm: data.knowsLthr ? data.lthrBpm : null,
-        cssSecondsPer100m: data.knowsCss ? data.cssSecondsPer100m : null,
-      });
-      // generate-plan handles both template generation and scheduling for triathlon
-      await this.dataStore.scheduleEntirePlan(createdPlan.id);
-    } else {
-      await this.dataStore.generatePlanTemplate(createdPlan.id);
-      await this.dataStore.scheduleEntirePlan(createdPlan.id);
-    }
-
-    await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
-    if (data.cycleEnabled) {
-      const cycleBackendData = this.mapCycleStatusToBackendMode(data.cycleStatus);
-      await this.dataStore.updateCycleProfile({
-        mode: cycleBackendData.mode,
-        variability: cycleBackendData.variability,
-        averageCycleLength: data.cycleLength,
-        lastPeriodStart: data.lastPeriodDate || null,
-      });
-    }
-
-    this.sharedCycleTrackingEnabled.set(data.cycleEnabled);
-    this.loading.set(false);
-
-    if (!this.dataStore.currentPlan()) {
-      return;
-    }
-
-    await this.router.navigateByUrl('/plan');
   }
 
   private mapCycleStatusToBackendMode(status: CycleStatus): {

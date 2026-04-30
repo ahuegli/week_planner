@@ -200,12 +200,15 @@ export class DayRowComponent {
     }
 
     const sessionType = event.sessionType ?? event.title;
+    const fromTimes = this.durationFromTimes(event.startTime, event.endTime);
+    const durationMinutes = fromTimes > 0 ? fromTimes : (event.duration ?? 0);
     return getWorkoutDescription(
       sessionType,
       this.phase(),
       this.weekNumber(),
       this.planMode(),
       this.sportType(),
+      durationMinutes,
     );
   }
 

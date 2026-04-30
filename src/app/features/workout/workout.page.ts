@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
@@ -30,6 +30,10 @@ export class WorkoutPageComponent {
 
   protected readonly pageState = signal<WorkoutPageState>('pre');
   protected readonly isWhyExpanded = signal(false);
+  protected readonly cyclePhaseTooltipPinned = signal(false);
+  protected readonly cyclePhaseTooltipHovered = signal(false);
+
+  private cyclePhaseTooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Post-workout form ─────────────────────────────────────────────────────
 
@@ -90,10 +94,14 @@ export class WorkoutPageComponent {
   protected readonly durationMinutes = computed(() => {
     const event = this.event();
     if (!event) return 0;
-    if (event.duration) return event.duration;
     const [sh, sm] = event.startTime.split(':').map(Number);
     const [eh, em] = event.endTime.split(':').map(Number);
-    return eh * 60 + em - (sh * 60 + sm);
+    const fromTimes = eh * 60 + em - (sh * 60 + sm);
+    if (fromTimes > 0) {
+      return fromTimes;
+    }
+    if (event.duration) return event.duration;
+    return 0;
   });
 
   // ── Pre-workout computed ───────────────────────────────────────────────────
@@ -160,6 +168,7 @@ export class WorkoutPageComponent {
       ctx?.weekNumber ?? 1,
       plan?.mode ?? 'race',
       plan?.sportType ?? null,
+      this.durationMinutes(),
     );
   });
 
@@ -253,6 +262,26 @@ export class WorkoutPageComponent {
     return `${names[info.phase] ?? info.phase} Phase · Day ${info.cycleDay}`;
   });
 
+  protected readonly cyclePhaseTooltipOpen = computed(
+    () => this.cyclePhaseTooltipPinned() || this.cyclePhaseTooltipHovered(),
+  );
+
+  protected readonly cyclePhaseTooltipText = computed(() => {
+    const phase = this.cyclePhaseInfo()?.phase;
+    if (!phase) {
+      return null;
+    }
+
+    const descriptions: Record<string, string> = {
+      menstrual: 'Days 1-5 typically. Energy may be lower; rest guilt-free if needed. Light movement is fine.',
+      follicular: 'Days 6-13 typically. Your strongest training window. Push intervals and hard sessions here.',
+      ovulation: 'Days 14-16 typically. Peak power and strength. Great for time trials and key sessions.',
+      luteal: 'Days 17-28 typically. Energy may dip mid-session. Effort over pace today; aerobic work shines.',
+    };
+
+    return descriptions[phase] ?? null;
+  });
+
   protected readonly cycleCoachingNote = computed<string | null>(() => {
     const info = this.cyclePhaseInfo();
     if (!info) return null;
@@ -273,6 +302,19 @@ export class WorkoutPageComponent {
     }
   }
 
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      this.closeCyclePhaseTooltip();
+      return;
+    }
+
+    if (!target.closest('.cycle-phase-tooltip')) {
+      this.closeCyclePhaseTooltip();
+    }
+  }
+
   // ── Pre-workout actions ───────────────────────────────────────────────────
 
   protected goBack(): void {
@@ -285,6 +327,27 @@ export class WorkoutPageComponent {
 
   protected toggleWhy(): void {
     this.isWhyExpanded.update((v) => !v);
+  }
+
+  protected toggleCyclePhaseTooltip(event: Event): void {
+    event.stopPropagation();
+    const nextValue = !this.cyclePhaseTooltipPinned();
+    this.cyclePhaseTooltipPinned.set(nextValue);
+
+    if (nextValue) {
+      this.startCyclePhaseTooltipTimer();
+      return;
+    }
+
+    this.clearCyclePhaseTooltipTimer();
+  }
+
+  protected showCyclePhaseTooltipOnHover(): void {
+    this.cyclePhaseTooltipHovered.set(true);
+  }
+
+  protected hideCyclePhaseTooltipOnHover(): void {
+    this.cyclePhaseTooltipHovered.set(false);
   }
 
   protected askCoach(): void {
@@ -376,5 +439,26 @@ export class WorkoutPageComponent {
     }
 
     this.goBack();
+  }
+
+  private startCyclePhaseTooltipTimer(): void {
+    this.clearCyclePhaseTooltipTimer();
+    this.cyclePhaseTooltipTimer = setTimeout(() => {
+      this.cyclePhaseTooltipPinned.set(false);
+      this.cyclePhaseTooltipTimer = null;
+    }, 5000);
+  }
+
+  private clearCyclePhaseTooltipTimer(): void {
+    if (this.cyclePhaseTooltipTimer) {
+      clearTimeout(this.cyclePhaseTooltipTimer);
+      this.cyclePhaseTooltipTimer = null;
+    }
+  }
+
+  private closeCyclePhaseTooltip(): void {
+    this.cyclePhaseTooltipPinned.set(false);
+    this.cyclePhaseTooltipHovered.set(false);
+    this.clearCyclePhaseTooltipTimer();
   }
 }

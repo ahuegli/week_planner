@@ -94,10 +94,13 @@
                 <div class="event-type-wrap">
                   <span class="event-type">{{ eventTypeLabel(event) }}</span>
                   @if (isBrickLinked(event)) {
-                    <span class="brick-badge">Brick</span>
+                    <span class="brick-badge"><span class="brick-icon" aria-hidden="true">&rarr;</span>Brick</span>
                   }
                 </div>
               </div>
+              @if (isOffBikeRun(event)) {
+                <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
+              }
               <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
 
               @if (event.type === 'workout') {

@@ -9,7 +9,14 @@
     </a>
   </header>
 
-  @if (hasPlan()) {
+  @if (isInitialLoading()) {
+    <div class="plan-loading-card" aria-busy="true" aria-live="polite">
+      <div class="plan-loading-title">Loading plan...</div>
+      <div class="plan-loading-week"></div>
+      <div class="plan-loading-row"></div>
+      <div class="plan-loading-row short"></div>
+    </div>
+  } @else if (hasPlan()) {
     <app-plan-header [plan]="plan()!" />
 
     <div class="plan-coach-row">
@@ -35,9 +42,39 @@
       </button>
     </div>
 
-    <button type="button" class="action-link action-link-danger" [disabled]="isDeleting()" (click)="deletePlan()">
+    <input #deletePlanConfirmToggle type="checkbox" hidden />
+    <button
+      type="button"
+      class="action-link action-link-danger"
+      [disabled]="isDeleting()"
+      (click)="deletePlanConfirmToggle.checked = true"
+    >
       {{ isDeleting() ? 'Deleting plan...' : 'Delete plan' }}
     </button>
+
+    @if (deletePlanConfirmToggle.checked) {
+      <div class="plan-delete-confirm" role="alert" aria-live="polite">
+        <p>Delete this plan? Your scheduled sessions will be removed. This can't be undone.</p>
+        <div class="plan-actions-row">
+          <button
+            type="button"
+            class="action-link"
+            [disabled]="isDeleting()"
+            (click)="deletePlanConfirmToggle.checked = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="action-link action-link-danger"
+            [disabled]="isDeleting()"
+            (click)="deletePlanConfirmToggle.checked = false; deletePlan()"
+          >
+            Yes, delete
+          </button>
+        </div>
+      </div>
+    }
 
     @if (currentWeek()) {
       <app-current-week-card

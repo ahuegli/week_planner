@@ -56,7 +56,7 @@
                       <span class="key-badge">Key</span>
                     }
                     @if (isBrickLinked(event, group.events)) {
-                      <span class="brick-badge">Brick</span>
+                      <span class="brick-badge"><span class="brick-icon" aria-hidden="true">&rarr;</span>Brick</span>
                     }
                     @if (inviteeBubbles(event).length > 0) {
                       <span class="invitee-bubbles">
@@ -71,6 +71,9 @@
                       </span>
                     }
                   </div>
+                  @if (isOffBikeRun(event)) {
+                    <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
+                  }
                   <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
                 </div>
                 @if (event.type !== 'busy') {

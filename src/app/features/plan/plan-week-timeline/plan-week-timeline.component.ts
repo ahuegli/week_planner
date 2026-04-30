@@ -160,6 +160,7 @@ export class PlanWeekTimelineComponent {
       week.weekNumber,
       this.plan().mode,
       this.plan().sportType,
+      session.duration,
     );
   }
 

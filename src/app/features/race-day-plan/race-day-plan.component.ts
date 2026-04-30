@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RaceDayPlan } from '../../core/models/app-data.models';
+import { DataStoreService } from '../../core/services/data-store.service';
 import { RaceDayPlanApiService } from '../../core/services/race-day-plan-api.service';
+import { UiFeedbackService } from '../../shared/ui-feedback.service';
 
 interface DisplayRow {
   label: string;
@@ -26,6 +28,8 @@ interface DisplaySection {
 })
 export class RaceDayPlanComponent {
   private readonly raceDayPlanApi = inject(RaceDayPlanApiService);
+  private readonly dataStore = inject(DataStoreService);
+  private readonly uiFeedback = inject(UiFeedbackService);
 
   readonly planId = input.required<string>();
 
@@ -33,6 +37,58 @@ export class RaceDayPlanComponent {
   protected readonly generating = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly raceDayPlan = signal<RaceDayPlan | null>(null);
+
+  protected readonly daysUntilRace = computed<number | null>(() => {
+    const goalDate = this.dataStore.currentPlan()?.goalDate;
+    if (!goalDate) {
+      return null;
+    }
+
+    const raceDate = new Date(`${goalDate}T00:00:00`);
+    if (Number.isNaN(raceDate.getTime())) {
+      return null;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffMs = raceDate.getTime() - today.getTime();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  });
+
+  protected readonly daysUntilUnlock = computed<number | null>(() => {
+    const days = this.daysUntilRace();
+    if (days === null) {
+      return null;
+    }
+    return Math.max(0, days - 14);
+  });
+
+  protected readonly raceReferenceLabel = computed(() => {
+    const goalDate = this.dataStore.currentPlan()?.goalDate;
+    if (!goalDate) {
+      return 'your race';
+    }
+
+    const raceDate = new Date(`${goalDate}T00:00:00`);
+    if (Number.isNaN(raceDate.getTime())) {
+      return 'your race';
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+      month: 'short',
+      day: 'numeric',
+    }).format(raceDate);
+  });
+
+  protected readonly showPreUnlockState = computed(() => {
+    const days = this.daysUntilRace();
+    return this.raceDayPlan() === null && days !== null && days > 14;
+  });
+
+  protected readonly showReadyToGenerateState = computed(() => {
+    const days = this.daysUntilRace();
+    return this.raceDayPlan() === null && days !== null && days <= 14;
+  });
 
   protected readonly sections = computed<DisplaySection[]>(() => {
     const plan = this.raceDayPlan();
@@ -70,9 +126,18 @@ export class RaceDayPlanComponent {
 
     try {
       const generated = await firstValueFrom(this.raceDayPlanApi.generate(this.planId()));
+      this.error.set(null);
       this.raceDayPlan.set(generated);
-    } catch {
-      this.error.set('Could not generate race-day plan. Please try again.');
+    } catch (error) {
+      const backendMessage = this.raceDayPlanApi.getErrorMessage(error);
+      const lowerMessage = backendMessage.toLowerCase();
+      const feedbackMessage =
+        lowerMessage.includes('triathlondistance') || lowerMessage.includes('distance')
+          ? 'This plan is missing triathlon distance. Please update your plan settings or recreate it.'
+          : backendMessage;
+
+      this.error.set(feedbackMessage);
+      this.uiFeedback.show(feedbackMessage, 6000);
     } finally {
       this.generating.set(false);
     }

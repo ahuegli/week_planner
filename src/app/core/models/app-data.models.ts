@@ -62,6 +62,7 @@ export interface SchedulerSettings {
   ftpWatts?: number | null;
   lthrBpm?: number | null;
   cssSecondsPer100m?: number | null;
+  runThresholdSecPerKm?: number | null;
   poolAccess?: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none' | null;
   hasPowerMeter?: boolean;
   triathlonsCompleted?: number | null;

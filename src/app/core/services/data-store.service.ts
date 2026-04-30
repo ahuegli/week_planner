@@ -289,7 +289,7 @@ export class DataStoreService {
     } catch (error) {
       console.error('[DataStore] Failed to update scheduler settings', error);
       this.schedulerSettings.set(snapshot);
-      this.error.set('Could not save scheduler settings.');
+      this.error.set('Could not save schedule preferences.');
     }
   }
 
@@ -720,7 +720,7 @@ export class DataStoreService {
 
     if (pendingSessions.length > 0) {
       const session = pendingSessions[0];
-      const description = getWorkoutDescription(session.sessionType, week.phase, week.weekNumber, plan.mode, plan.sportType).whatToDo;
+      const description = getWorkoutDescription(session.sessionType, week.phase, week.weekNumber, plan.mode, plan.sportType, session.duration).whatToDo;
       return {
         kind: 'pending',
         message: `You have a ${this.formatSessionName(session.sessionType)} planned this week that hasn't been scheduled yet. Want to do it now?`,
@@ -761,6 +761,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          session.duration,
         ).whatToDo;
 
         return {
@@ -804,6 +805,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          session.duration,
         ).whatToDo;
 
         return {
@@ -868,6 +870,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          makeUpSession.duration,
         ).whatToDo;
 
         return {
@@ -887,7 +890,7 @@ export class DataStoreService {
 
     const allDone = totalSessions > 0 && completionRate === 1;
     if (allDone) {
-      const recoveryDescription = getWorkoutDescription('mobility', week.phase, week.weekNumber, plan.mode, plan.sportType).whatToDo;
+      const recoveryDescription = getWorkoutDescription('mobility', week.phase, week.weekNumber, plan.mode, plan.sportType, 20).whatToDo;
       return {
         kind: 'recovery',
         message: 'All sessions done! How about 20 min of Yoga & Mobility for recovery?',

@@ -526,6 +526,8 @@ export class MonthGridComponent {
     const plan = this.dataStore.currentPlan();
     const date = event.date ?? this.selectedDate();
     const weekMeta = date ? this.findWeekMeta(date) : null;
+    const fromTimes = this.durationFromTimes(event.startTime, event.endTime);
+    const durationMinutes = fromTimes > 0 ? fromTimes : (event.duration ?? 0);
 
     return getWorkoutDescription(
       event.sessionType ?? event.title,
@@ -533,6 +535,7 @@ export class MonthGridComponent {
       weekMeta?.weekNumber ?? 1,
       plan?.mode ?? 'race',
       plan?.sportType ?? null,
+      durationMinutes,
     );
   }
 

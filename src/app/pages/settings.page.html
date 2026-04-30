@@ -556,6 +556,11 @@
             [value]="cssSecondsPer100m() ?? ''"
             (input)="cssSecondsPer100m.set(+$any($event.target).value || null)" />
 
+          <label class="field-label">Run threshold pace (seconds per km)</label>
+          <input class="input" type="number" min="180" max="600" placeholder="e.g. 300"
+            [value]="runThresholdSecPerKm() ?? ''"
+            (input)="runThresholdSecPerKm.set(+$any($event.target).value || null)" />
+
           <label class="field-label">Pool access</label>
           <select class="input" [value]="poolAccess()" (change)="poolAccess.set($any($event.target).value)">
             <option value="25m">25m pool</option>

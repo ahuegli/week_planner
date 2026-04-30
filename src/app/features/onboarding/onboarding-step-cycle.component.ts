@@ -10,13 +10,13 @@ import { CycleStatus, OnboardingData } from './onboarding.models';
       <p class="step-subtitle">Training and nutrition respond differently across your menstrual cycle. We can adapt your plan accordingly.</p>
 
       <div class="choice-list">
-        <button type="button" class="choice-card" [class.selected]="data().cycleEnabled" (click)="setEnabled(true)">
+        <button type="button" class="choice-card" [class.selected]="data().cycleEnabled" (click)="chooseCycleEnabled()">
           <p class="choice-title">Yes, track my cycle</p>
           <p class="choice-subtitle">We'll adjust workout intensity, recovery, and nutrition targets based on your cycle phase</p>
         </button>
-        <button type="button" class="choice-card" [class.selected]="!data().cycleEnabled" (click)="setEnabled(false)">
+        <button type="button" class="choice-card" [class.selected]="!data().cycleEnabled" (click)="chooseSkipForNow()">
           <p class="choice-title">Skip for now</p>
-          <p class="choice-subtitle">You can always enable this later in Settings</p>
+          <p class="choice-subtitle">Decide later. You can turn this on anytime in Settings.</p>
         </button>
       </div>
 
@@ -103,8 +103,12 @@ export class OnboardingStepCycleComponent {
     { value: 'menopause', label: "I'm in perimenopause or menopause" },
   ];
 
-  protected setEnabled(enabled: boolean): void {
-    this.dataChange.emit({ cycleEnabled: enabled });
+  protected chooseCycleEnabled(): void {
+    this.emitCycleChoice({ cycleEnabled: true, cycleSkipped: false });
+  }
+
+  protected chooseSkipForNow(): void {
+    this.emitCycleChoice({ cycleEnabled: false, cycleSkipped: true });
   }
 
   protected setStatus(status: CycleStatus): void {
@@ -118,5 +122,9 @@ export class OnboardingStepCycleComponent {
   protected adjustLength(delta: number): void {
     const cycleLength = Math.min(40, Math.max(21, this.data().cycleLength + delta));
     this.dataChange.emit({ cycleLength });
+  }
+
+  private emitCycleChoice(choice: { cycleEnabled: boolean; cycleSkipped: boolean }): void {
+    this.dataChange.emit(choice as Partial<OnboardingData>);
   }
 }

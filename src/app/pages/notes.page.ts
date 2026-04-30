@@ -14,7 +14,19 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
     <section class="page-wrap">
       <header class="page-header">
         <h1 class="page-title">Notes</h1>
+        <button type="button" class="header-settings" aria-label="Open settings" (click)="openSettings()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
       </header>
+
+      <div class="filter-strip" role="tablist" aria-label="Note filters">
+        <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'all'" [attr.aria-selected]="activeFilter() === 'all'" (click)="setFilter('all')">All</button>
+        <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'tasks'" [attr.aria-selected]="activeFilter() === 'tasks'" (click)="setFilter('tasks')">Tasks</button>
+        <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'reminders'" [attr.aria-selected]="activeFilter() === 'reminders'" (click)="setFilter('reminders')">Reminders</button>
+      </div>
 
       <article class="card add-card">
         @if (!formExpanded()) {
@@ -95,13 +107,13 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
         }
       </article>
 
-      @if (sortedNotes().length === 0) {
+      @if (visibleNotes().length === 0) {
         <article class="card empty-card">
-          <p class="empty-text">No notes yet. Capture a task, a thought, or something to remember.</p>
+          <p class="empty-text">{{ emptyStateText() }}</p>
         </article>
       }
 
-      @for (note of sortedNotes(); track note.id) {
+      @for (note of visibleNotes(); track note.id) {
         <article class="card note-card" [class.is-done]="note.completed">
           <div class="note-row">
             <button
@@ -176,8 +188,13 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
   `,
   styles: `
     .page-wrap { display: flex; flex-direction: column; gap: 10px; padding: 16px; max-width: 480px; margin: 0 auto; }
-    .page-header { padding: 4px 0 0; }
+    .page-header { padding: 4px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .page-title { font-family: Georgia, serif; font-size: 24px; margin: 0; color: var(--color-text); }
+    .header-settings { width: 34px; height: 34px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); display: inline-flex; align-items: center; justify-content: center; color: var(--color-text-secondary); cursor: pointer; }
+    .header-settings:hover { color: var(--color-primary); border-color: rgba(45, 77, 122, 0.28); }
+    .filter-strip { display: flex; align-items: center; gap: 8px; }
+    .filter-pill { border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .filter-pill.selected { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
     .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 12px; padding: 14px; }
 
     /* Add form */
@@ -259,6 +276,28 @@ export class NotesPageComponent {
     return [...incomplete, ...done];
   });
 
+  protected readonly activeFilter = signal<'all' | 'tasks' | 'reminders'>('all');
+  protected readonly visibleNotes = computed<Note[]>(() => {
+    const notes = this.sortedNotes();
+    const filter = this.activeFilter();
+
+    if (filter === 'all') {
+      return notes;
+    }
+
+    if (filter === 'tasks') {
+      return notes.filter((note) => {
+        const typedNote = note as Note & { noteType?: string | null };
+        return !typedNote.noteType || typedNote.noteType === 'task';
+      });
+    }
+
+    return notes.filter((note) => {
+      const typedNote = note as Note & { noteType?: string | null };
+      return typedNote.noteType === 'reminder';
+    });
+  });
+
   protected readonly formExpanded = signal(false);
   protected readonly newTitle = signal('');
   protected readonly newBody = signal('');
@@ -277,6 +316,14 @@ export class NotesPageComponent {
     return this.newDuration() !== '' && Number.isFinite(num) && num > 0;
   });
 
+  protected readonly emptyStateText = computed(() => {
+    if (this.activeFilter() === 'reminders') {
+      return 'No reminders yet - coming soon';
+    }
+
+    return 'No notes yet. Capture a task, a thought, or something to remember.';
+  });
+
   constructor() {
     void this.dataStore.loadNotes();
     effect(() => {
@@ -288,6 +335,14 @@ export class NotesPageComponent {
 
   protected expandForm(): void {
     this.formExpanded.set(true);
+  }
+
+  protected setFilter(filter: 'all' | 'tasks' | 'reminders'): void {
+    this.activeFilter.set(filter);
+  }
+
+  protected openSettings(): void {
+    void this.router.navigate(['/settings']);
   }
 
   protected async submitNote(): Promise<void> {

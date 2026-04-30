@@ -43,6 +43,47 @@
   margin-bottom: 12px;
 }
 
+.today-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-skeleton-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-skeleton-line {
+  height: 11px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    color-mix(in srgb, var(--color-border) 50%, transparent) 50%,
+    var(--color-border) 75%
+  );
+  background-size: 220% 100%;
+  animation: today-shimmer 1.4s ease-in-out infinite;
+}
+
+.today-skeleton-line.wide {
+  width: 78%;
+}
+
+.today-skeleton-line.medium {
+  width: 56%;
+}
+
+.today-skeleton-line.short {
+  width: 36%;
+}
+
 .coach-adjust-card {
   border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--color-border));
   background: color-mix(in srgb, var(--color-warning) 9%, var(--color-card));
@@ -79,6 +120,53 @@
   font-size: 12px;
   font-weight: 600;
   padding: 6px 12px;
+}
+
+.tomorrow-preview {
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, #2d4d7a 15%);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-card) 92%, #2d4d7a 8%);
+  padding: 12px;
+
+  .section-label {
+    margin-bottom: 8px;
+  }
+}
+
+.tomorrow-preview-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tomorrow-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tomorrow-meta,
+.tomorrow-time,
+.tomorrow-more,
+.tomorrow-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.tomorrow-more {
+  font-weight: 600;
+}
+
+.tomorrow-preview.is-actionable:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
 }
 
 .bottom-spacer {
@@ -148,4 +236,13 @@
   font-size: 13px;
   cursor: pointer;
   padding: 0;
+}
+
+@keyframes today-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

@@ -3,7 +3,7 @@
   <!-- Header -->
   <header class="today-header">
     <div>
-      <h1 class="page-title">{{ selectedDayTitle() }}</h1>
+      <h1 class="page-title">{{ pageGreeting() }}</h1>
       <p class="page-subtitle">{{ formattedDate() }}</p>
     </div>
     <div class="header-actions">
@@ -57,7 +57,20 @@
   <div class="content-pad">
     <p class="section-label">Your Day</p>
 
-    @if (hasAnyEvents()) {
+    @if (isLoading() && !hasLoaded()) {
+      <div class="today-skeleton-list" aria-busy="true" aria-live="polite">
+        <div class="today-skeleton-card">
+          <div class="today-skeleton-line wide"></div>
+          <div class="today-skeleton-line medium"></div>
+          <div class="today-skeleton-line short"></div>
+        </div>
+        <div class="today-skeleton-card">
+          <div class="today-skeleton-line wide"></div>
+          <div class="today-skeleton-line medium"></div>
+          <div class="today-skeleton-line short"></div>
+        </div>
+      </div>
+    } @else if (hasAnyEvents()) {
       @for (event of pastEvents(); track event.id) {
         <app-event-card
           [event]="event"
@@ -127,6 +140,27 @@
   <!-- Did You Know -->
   <div class="content-pad">
     <app-did-you-know [card]="didYouKnow" />
+  </div>
+
+  <div class="content-pad">
+    <article class="tomorrow-preview" [class.is-actionable]="!!tomorrowFirstWorkout()">
+      <p class="section-label">Tomorrow</p>
+
+      @if (tomorrowFirstWorkout(); as workout) {
+        <button type="button" class="tomorrow-preview-btn" (click)="openTomorrowInWeekView()">
+          <p class="tomorrow-title">{{ workout.title }}</p>
+          @if (previewMeta(workout); as meta) {
+            <p class="tomorrow-meta">{{ meta }}</p>
+          }
+          <p class="tomorrow-time">{{ workout.startTime }} — {{ workout.endTime }}</p>
+          @if (tomorrowAdditionalCount() > 0) {
+            <p class="tomorrow-more">+ {{ tomorrowAdditionalCount() }} more</p>
+          }
+        </button>
+      } @else {
+        <p class="tomorrow-empty">Free day tomorrow — rest up.</p>
+      }
+    </article>
   </div>
 
   <!-- Spacer for fixed buttons + tab bar -->

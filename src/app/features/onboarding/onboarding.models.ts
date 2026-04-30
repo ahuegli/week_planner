@@ -50,6 +50,8 @@ export interface OnboardingData {
   lthrBpm: number | null;
   knowsCss: boolean;
   cssSecondsPer100m: number | null;
+  knowsRunThreshold: boolean;
+  runThresholdSecPerKm: number | null;
 }
 
 export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
@@ -100,4 +102,6 @@ export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   lthrBpm: null,
   knowsCss: false,
   cssSecondsPer100m: null,
+  knowsRunThreshold: false,
+  runThresholdSecPerKm: null,
 };

@@ -43,7 +43,13 @@
         </button>
       </div>
     } @else {
-      <p class="race-day-hint">Create a full pacing, fueling, hydration, transitions, and contingency brief for race day.</p>
+      @if (showPreUnlockState()) {
+        <p class="race-day-hint">Your race-day plan unlocks {{ daysUntilUnlock() }} days before {{ raceReferenceLabel() }}. We'll generate pacing, fueling, hydration, transitions, and contingency protocols based on your fitness data and race distance.</p>
+      } @else if (showReadyToGenerateState()) {
+        <p class="race-day-hint">Your race is in {{ daysUntilRace() }} days. Generate your race-day execution plan now.</p>
+      } @else {
+        <p class="race-day-hint">Create a full pacing, fueling, hydration, transitions, and contingency brief for race day.</p>
+      }
       <button type="button" class="race-day-btn" [disabled]="generating()" (click)="generatePlan()">
         {{ generating() ? 'Generating...' : 'Generate race-day plan' }}
       </button>

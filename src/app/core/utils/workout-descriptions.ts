@@ -7,7 +7,20 @@ export interface WorkoutDescription {
 
 type DescriptionPhase = PlanPhase | 'any';
 
-type SessionDescriptions = Partial<Record<DescriptionPhase, WorkoutDescription>>;
+type DurationBucket = 'short' | 'medium' | 'long' | 'very_long';
+
+type DurationBuckets = Partial<Record<DurationBucket, WorkoutDescription>>;
+
+type SessionDescriptions = Partial<Record<DescriptionPhase, WorkoutDescription>> & {
+  byDuration?: DurationBuckets;
+};
+
+function getDurationBucket(minutes: number, thresholds: { medium: number; long: number; very_long?: number }): DurationBucket {
+  if (minutes >= (thresholds.very_long ?? Infinity)) return 'very_long';
+  if (minutes >= thresholds.long) return 'long';
+  if (minutes >= thresholds.medium) return 'medium';
+  return 'short';
+}
 
 const WEIGHT_LOSS_NOTE =
   'Weight loss mode: keep this mostly moderate and sustainable for 40+ minutes when possible to maximize fat-burning while preserving recovery.';
@@ -48,6 +61,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
       whyItHelps:
         'Keeps muscles active while your body absorbs the training from previous weeks.',
     },
+    byDuration: {
+      short: {
+        whatToDo:
+          'Keep it conversational and short — this is recovery miles. If breathing accelerates, slow down. The point is moving blood, not building fitness today.',
+        whyItHelps:
+          'Short easy runs reduce muscle stiffness and promote blood flow without accumulating fatigue.',
+      },
+      medium: {
+        whatToDo:
+          'Standard aerobic effort. You should be able to speak in full sentences throughout. Build the engine that everything else sits on top of.',
+        whyItHelps:
+          'This duration is the sweet spot for aerobic development — long enough to stimulate adaptation, short enough to recover well.',
+      },
+      long: {
+        whatToDo:
+          "The big aerobic block. Pace conservative throughout. After 60 minutes, sip water with electrolytes. Don\u2019t chase the pace \u2014 let the duration do the work.",
+        whyItHelps:
+          'Extended easy running builds fat-burning capacity and mental endurance that shorter runs cannot replicate.',
+      },
+    },
   },
   long_run: {
     base: {
@@ -70,6 +103,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
     taper: {
       whatToDo: 'Shorter than recent weeks. Easy pace, enjoy the run.',
       whyItHelps: 'Maintains fitness while allowing full recovery before race day.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Build aerobic capacity at moderate effort. Last 10 minutes can lift slightly toward marathon pace if feeling good.',
+        whyItHelps:
+          'This length establishes an endurance base and rehearses pacing discipline without deep fatigue.',
+      },
+      long: {
+        whatToDo:
+          'Real distance work. Fuel from minute 60 onward — gel or sport drink. Keep heart rate Z2 for the first 75% of the run, optional tempo finish.',
+        whyItHelps:
+          'Sustained running at this duration trains fat metabolism and glycogen management, both critical on race day.',
+      },
+      very_long: {
+        whatToDo:
+          'Full long run territory. Fuel every 20 minutes, water every 15. Pace must stay easy — finishing strong matters more than starting fast.',
+        whyItHelps:
+          'Peak-week long runs build mental endurance and race-specific confidence that no other session can replicate.',
+      },
     },
   },
   cardio_run: {
@@ -139,6 +192,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
       whatToDo: 'Easy spin, focus on smooth pedal stroke. Keep heart rate low.',
       whyItHelps: 'Active recovery between harder sessions.',
     },
+    byDuration: {
+      short: {
+        whatToDo:
+          'A short spin to keep the legs moving. Stay in zone 2, cadence 80-90 rpm, no effort needed. Think of this as recovery on the bike.',
+        whyItHelps:
+          'Short easy rides flush lactate and keep the aerobic system ticking without adding meaningful fatigue.',
+      },
+      medium: {
+        whatToDo:
+          'Steady aerobic ride at a chatty effort. Maintain smooth cadence throughout and keep power in zone 2. Fuel with water and a bar if approaching 60 minutes.',
+        whyItHelps:
+          'This is your aerobic base-building session on the bike — consistent zone 2 work improves fat oxidation and cardiac output.',
+      },
+      long: {
+        whatToDo:
+          'Long easy ride in zone 2. Eat every 45 minutes, drink every 20. After 75 minutes your body starts drawing on fat stores — keep the effort low enough to stay there.',
+        whyItHelps:
+          'Extended low-intensity cycling builds mitochondrial density and fueling habits essential for endurance events.',
+      },
+    },
   },
   long_ride: {
     base: {
@@ -157,6 +230,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
       whatToDo:
         'Longest ride of the plan. Moderate effort, focus on nutrition and hydration. Simulate race conditions if possible.',
       whyItHelps: 'Confidence builder - proves your body can handle the distance.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Steady endurance ride at zone 2 to low zone 3. Bring a bottle and a bar. Keep cadence smooth and effort sustainable throughout.',
+        whyItHelps:
+          'Medium-long rides build the aerobic and metabolic base needed before longer and harder sessions later in the plan.',
+      },
+      long: {
+        whatToDo:
+          'Full endurance ride. Fuel every 45 minutes, hydrate consistently. After 75 minutes include some moderate zone 3 efforts on any climbs to practice race pacing.',
+        whyItHelps:
+          'This is where cycling-specific endurance is built. Your body adapts to sustained saddle time and learns to access fat as fuel.',
+      },
+      very_long: {
+        whatToDo:
+          'Longest ride of the week. Treat nutrition as a training objective — eat before you are hungry, drink before you are thirsty. Simulate race conditions and practice any planned gear.',
+        whyItHelps:
+          'Extended rides build the physical and psychological endurance to sustain effort through the hardest parts of your target event.',
+      },
     },
   },
   tempo_ride: {
@@ -194,6 +287,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
         'Easy continuous swim. Mix in 100m of backstroke or drill work every 400m to stay loose.',
       whyItHelps: 'Maintains feel for the water between harder sessions.',
     },
+    byDuration: {
+      short: {
+        whatToDo:
+          'Short recovery swim focused purely on feel. Breathe every 3 strokes, keep the stroke long and lazy. No effort counting — just move through the water.',
+        whyItHelps:
+          'Short water sessions restore shoulder mobility and feel without adding fatigue, especially useful the day after a hard run or ride.',
+      },
+      medium: {
+        whatToDo:
+          'Continuous aerobic swim at a relaxed pace. Include a 200m drill set mid-session (catch-up or fingertip drag). Aim for consistent stroke rate throughout.',
+        whyItHelps:
+          'Medium easy swims build swim-specific aerobic fitness and reinforce technique simultaneously.',
+      },
+      long: {
+        whatToDo:
+          'Long easy swim. Break into 400m to 600m blocks with 30 seconds rest to maintain quality. Focus on body rotation and keeping hips high. Sip water at each rest.',
+        whyItHelps:
+          'Extended swimming builds aerobic endurance in a low-impact format, supporting recovery while accumulating useful training stimulus.',
+      },
+    },
   },
   long_swim: {
     base: {
@@ -206,6 +319,26 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
         'Continuous swim with some pace variation. Include 200m at tempo effort every 600m.',
       whyItHelps:
         'Simulates race conditions where you need to change pace around buoys and other swimmers.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Steady swim at a moderate aerobic effort. Break into 400m sets with 20 seconds rest. Include one 200m build effort mid-session, then return to easy pace.',
+        whyItHelps:
+          'Builds swim endurance and introduces pace-change skills needed for open water racing.',
+      },
+      long: {
+        whatToDo:
+          'Full endurance swim. Structure as 3 to 4 longer sets with short rests. Include 200m at tempo effort every 600m. Count strokes and watch that technique holds as fatigue builds.',
+        whyItHelps:
+          'Long swims build the specific endurance and pacing awareness that directly translates to race performance.',
+      },
+      very_long: {
+        whatToDo:
+          'Maximum endurance swim. Use a structured set plan — for example 5x800m with 45 seconds rest. Hold consistent pace throughout and treat the last set as a test of mental endurance.',
+        whyItHelps:
+          'This session pushes your aerobic ceiling in the water and conditions your body to sustain effort past the point of comfort.',
+      },
     },
   },
   intervals_swim: {
@@ -443,16 +576,47 @@ function fallbackForSport(sportType?: string | null): WorkoutDescription {
   };
 }
 
+const DURATION_THRESHOLDS: Partial<Record<string, { medium: number; long: number; very_long?: number }>> = {
+  easy_run:   { medium: 45, long: 75 },
+  long_run:   { medium: 60, long: 90, very_long: 120 },
+  easy_ride:  { medium: 45, long: 75 },
+  long_ride:  { medium: 60, long: 90, very_long: 150 },
+  easy_swim:  { medium: 25, long: 45 },
+  long_swim:  { medium: 35, long: 55, very_long: 75 },
+};
+
 export function getWorkoutDescription(
   sessionType: string,
   phase: string,
   weekNumber: number,
   mode: PlanMode,
   sportType?: string | null,
+  durationMinutes?: number,
 ): WorkoutDescription {
   const key = inferSessionKey(sessionType, sportType);
   const normalizedPhase = normalizePhase(phase);
   const bySession = DESCRIPTIONS[key];
+
+  // Duration-bucket resolution (optional — only for supported session types)
+  if (durationMinutes != null && bySession?.byDuration) {
+    const thresholds = DURATION_THRESHOLDS[key];
+    if (thresholds) {
+      const bucket = getDurationBucket(durationMinutes, thresholds);
+      const bucketDesc = bySession.byDuration[bucket];
+      if (bucketDesc) {
+        // Apply weight-loss and triathlon suffixes on the bucket result too
+        let result = bucketDesc;
+        if (mode === 'weight_loss' && ENDURANCE_SESSION_KEYS.has(key)) {
+          result = { whatToDo: result.whatToDo, whyItHelps: `${result.whyItHelps} ${WEIGHT_LOSS_NOTE}` };
+        }
+        const sport = normalizeSport(sportType);
+        if (sport === 'triathlon' && key !== 'brick_workout' && key !== 'open_water_swim') {
+          result = { whatToDo: result.whatToDo, whyItHelps: `${result.whyItHelps} In triathlon plans, this works best when balanced against the other two disciplines in the same week.` };
+        }
+        return result;
+      }
+    }
+  }
 
   const selected = bySession?.[normalizedPhase] ?? bySession?.any ?? bySession?.base;
   const fallback = selected ?? fallbackForSport(sportType);

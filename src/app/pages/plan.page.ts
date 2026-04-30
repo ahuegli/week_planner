@@ -28,6 +28,10 @@ export class PlanPageComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly router = inject(Router);
 
+  protected readonly isInitialLoading = computed(
+    () => this.dataStore.isLoading() && !this.dataStore.isLoaded(),
+  );
+
   protected readonly hasPlan = computed(() => !!this.dataStore.currentPlan());
   protected readonly hasSavedSettings = computed(() => this.dataStore.schedulerSettings() !== null);
   protected readonly showCreatePlanCta = computed(

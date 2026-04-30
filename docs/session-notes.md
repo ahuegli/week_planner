@@ -36,6 +36,59 @@ Decision points:
 - Run threshold: not a stored field on SchedulerSettings → RPE fallback for all users. v2 item to add `runThresholdSecPerKm` to settings.
 
 ### Build
+
+## 2026-05-01 — Loading indicator polish for slow calls
+
+### Files modified
+- `src/app/pages/plan.page.ts` — added `isInitialLoading` computed using DataStore loading + loaded state
+- `src/app/pages/plan.page.html` — added initial-load skeleton week card block
+- `src/app/pages/plan.page.scss` — added plan skeleton shimmer styles
+- `src/app/pages/today.page.html` — added calendar skeleton cards while initial fetch is in-flight
+- `src/app/pages/today.page.scss` — added today skeleton card styles
+- `src/app/pages/stats.page.html` — expanded loading state with skeleton number placeholders
+- `src/app/pages/stats.page.scss` — added number skeleton sizing styles
+- `src/app/pages/onboarding.page.html` — added full-screen generating overlay with spinner + copy
+- `src/app/pages/onboarding.page.scss` — added overlay and spinner styling
+- `src/app/pages/onboarding.page.ts` — wrapped `generatePlan()` in `try/finally` so loading reliably resets
+
+### Verification
+- `npm run build` (frontend): clean
+- Browser checks:
+  - Plan page shows initial skeleton week card while loading
+  - Today page renders skeleton cards when load state is active
+  - Stats page renders skeleton number placeholders during loading
+  - Onboarding shows full-screen overlay with “Generating your plan...” while loading
+
+## 2026-05-01 — Today page tomorrow preview card
+
+### Files modified
+- `src/app/pages/today.page.ts` — added tomorrow-date/workout computed signals, preview metadata helpers, and week-view navigation handler
+- `src/app/pages/today.page.html` — added bottom Tomorrow preview card with actionable workout state, `+ N more` indicator, and free-day fallback text
+- `src/app/pages/today.page.scss` — added muted preview-card styling consistent with existing event card language
+
+### Verification
+- `npm run build` (frontend): clean
+- Browser checks:
+  - Real data case: tomorrow workout preview renders title/meta/time and navigates to `/week?date=...` on tap
+  - Multiple-workout case: runtime-injected second workout shows `+ 1 more`
+  - No-workout case: card shows `Free day tomorrow — rest up.` with no action button
+
+## 2026-04-30 — Workout page cycle phase tooltip polish
+
+### Files modified (3)
+- `src/app/features/workout/workout.page.ts` — added inline cycle-phase tooltip state, tooltip copy per phase, outside-click dismissal, and hover/pin handling
+- `src/app/features/workout/workout.page.html` — replaced the plain cycle-phase chip with inline info-button + conditional popover markup
+- `src/app/features/workout/workout.page.scss` — added local tooltip/button/popover styling and aligned the chip for inline icon placement
+
+### Implementation notes
+- No reusable tooltip/info-icon pattern existed in `src/app/**`, so this was built inline in the workout page only
+- Tooltip copy covers menstrual, follicular, ovulation, and luteal terminology in short user-facing language
+
+### Verification
+- Frontend build: clean (`npm run build`)
+- Cycle disabled case: verified on a real workout route that no cycle-phase chip or info icon is shown when cycle tracking is off
+- Cycle enabled case: verified in the running app by enabling the existing cycle state, loading cycle data, opening a workout with a visible phase chip, and confirming the `ⓘ` button opens the expected follicular explanation text
+
 - Two compile errors fixed: `FUELING_SPECS` changed from `Partial<Record>` to full `Record` with sprint entry
 - Final: clean, 0 TypeScript errors
 
