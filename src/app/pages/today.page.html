@@ -53,6 +53,52 @@
     </div>
   }
 
+  <!-- Reminders due today -->
+  @if (remindersDueToday().length > 0) {
+    <div class="content-pad">
+      <p class="section-label">Due today</p>
+      <div class="reminders-list">
+        @for (reminder of remindersDueToday(); track reminder.id) {
+          <div class="reminder-card" [class.reminder-card--overdue]="reminder.dueDate! < todayDateString()">
+            <button type="button" class="reminder-card-body" (click)="navigateToNote(reminder)" aria-label="View reminder: {{ reminder.title }}">
+              <span class="reminder-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+              </span>
+              <span class="reminder-content">
+                <span class="reminder-title">{{ reminder.title }}</span>
+                @if (reminder.description) {
+                  <span class="reminder-desc">{{ reminder.description }}</span>
+                }
+                @if (reminder.dueTime) {
+                  <span class="reminder-time">{{ reminder.dueTime }}</span>
+                }
+                @if (reminder.dueDate! < todayDateString()) {
+                  <span class="reminder-overdue-label">Overdue</span>
+                }
+              </span>
+            </button>
+            <button
+              type="button"
+              class="reminder-complete-btn"
+              (click)="completeReminder(reminder)"
+              aria-label="Mark {{ reminder.title }} as complete">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   <!-- Your Day -->
   <div class="content-pad">
     <div class="your-day-header">
@@ -223,6 +269,55 @@
       }
     </article>
   </div>
+
+  @if (recapShouldRender()) {
+    <div class="recap-overlay" [class.is-visible]="recapIsVisible()" [class.is-leaving]="recapIsLeaving()" role="dialog" aria-modal="true" aria-labelledby="day-recap-title">
+      <article class="recap-panel">
+        <h2 id="day-recap-title" class="recap-title">Your day</h2>
+
+        <section class="recap-section">
+          <p class="recap-section-label">Completed today</p>
+          <div class="recap-stat-row">
+            <span class="recap-stat-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6.5 6.5 11 11"/><path d="m21 3-4 4"/><path d="m7 17-4 4"/>
+                <path d="m3 3 4 4"/><path d="m17 17 4 4"/>
+              </svg>
+            </span>
+            <span>{{ recapCompletedWorkoutsCount() }} workout{{ recapCompletedWorkoutsCount() === 1 ? '' : 's' }} completed</span>
+          </div>
+          <div class="recap-stat-row">
+            <span class="recap-stat-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </span>
+            <span>{{ recapCompletedTasksCount() }} task{{ recapCompletedTasksCount() === 1 ? '' : 's' }} completed</span>
+          </div>
+          @if (recapWorkoutDurationMinutes() > 0) {
+            <p class="recap-duration">Workout time: {{ recapDurationLabel() }}</p>
+          }
+        </section>
+
+        <p class="recap-streak">
+          <span class="recap-streak-icon" aria-hidden="true">🔥</span>
+          @if (recapStreakDays() === 1) {
+            <span>Streak started today</span>
+          } @else {
+            <span>Streak: {{ recapStreakDays() }} days</span>
+          }
+        </p>
+
+        <section class="recap-section recap-tomorrow">
+          <p class="recap-section-label">Tomorrow</p>
+          <p class="recap-tomorrow-text">{{ recapTomorrowSummary() }}</p>
+        </section>
+
+        <button type="button" class="recap-cta" (click)="dismissRecap()">Got it</button>
+      </article>
+    </div>
+  }
 
   <!-- Spacer for fixed buttons + tab bar -->
   <div class="bottom-spacer"></div>

@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ActivatedRoute, Router } from '@angular/router';
 import { OnboardingStepAvailabilityComponent } from '../features/onboarding/onboarding-step-availability.component';
 import { OnboardingStepCycleComponent } from '../features/onboarding/onboarding-step-cycle.component';
+import { OnboardingStepFitnessComponent } from '../features/onboarding/onboarding-step-fitness.component';
 import { OnboardingStepGoalComponent } from '../features/onboarding/onboarding-step-goal.component';
+import { OnboardingStepHoursComponent } from '../features/onboarding/onboarding-step-hours.component';
 import { OnboardingStepSportComponent } from '../features/onboarding/onboarding-step-sport.component';
 import { OnboardingStepSummaryComponent } from '../features/onboarding/onboarding-step-summary.component';
 import { OnboardingStepTriathlonComponent } from '../features/onboarding/onboarding-step-triathlon.component';
@@ -20,6 +22,8 @@ import { PlanMode } from '../core/models/app-data.models';
     OnboardingStepGoalComponent,
     OnboardingStepSportComponent,
     OnboardingStepTriathlonComponent,
+    OnboardingStepFitnessComponent,
+    OnboardingStepHoursComponent,
     OnboardingStepAvailabilityComponent,
     OnboardingStepWorkComponent,
     OnboardingStepCycleComponent,
@@ -40,8 +44,10 @@ export class OnboardingPageComponent {
   protected readonly onboardingData = signal<OnboardingData>(DEFAULT_ONBOARDING_DATA);
 
   protected readonly isTriathlonPlan = computed(() => this.onboardingData().triathlonDistance !== '');
-  protected readonly totalSteps = computed(() => this.isTriathlonPlan() ? 8 : 7);
-  protected readonly stepDots = computed(() => Array.from({ length: this.totalSteps() }, (_, i) => i + 1));
+  // Step 4 (triathlon) is only shown for triathlon plans; steps 1-10 are the full sequence.
+  // visibleStepCount drives the dot display; navigation caps at step 10 for both paths.
+  private readonly visibleStepCount = computed(() => this.isTriathlonPlan() ? 10 : 9);
+  protected readonly stepDots = computed(() => Array.from({ length: this.visibleStepCount() }, (_, i) => i + 1));
 
   constructor() {
     const goal = this.route.snapshot.queryParamMap.get('goal');
@@ -66,7 +72,7 @@ export class OnboardingPageComponent {
     if (next === 4 && !this.isTriathlonPlan()) {
       this.currentStep.set(5);
     } else {
-      this.currentStep.set(Math.min(this.totalSteps(), next));
+      this.currentStep.set(Math.min(10, next));
     }
   }
 
@@ -80,7 +86,7 @@ export class OnboardingPageComponent {
   }
 
   protected goToStep(step: number): void {
-    this.currentStep.set(Math.min(this.totalSteps(), Math.max(1, step)));
+    this.currentStep.set(Math.min(10, Math.max(1, step)));
   }
 
   protected skipCycleStep(): void {
@@ -138,6 +144,11 @@ export class OnboardingPageComponent {
         await this.dataStore.generatePlanTemplate(createdPlan.id);
         await this.dataStore.scheduleEntirePlan(createdPlan.id);
       }
+
+      await this.dataStore.updateSchedulerSettings({
+        level: data.fitnessLevel ?? null,
+        weeklyHours: data.weeklyHours ?? null,
+      });
 
       await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
       if (data.cycleEnabled) {

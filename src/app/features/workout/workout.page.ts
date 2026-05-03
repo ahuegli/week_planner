@@ -9,7 +9,17 @@ import { getWorkoutStructure, WorkoutStep } from '../../core/utils/workout-struc
 import { EnergyRating } from '../../core/models/app-data.models';
 
 type WorkoutPageState = 'pre' | 'during' | 'post';
-type StartButtonState = 'start' | 'completed';
+type StartButtonState = 'start' | 'completed' | 'skipped';
+
+const SKIP_REASONS = [
+  'Sick / unwell',
+  'Time constraint',
+  'Travel',
+  'Energy / fatigue',
+  'Injury',
+  'Other',
+] as const;
+type SkipReason = typeof SKIP_REASONS[number];
 
 @Component({
   selector: 'app-workout-page',
@@ -47,6 +57,12 @@ export class WorkoutPageComponent {
   protected readonly elevationGain = signal<number | null>(null);
   protected readonly notes = signal<string>('');
   protected readonly isSaving = signal(false);
+
+  // ── Skip session state ────────────────────────────────────────────────────
+
+  protected readonly skipOpen = signal(false);
+  protected readonly skipReason = signal<SkipReason | null>(null);
+  protected readonly skipReasons = SKIP_REASONS;
 
   // ── Route → event ─────────────────────────────────────────────────────────
 
@@ -188,6 +204,7 @@ export class WorkoutPageComponent {
     const event = this.event();
     if (!event) return 'start';
     if (event.status === 'completed') return 'completed';
+    if (event.status === 'skipped') return 'skipped';
     return 'start';
   });
 
@@ -354,6 +371,41 @@ export class WorkoutPageComponent {
     const context = title ? encodeURIComponent(title) : undefined;
     const url = context ? `/coach?workout=${context}` : '/coach';
     void this.router.navigateByUrl(url);
+  }
+
+  protected openSkipPicker(): void {
+    this.skipReason.set(null);
+    this.skipOpen.set(true);
+  }
+
+  protected closeSkipPicker(): void {
+    this.skipOpen.set(false);
+  }
+
+  protected selectSkipReason(reason: SkipReason): void {
+    this.skipReason.set(reason);
+  }
+
+  protected async confirmSkip(): Promise<void> {
+    if (this.isSaving()) return;
+    const event = this.event();
+    if (!event) return;
+
+    this.isSaving.set(true);
+    this.skipOpen.set(false);
+    try {
+      const session = this.linkedSession();
+      if (session) {
+        await this.dataStore.skipSession(session.id);
+      }
+      await this.dataStore.updateCalendarEvent(event.id, { status: 'skipped' });
+    } catch (err) {
+      console.error('[WorkoutPage] Skip failed', err);
+    } finally {
+      this.isSaving.set(false);
+    }
+
+    this.goBack();
   }
 
   protected goToPostWorkout(): void {

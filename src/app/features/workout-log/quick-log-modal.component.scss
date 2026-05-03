@@ -161,6 +161,37 @@
   flex-shrink: 0;
 }
 
+.ql-export-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.ql-btn-export,
+.ql-btn-export-copy {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #2d4d7a) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-card, #fff) 92%, var(--color-primary, #2d4d7a) 8%);
+  color: var(--color-primary, #2d4d7a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ql-btn-export {
+  flex: 1;
+  padding: 0 14px;
+}
+
+.ql-btn-export-copy {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .ql-btn-cancel {
   flex: 0 0 auto;
   height: 44px;
@@ -214,5 +245,15 @@
 
   &:not(:disabled):hover {
     background: color-mix(in srgb, var(--color-primary, #2d4d7a) 87%, #000 13%);
+  }
+}
+
+@media (max-width: 520px) {
+  .ql-export-row {
+    flex-direction: column;
+  }
+
+  .ql-btn-export-copy {
+    justify-content: center;
   }
 }

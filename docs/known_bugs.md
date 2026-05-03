@@ -245,3 +245,18 @@ Today-page "I have time now" entry point isn't wired correctly.
 
 ~30 min Copilot fix once WP14 ships.
 
+
+## Skip reason not persisted to backend
+
+UI captures the skip reason ("Sick/unwell", "Time constraint", etc.)
+but doesn't send it to the backend. PlannedSession entity has no 
+skipReason field. Add when WP14 hardening ships:
+- Add @Column({ nullable: true }) skipReason: string | null to 
+  planned-session.entity.ts  
+- Update PlannedSessionDto with optional field
+- Update markSkipped() to accept + save reason
+- Frontend already sends the reason in the request body — wire to 
+  controller param
+
+~30 min CC fix.
+

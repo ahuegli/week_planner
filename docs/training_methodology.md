@@ -37,13 +37,22 @@ inputs could conflict, the canonical one is named explicitly.
 **Required:**
 - `tier` — running session count target (`tier4plus` | `tier3` | `tier2`)
 - `weeklyHours` — **canonical total time budget** for structured exercise across all modalities. Volume tables below are advisory targets the engine tries to hit within this budget; if hours and km tables conflict, hours wins.
-- `level` — self-reported athlete level at onboarding (`novice` | `beginner` | `intermediate` | `advanced`). Definitions:
+- `level` — self-reported running level at onboarding. Definitions:
   - **Novice**: <6 months consistent running, no race history
   - **Beginner**: 6–18 months consistent running, completed at least one race at any distance
   - **Intermediate**: 18+ months consistent running, multiple races completed, established weekly mileage
   - **Advanced**: 3+ years consistent training, race times competitive for age group, comfortable with structured intensity work
   
-  Self-report is the v1 input. v2 refines from completed-session adherence patterns and race results.
+  Self-report is the v1 input. v2 refines from completed-session 
+  adherence patterns and race results.
+  
+  **Relationship to triathlon `experienceLevel`:** these measure 
+  different things and coexist. A 10-year marathoner is `advanced` 
+  on the run side but may be `tri_novice_but_fit` for triathlon 
+  experience. The engine reads both when generating triathlon plans. 
+  Run plans only use `level`. Triathlon plans use `experienceLevel` 
+  for triathlon-specific scaling and `level` for run-side scaling 
+  within the triathlon plan.
 
 - `goalRace` — distance and date if applicable
 - `groupClassSlots[]` — fixed-time recurring sessions the user has externally committed to (martial arts class, dance class). Engine treats these as immovable in the schedule and accounts for their hardness rating in adjacent-day planning.
@@ -52,6 +61,18 @@ inputs could conflict, the canonical one is named explicitly.
 - `currentRaceTimes` — recent race results for pace zone calibration
 - `vO2max` or `criticalSpeed` — if known
 - `restingHR`, `maxHR` — for HR-zone work
+
+**Pace anchor inputs (running-specific, optional but high-value):**
+- `runThresholdSecPerKm` — threshold pace in seconds per km. Drives 
+  zone definitions and pace targets across all running sessions. 
+  Computable from a 5K or 10K race result via Riegel. If absent, 
+  zones derive from `level` + RPE.
+- `recent5kTime` or `recent10kTime` — race results computable to 
+  threshold pace. Single most useful input for an active runner.
+
+If both `runThresholdSecPerKm` and recent race times are provided, 
+the more recent input wins. If neither is provided, the engine 
+falls back to RPE-only prescription with `level`-scaled defaults.
 
 ## Frequency tiers
 
@@ -256,6 +277,20 @@ Tier 3.
 The denominator change at Tier 2 matters — without cross-training in
 the equation, the cap blocks long runs that are perfectly safe given
 the athlete's actual aerobic conditioning.
+
+**Progression mechanic:** Long run distance follows the linear-ramp
+mechanism (see triathlon_methodology.md "Progression mechanism"
+section). Within base phase: starts at 0.70× of phase peak target,
+ramps to 1.00×. Within build phase: 0.90× → 1.15× of base peak.
+Deload weeks reduce by 30% but don't reset the ramp baseline. The
+absolute caps in the table above hold regardless.
+
+**Fitness scaling:** Long run baseline distance is multiplied by
+`level` factor (novice 0.85, beginner 0.95, intermediate 1.05,
+advanced 1.15) and `weeklyHours` factor (0.65–1.50 of standard).
+An advanced runner training 60 km/week gets meaningfully longer
+long runs than a beginner training 25 km/week even at the same
+plan length and race distance.
 
 ## Race distance training emphasis
 
@@ -493,6 +528,10 @@ differentiator.
 
 ## Implementation hooks for plan-template.service.ts rewrite
 
+- **Canonical session units**: per shared canonical-unit table 
+  (see triathlon_methodology.md). Long runs are distance-canonical, 
+  recovery runs time-canonical, intervals time-and-reps canonical. 
+  Engine computes derived units from canonical + pace.
 - Inputs: `tier`, `weeklyHours` (canonical), `level`, `goalRace`, `groupClassSlots[]`
 - `calculateLongRunProgression()` — marathon cap 32 km, tier-aware % cap
 - `calculateSpeedWorkProgression()` — split LT2 and VO2max buckets; rotation logic at Tier 3; combined-session at Tier 2

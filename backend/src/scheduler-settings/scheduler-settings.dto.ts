@@ -128,4 +128,14 @@ export class UpdateSchedulerSettingsDto {
   @IsOptional()
   @IsIn(['traditional', 'reverse'])
   periodisationOverride?: string;
+
+  @IsOptional()
+  @IsIn(['novice', 'beginner', 'intermediate', 'advanced'])
+  level?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(40)
+  weeklyHours?: number;
 }

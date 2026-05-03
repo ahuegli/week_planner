@@ -10,6 +10,22 @@ import { calculateTaskBadges } from '../features/stats/utils/task-badge-calculat
 
 const RING_R = 36;
 export const RING_C = +(2 * Math.PI * RING_R).toFixed(2);
+type StatsPeriod = 'this-week' | 'all-time';
+
+interface PeriodStatsView {
+  label: 'This week' | 'All time';
+  completed: number;
+  total: number;
+  keyCompleted: number;
+  keyTotal: number;
+  completionRate: number;
+  keyCompletionRate: number;
+  supportingCompletionRate: number | null;
+  optionalCompletionRate: number | null;
+  totalWorkoutsCompleted: number;
+  totalDurationMinutes: number;
+  totalDistanceKm: number;
+}
 
 const MOTIVATIONAL: Array<(s: StatsSummary, st: StreakStats) => string | null> = [
   (s, st) => st.currentWeekStreak >= 4 ? `You're on fire! ${st.currentWeekStreak} weeks of crushing it.` : null,
@@ -45,15 +61,73 @@ export class StatsPageComponent {
   protected readonly weeklyError = signal(false);
   protected readonly streaksError = signal(false);
   protected readonly volumeMetric = signal<'duration' | 'distance'>('duration');
+  protected readonly selectedPeriod = signal<StatsPeriod>('this-week');
   protected readonly expandedSport = signal<string | null>(null);
   protected readonly expandedBadgeId = signal<string | null>(null);
 
   protected readonly ringCircumference = RING_C;
 
+  private readonly thisWeekStats = computed<PeriodStatsView | null>(() => {
+    const s = this.summary();
+    if (!s) return null;
+
+    const weeks = this.weekly()?.weeks ?? [];
+    const currentWeekNumber = s.currentPlan?.weekNumber;
+    const matchingWeek = currentWeekNumber
+      ? weeks.find(w => w.weekNumber === currentWeekNumber)
+      : weeks.at(-1);
+
+    const completionRate = s.thisWeek.total > 0
+      ? Math.round((s.thisWeek.completed / s.thisWeek.total) * 100)
+      : 0;
+    const keyCompletionRate = s.thisWeek.keySessionsTotal > 0
+      ? Math.round((s.thisWeek.keySessionsHit / s.thisWeek.keySessionsTotal) * 100)
+      : 0;
+
+    return {
+      label: 'This week',
+      completed: s.thisWeek.completed,
+      total: s.thisWeek.total,
+      keyCompleted: s.thisWeek.keySessionsHit,
+      keyTotal: s.thisWeek.keySessionsTotal,
+      completionRate,
+      keyCompletionRate,
+      supportingCompletionRate: null,
+      optionalCompletionRate: null,
+      totalWorkoutsCompleted: matchingWeek?.completed ?? s.thisWeek.completed,
+      totalDurationMinutes: matchingWeek?.totalDurationMinutes ?? 0,
+      totalDistanceKm: matchingWeek?.totalDistanceKm ?? 0,
+    };
+  });
+
+  private readonly allTimeStats = computed<PeriodStatsView | null>(() => {
+    const s = this.summary();
+    if (!s) return null;
+
+    return {
+      label: 'All time',
+      completed: s.totalWorkoutsCompleted,
+      total: s.keyTotal + s.supportTotal + s.optTotal,
+      keyCompleted: s.keyCompleted,
+      keyTotal: s.keyTotal,
+      completionRate: s.completionRate,
+      keyCompletionRate: s.keyCompletionRate,
+      supportingCompletionRate: s.supportingCompletionRate,
+      optionalCompletionRate: s.optionalCompletionRate,
+      totalWorkoutsCompleted: s.totalWorkoutsCompleted,
+      totalDurationMinutes: s.totalDurationMinutes,
+      totalDistanceKm: s.totalDistanceKm,
+    };
+  });
+
+  protected readonly selectedStats = computed<PeriodStatsView | null>(() =>
+    this.selectedPeriod() === 'this-week' ? this.thisWeekStats() : this.allTimeStats(),
+  );
+
   protected readonly ringOffset = computed(() => {
-    const tw = this.summary()?.thisWeek;
-    if (!tw || tw.total === 0) return RING_C;
-    return +(RING_C * (1 - tw.completed / tw.total)).toFixed(2);
+    const selected = this.selectedStats();
+    if (!selected || selected.total === 0) return RING_C;
+    return +(RING_C * (1 - selected.completed / selected.total)).toFixed(2);
   });
 
   protected readonly weeklyChartData = computed<ChartBar[]>(() => {
@@ -89,6 +163,10 @@ export class StatsPageComponent {
   protected readonly activeSports = computed(() =>
     this.sportStats().filter(s => s.totalSessions > 0),
   );
+
+  protected setPeriod(period: StatsPeriod): void {
+    this.selectedPeriod.set(period);
+  }
 
   constructor() {
     void this.loadAll();

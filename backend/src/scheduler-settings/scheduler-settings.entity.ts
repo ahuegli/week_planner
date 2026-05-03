@@ -78,6 +78,12 @@ export class SchedulerSettings {
   @Column({ type: 'enum', enum: ['traditional', 'reverse'], nullable: true })
   periodisationOverride: 'traditional' | 'reverse' | null;
 
+  @Column({ type: 'enum', enum: ['novice', 'beginner', 'intermediate', 'advanced'], nullable: true })
+  level: 'novice' | 'beginner' | 'intermediate' | 'advanced' | null;
+
+  @Column({ type: 'float', nullable: true })
+  weeklyHours: number | null;
+
   @Column({ unique: true })
   userId: string;
 

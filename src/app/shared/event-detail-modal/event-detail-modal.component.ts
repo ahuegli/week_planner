@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { CalendarEvent } from '../../mock-data';
+import { CalendarEvent as CoreCalendarEvent } from '../../core/models/app-data.models';
 import { DataStoreService } from '../../core/services/data-store.service';
 import { UiFeedbackService } from '../ui-feedback.service';
+import { generateIcsForEvent } from '../utils/ics-generator.util';
 
 type EventFormValue = {
   title: string;
@@ -88,6 +90,7 @@ export class EventDetailModalComponent {
   protected readonly inviteOnlyMode = computed(() => this.openTo() === 'invite');
 
   protected readonly isWorkout = computed(() => this.event()?.type === 'workout');
+  protected readonly canExportCalendar = computed(() => !this.isCreateMode() && this.isWorkout());
   protected readonly isShift = computed(() => this.event()?.type === 'shift');
   protected readonly isMealPrep = computed(() => this.event()?.type === 'mealprep');
   protected readonly isPersonal = computed(() => this.event()?.type === 'personal' || this.event()?.type === 'custom-event');
@@ -282,6 +285,30 @@ export class EventDetailModalComponent {
     }
   }
 
+  protected exportCalendarDownload(): void {
+    const ev = this.event();
+    if (!ev || ev.type !== 'workout') {
+      return;
+    }
+
+    const coreEvent = this.toCoreCalendarEvent(ev);
+    const content = generateIcsForEvent(coreEvent);
+    const filename = this.buildIcsFilename(coreEvent.title, coreEvent.date);
+    this.downloadIcsFile(content, filename);
+    this.uiFeedback.show('Calendar file downloaded');
+  }
+
+  protected async exportCalendarCopy(): Promise<void> {
+    const ev = this.event();
+    if (!ev || ev.type !== 'workout') {
+      return;
+    }
+
+    const content = generateIcsForEvent(this.toCoreCalendarEvent(ev));
+    const copied = await this.copyToClipboard(content);
+    this.uiFeedback.show(copied ? 'Calendar text copied' : 'Could not copy calendar text');
+  }
+
   private toFormValue(event: CalendarEvent): EventFormValue {
     return {
       title: event.title,
@@ -314,6 +341,51 @@ export class EventDetailModalComponent {
 
   private toOptionalChoice<T extends string>(value: T | ''): T | undefined {
     return value || undefined;
+  }
+
+  private toCoreCalendarEvent(event: CalendarEvent): CoreCalendarEvent {
+    return {
+      ...event,
+      day: typeof event.day === 'number' ? event.day : this.resolveEventDay(event),
+    };
+  }
+
+  private buildIcsFilename(title: string, date?: string): string {
+    const safeTitle = title
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'workout';
+
+    const safeDate = date ?? this.toDateString(new Date());
+    return `${safeTitle}_${safeDate}.ics`;
+  }
+
+  private downloadIcsFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  private async copyToClipboard(content: string): Promise<boolean> {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
   }
 
   private resolveEventDay(event: CalendarEvent): number {

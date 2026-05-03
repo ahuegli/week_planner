@@ -24,6 +24,30 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
         </button>
       </header>
 
+      <div class="search-wrap">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input
+          class="field search-input"
+          type="text"
+          placeholder="Search notes..."
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+          aria-label="Search notes"
+        />
+        @if (searchQuery().trim().length > 0) {
+          <button type="button" class="search-clear-btn" (click)="clearSearch()" aria-label="Clear search">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m15 9-6 6"></path>
+              <path d="m9 9 6 6"></path>
+            </svg>
+          </button>
+        }
+      </div>
+
       <div class="filter-strip" role="tablist" aria-label="Note filters">
         <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'all'" [attr.aria-selected]="activeFilter() === 'all'" (click)="setFilter('all')">All</button>
         <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'tasks'" [attr.aria-selected]="activeFilter() === 'tasks'" (click)="setFilter('tasks')">Tasks</button>
@@ -591,6 +615,11 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
     .page-title { font-family: Georgia, serif; font-size: 24px; margin: 0; color: var(--color-text); }
     .header-settings { width: 34px; height: 34px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); display: inline-flex; align-items: center; justify-content: center; color: var(--color-text-secondary); cursor: pointer; }
     .header-settings:hover { color: var(--color-primary); border-color: rgba(45, 77, 122, 0.28); }
+    .search-wrap { position: relative; width: 100%; margin-bottom: 2px; }
+    .search-input { padding-left: 34px; padding-right: 34px; }
+    .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); pointer-events: none; }
+    .search-clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: none; width: 24px; height: 24px; border-radius: 50%; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--color-text-secondary); cursor: pointer; }
+    .search-clear-btn:hover { color: var(--color-text); }
     .filter-strip { display: flex; align-items: center; gap: 8px; overflow-x: auto; }
     .filter-pill { border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
     .filter-pill.selected { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
@@ -770,19 +799,37 @@ export class NotesPageComponent {
   });
 
   protected readonly activeFilter = signal<'all' | 'tasks' | 'projects' | 'reminders'>('all');
+  protected readonly searchQuery = signal('');
   protected readonly visibleNotes = computed<Note[]>(() => {
     const notes = this.sortedNotes();
     const filter = this.activeFilter();
+    const query = this.searchQuery().trim().toLowerCase();
     const byParent = this.subtasksByParent();
 
-    if (filter === 'all') return notes;
-    if (filter === 'tasks') {
-      return notes.filter((n) => (n.noteType === 'task' || !n.noteType) && !byParent.has(n.id));
+    let filteredByPill: Note[];
+
+    if (filter === 'all') {
+      filteredByPill = notes;
+    } else if (filter === 'tasks') {
+      filteredByPill = notes.filter((n) => (n.noteType === 'task' || !n.noteType) && !byParent.has(n.id));
+    } else if (filter === 'projects') {
+      filteredByPill = notes.filter((n) => (n.noteType === 'task' || !n.noteType) && byParent.has(n.id));
+    } else {
+      filteredByPill = notes.filter((n) => n.noteType === 'reminder');
     }
-    if (filter === 'projects') {
-      return notes.filter((n) => (n.noteType === 'task' || !n.noteType) && byParent.has(n.id));
-    }
-    return notes.filter((n) => n.noteType === 'reminder');
+
+    if (!query) return filteredByPill;
+
+    return filteredByPill.filter((note) => {
+      const title = note.title.toLowerCase();
+      const description = (note.description ?? note.body ?? '').toLowerCase();
+      const noteMatches = title.includes(query) || description.includes(query);
+
+      if (noteMatches) return true;
+
+      const subtasks = byParent.get(note.id) ?? [];
+      return subtasks.some((sub) => sub.title.toLowerCase().includes(query));
+    });
   });
 
   protected readonly formExpanded = signal(false);
@@ -837,6 +884,9 @@ export class NotesPageComponent {
   });
 
   protected readonly emptyStateText = computed(() => {
+    const term = this.searchQuery().trim();
+    if (term.length > 0) return `No notes match '${term}'`;
+
     const filter = this.activeFilter();
     if (filter === 'reminders') return 'No reminders yet.';
     if (filter === 'projects') return 'No projects yet — add a sub-task to any task to turn it into a project.';
@@ -873,6 +923,10 @@ export class NotesPageComponent {
 
   protected setFilter(filter: 'all' | 'tasks' | 'projects' | 'reminders'): void {
     this.activeFilter.set(filter);
+  }
+
+  protected clearSearch(): void {
+    this.searchQuery.set('');
   }
 
   protected openSettings(): void {

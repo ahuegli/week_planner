@@ -96,6 +96,9 @@ export class SettingsPageComponent {
   protected readonly endurancePedigree = signal<'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple'>('none');
   protected readonly periodisationOverride = signal<'traditional' | 'reverse' | ''>('');
   protected readonly triCalibSaveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
+  protected readonly fitnessLevel = signal<'novice' | 'beginner' | 'intermediate' | 'advanced' | ''>('');
+  protected readonly weeklyHours = signal<number>(6);
+  protected readonly fitnessSaveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
 
   protected readonly mealPrepPerWeek = signal('2');
   protected readonly mealPrepDuration = signal('1 hour');
@@ -301,6 +304,20 @@ export class SettingsPageComponent {
     }
   }
 
+  protected async saveFitnessProfile(): Promise<void> {
+    this.fitnessSaveStatus.set('saving');
+    try {
+      await this.dataStore.updateSchedulerSettings({
+        level: this.fitnessLevel() || null,
+        weeklyHours: this.weeklyHours() || null,
+      });
+      this.fitnessSaveStatus.set('saved');
+      setTimeout(() => this.fitnessSaveStatus.set('idle'), 1500);
+    } catch {
+      this.fitnessSaveStatus.set('idle');
+    }
+  }
+
   protected logout(): void {
     this.authService.logout();
     void this.router.navigate(['/login']);
@@ -485,6 +502,8 @@ export class SettingsPageComponent {
       this.triathlonsCompleted.set(scheduler.triathlonsCompleted ?? 0);
       this.endurancePedigree.set(scheduler.endurancePedigree ?? 'none');
       this.periodisationOverride.set(scheduler.periodisationOverride ?? '');
+      this.fitnessLevel.set(scheduler.level ?? '');
+      this.weeklyHours.set(scheduler.weeklyHours ?? 6);
     }
 
     if (mealprep) {

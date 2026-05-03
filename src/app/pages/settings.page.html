@@ -120,6 +120,32 @@
           <button type="button" class="btn-secondary small-btn" (click)="createPlan()">Create new plan</button>
         }
 
+        <div class="setting-block">
+          <p class="block-title">Fitness profile</p>
+          <label class="field-label">Experience level</label>
+          <select class="input" [value]="fitnessLevel()" (change)="fitnessLevel.set($any($event.target).value)">
+            <option value="">Not set</option>
+            <option value="novice">Novice — less than 6 months</option>
+            <option value="beginner">Beginner — 6–18 months, at least one race</option>
+            <option value="intermediate">Intermediate — 18+ months, multiple races</option>
+            <option value="advanced">Advanced — 3+ years, structured training</option>
+          </select>
+
+          <div class="setting-row" style="margin-top: 8px;">
+            <span>Weekly training hours</span>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" (click)="adjustSignal(weeklyHours, -1, 1, 20)">-</button>
+              <span>{{ weeklyHours() }}h</span>
+              <button type="button" class="stepper-btn" (click)="adjustSignal(weeklyHours, 1, 1, 20)">+</button>
+            </div>
+          </div>
+          <p class="info-text">Total across all sports — running, cycling, swimming, strength, mobility</p>
+
+          <button type="button" class="btn-primary small-btn" style="margin-top: 8px;" (click)="saveFitnessProfile()" [disabled]="fitnessSaveStatus() === 'saving'">
+            {{ fitnessSaveStatus() === 'saving' ? 'Saving...' : fitnessSaveStatus() === 'saved' ? 'Saved' : 'Save fitness profile' }}
+          </button>
+        </div>
+
         <div class="setting-row">
           <span>Available training days</span>
           <div class="stepper">

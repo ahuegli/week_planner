@@ -52,6 +52,8 @@ export interface OnboardingData {
   cssSecondsPer100m: number | null;
   knowsRunThreshold: boolean;
   runThresholdSecPerKm: number | null;
+  fitnessLevel: 'novice' | 'beginner' | 'intermediate' | 'advanced' | null;
+  weeklyHours: number | null;
 }
 
 export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
@@ -104,4 +106,6 @@ export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   cssSecondsPer100m: null,
   knowsRunThreshold: false,
   runThresholdSecPerKm: null,
+  fitnessLevel: null,
+  weeklyHours: null,
 };

@@ -43,6 +43,122 @@
   margin-bottom: 12px;
 }
 
+// ── Reminders due today ─────────────────────────────────────────────────
+.reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, #fff8e1 80%, var(--color-card) 20%);
+  border: 1px solid color-mix(in srgb, #f0c040 35%, var(--color-border) 65%);
+  border-radius: 10px;
+  padding: 10px 10px 10px 12px;
+  animation: reminder-enter 0.2s ease;
+
+  &--overdue {
+    background: color-mix(in srgb, #fff3f0 80%, var(--color-card) 20%);
+    border-color: color-mix(in srgb, #f09080 35%, var(--color-border) 65%);
+  }
+}
+
+@keyframes reminder-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reminder-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.reminder-icon {
+  flex: 0 0 auto;
+  color: #b0832a;
+  margin-top: 1px;
+
+  .reminder-card--overdue & {
+    color: #c0533a;
+  }
+}
+
+.reminder-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reminder-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-time {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.reminder-overdue-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c0533a;
+}
+
+.reminder-complete-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, #f0c040 40%, var(--color-border) 60%);
+  background: transparent;
+  color: #b0832a;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  .reminder-card--overdue & {
+    border-color: color-mix(in srgb, #f09080 40%, var(--color-border) 60%);
+    color: #c0533a;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, #f0c040 20%, transparent 80%);
+    border-color: #c8a030;
+    color: #7a5510;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────
+
 .today-empty-state {
   display: flex;
   flex-direction: column;
@@ -203,6 +319,139 @@
 
 .tomorrow-preview.is-actionable:hover {
   border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+}
+
+.recap-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.46);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+  z-index: 1200;
+
+  &.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  &.is-leaving {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.recap-panel {
+  width: min(420px, 100%);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transform: translateY(8px);
+  opacity: 0;
+  transition: transform 300ms ease, opacity 300ms ease;
+  overflow: hidden;
+
+  .recap-overlay.is-visible & {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .recap-overlay.is-leaving & {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+.recap-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.recap-section {
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, #2d4d7a 18%);
+  background: color-mix(in srgb, var(--color-card) 94%, #2d4d7a 6%);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.recap-section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.recap-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.recap-stat-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.recap-duration {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.recap-streak {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.recap-streak-icon {
+  font-size: 14px;
+}
+
+.recap-tomorrow-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.recap-cta {
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .your-day-header {

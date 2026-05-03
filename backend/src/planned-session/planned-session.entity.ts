@@ -89,6 +89,9 @@ export class PlannedSession {
   @Column({ type: 'enum', enum: ['swim', 'bike', 'run', 'brick', 'strength', 'mobility', 'rest'], nullable: true })
   discipline: PlannedSessionDiscipline | null;
 
+  @Column({ type: 'enum', enum: ['endurance', 'sweet_spot', 'ftp', 'recovery', 'race_pace'], nullable: true })
+  bikeIntent: 'endurance' | 'sweet_spot' | 'ftp' | 'recovery' | 'race_pace' | null;
+
   @Column({ type: 'jsonb', nullable: true })
   prescriptionData: Record<string, unknown> | null;
 

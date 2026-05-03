@@ -248,6 +248,7 @@ export class SchedulerController {
             substituteOptions: session.substituteOptions,
             missImpact: session.missImpact,
             discipline: session.discipline,
+            bikeIntent: session.bikeIntent ?? null,
             prescriptionData: session.prescriptionData,
             cyclePhaseRules: session.cyclePhaseRules,
             linkedNextSessionId: session.linkedNextSessionId ?? null,

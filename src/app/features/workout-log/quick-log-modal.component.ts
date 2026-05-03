@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { DataStoreService } from '../../core/services/data-store.service';
 import { UiFeedbackService } from '../../shared/ui-feedback.service';
 import { CreateWorkoutLogPayload, EnergyRating, UpdateWorkoutLogPayload, WorkoutLog } from '../../core/models/app-data.models';
+import { generateIcsForLog } from '../../shared/utils/ics-generator.util';
 
 const SESSION_TYPES: { value: string; label: string }[] = [
   { value: 'running', label: 'Running' },
@@ -51,6 +52,7 @@ export class QuickLogModalComponent {
   protected readonly isEditMode = computed(() => !!this.logToEdit());
   protected readonly modalTitle = computed(() => (this.isEditMode() ? 'Edit logged workout' : 'Log a workout'));
   protected readonly saveLabel = computed(() => (this.isEditMode() ? 'Save changes' : 'Save workout'));
+  protected readonly canExport = computed(() => !!this.logToEdit());
 
   protected readonly showDistance = computed(() => DISTANCE_TYPES.has(this.activityType()));
 
@@ -168,6 +170,28 @@ export class QuickLogModalComponent {
     }
   }
 
+  protected exportCalendarDownload(): void {
+    const log = this.logToEdit();
+    if (!log) {
+      return;
+    }
+
+    const content = generateIcsForLog(log);
+    const filename = this.buildIcsFilename(log);
+    this.downloadIcsFile(content, filename);
+    this.uiFeedback.show('Calendar file downloaded');
+  }
+
+  protected async exportCalendarCopy(): Promise<void> {
+    const log = this.logToEdit();
+    if (!log) {
+      return;
+    }
+
+    const copied = await this.copyToClipboard(generateIcsForLog(log));
+    this.uiFeedback.show(copied ? 'Calendar text copied' : 'Could not copy calendar text');
+  }
+
   private resetForm(): void {
     this.activityType.set('running');
     this.durationStr.set('');
@@ -204,5 +228,47 @@ export class QuickLogModalComponent {
     const val = this.completedAtStr();
     if (!val) return new Date().toISOString();
     return new Date(val).toISOString();
+  }
+
+  private buildIcsFilename(log: WorkoutLog): string {
+    const baseTitle = (log.title?.trim() || log.sessionType || 'workout')
+      .replace(/\s+/g, '_')
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'workout';
+
+    const date = new Date(log.completedAt);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const datePart = Number.isNaN(date.getTime()) ? 'unknown-date' : `${year}-${month}-${day}`;
+
+    return `${baseTitle}_${datePart}.ics`;
+  }
+
+  private downloadIcsFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  private async copyToClipboard(content: string): Promise<boolean> {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
   }
 }

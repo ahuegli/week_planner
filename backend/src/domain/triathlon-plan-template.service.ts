@@ -39,7 +39,7 @@ export interface TriathlonPlanParams {
 }
 
 type SwimIntent = 'technique' | 'threshold' | 'endurance';
-type BikeIntent = 'intervals' | 'sweet_spot' | 'long' | 'race_pace';
+type BikeIntent = 'ftp' | 'sweet_spot' | 'endurance' | 'recovery' | 'race_pace';
 type RunIntent = 'quality' | 'easy' | 'long';
 
 interface TriTemplateSession {
@@ -121,6 +121,75 @@ const CYCLE_PHASE_RULES = {
 };
 
 // ---------------------------------------------------------------------------
+// Fitness context — wires experienceLevel, pedigree, weeklyHours, thresholds
+// into long-session sizing. Resolved once per plan generation call.
+// ---------------------------------------------------------------------------
+
+type PedigreeStrength = 'none' | 'some' | 'strong';
+
+interface TriFitnessContext {
+  experienceLevel: TriExperienceLevel;
+  pedigreeStrength: PedigreeStrength;
+  weeklyHours: number;
+  tier: TriTier;
+  distance: TriathlonDistance;
+  runThresholdSecPerKm: number | null;
+  cssSecondsPer100m: number | null;
+}
+
+// Per methodology 'Fitness inputs hierarchy — triathlon' and 'Progression mechanism'
+const TRI_EXPERIENCE_MULTIPLIER: Record<TriExperienceLevel, number> = {
+  true_beginner: 0.85, tri_novice_but_fit: 0.95, intermediate: 1.05, experienced: 1.15,
+};
+
+const PEDIGREE_STRENGTH_MULTIPLIER: Record<PedigreeStrength, number> = {
+  none: 0.95, some: 1.00, strong: 1.10,
+};
+
+// Per methodology long-session progression tables — base value is the km/h reference
+// at which intermediate (1.05×) × standard-hours (1.0×) × phase-ramp-0.70 ≈ methodology starts.
+// Ceilings match methodology 'Hard caps'.
+
+// Long run — distance-canonical (km)
+const TRI_LONG_RUN_BASE_KM: Record<TriathlonDistance, number> = {
+  sprint: 11, olympic: 14, '70_3': 16, '140_6': 19,
+};
+const TRI_LONG_RUN_CEILING_KM: Record<TriathlonDistance, number> = {
+  sprint: 14, olympic: 18, '70_3': 25, '140_6': 32,
+};
+
+// Long bike — time-canonical (hours)
+const TRI_LONG_BIKE_BASE_H: Record<TriathlonDistance, number> = {
+  sprint: 2.0, olympic: 2.7, '70_3': 3.4, '140_6': 4.0,
+};
+const TRI_LONG_BIKE_CEILING_H: Record<TriathlonDistance, number> = {
+  sprint: 2.5, olympic: 3.5, '70_3': 5.0, '140_6': 6.0,
+};
+
+// Long swim — distance-canonical (meters)
+const TRI_LONG_SWIM_BASE_M: Record<TriathlonDistance, number> = {
+  sprint: 1500, olympic: 2500, '70_3': 3200, '140_6': 4000,
+};
+const TRI_LONG_SWIM_CEILING_M: Record<TriathlonDistance, number> = {
+  sprint: 2000, olympic: 3000, '70_3': 4000, '140_6': 5000,
+};
+
+// Easy run pace fallback when runThresholdSecPerKm not available.
+// Slightly slower than run-only defaults to reflect accumulated triathlon fatigue.
+const TRI_DEFAULT_EASY_PACE_SEC_KM: Record<TriExperienceLevel, number> = {
+  true_beginner: 420, tri_novice_but_fit: 390, intermediate: 360, experienced: 330,
+};
+
+// Swim pace fallback when CSS not available (s per 100m, endurance/Z2 effort).
+const TRI_DEFAULT_SWIM_PACE_SEC_100M: Record<TriExperienceLevel, number> = {
+  true_beginner: 150, tri_novice_but_fit: 125, intermediate: 105, experienced: 90,
+};
+
+// Long run should not exceed this fraction of total weekly running time.
+// Per methodology 'Universal rules — long run as % of running volume': 30-35%.
+const LONG_RUN_VOLUME_FRACTION = 0.33;
+
+// ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
 
@@ -165,6 +234,7 @@ export class TriathlonPlanTemplateService {
     params: TriathlonPlanParams,
   ): { weeks: PlanWeek[]; sessions: PlannedSession[] } {
     const { distance, tier, weeklyHours, calibration, poolAccess, periodisation } = params;
+    const fitnessCtx = this.resolveFitnessContext(params, settings);
 
     // Per methodology 'Frequency tiers' — Tier 3 (≤7 sessions) cannot support the volume
     // required for 140.6. Caller should have validated this, but guard here as hard backstop.
@@ -195,7 +265,7 @@ export class TriathlonPlanTemplateService {
 
       const templateSessions = this.getWeekSessions(
         weekNumber, totalWeeks, phase, isDeload,
-        tier, distance, weeklyHours, periodisation,
+        tier, distance, weeklyHours, periodisation, fitnessCtx,
       );
 
       const tempWeekId = `week-${weekNumber}`;
@@ -234,6 +304,7 @@ export class TriathlonPlanTemplateService {
           substituteOptions: tmpl.substituteOptions,
           missImpact: tmpl.priority === 'key' ? 'high' : tmpl.priority === 'supporting' ? 'medium' : 'low',
           discipline: tmpl.discipline,
+          bikeIntent: tmpl.bikeIntent ?? null,
           prescriptionData: this.buildPrescription(tmpl, phase, distance, calibration, poolAccess, weeklyHours),
           cyclePhaseRules: CYCLE_PHASE_RULES,
           status: 'pending',
@@ -312,37 +383,79 @@ export class TriathlonPlanTemplateService {
     distance: TriathlonDistance,
     weeklyHours: number,
     periodisation: TriPeriodisation,
+    fitnessCtx: TriFitnessContext,
   ): (TriTemplateSession & { duration: number })[] {
     const brickVariant = this.computeBrickVariant(distance, phase, weekNumber, totalWeeks);
     const templates: TriTemplateSession[] = tier === 'tier4plus'
       ? this.tier4PlusTemplate(distance, phase, brickVariant)
       : this.tier3Template(distance, phase, brickVariant);
 
-    // Duration scaling: hour scaler × progression scaler × deload scaler
     const stdHours = STANDARD_WEEKLY_HOURS[tier][distance];
-    // Scaler capped at 1.5× (50% above standard) to prevent session durations becoming unworkable.
-    // Capped at 0.65× minimum to preserve minimum viable session quality at low-hour inputs.
     const hourScaler = Math.min(1.5, Math.max(0.65, weeklyHours / stdHours));
-    // progressionScaler replaces the old flat PHASE_VOLUME_SCALER — it ramps linearly within each
-    // phase so volume builds toward peak rather than jumping to a fixed phase multiplier.
     const progressionScaler = this.computeProgressionScaler(weekNumber, phase, distance, totalWeeks);
     const deloadScaler = isDeload ? 0.70 : 1.0;
-
-    // Per methodology 'Periodisation models — reverse': reverse periodisation does NOT change volume,
-    // only zone emphasis. The 1.05 bias in build nudges slightly more time-in-zone for experienced
-    // athletes who already have aerobic base. Judgment call: this is a minor bias, not a full swap.
-    // Volume remains the same — only session intent shifts (handled in prescriptionData)
-    // Phase weighting adjusts in the reverse case: build phase gets slightly more volume early
     const reverseBias = periodisation === 'reverse' && phase === 'build' ? 1.05 : 1.0;
-    const totalScaler = hourScaler * progressionScaler * deloadScaler * reverseBias;
+    // experienceFactor and pedigreeFactor now compound into totalScaler for all sessions.
+    const experienceFactor = TRI_EXPERIENCE_MULTIPLIER[fitnessCtx.experienceLevel];
+    const pedigreeFactor = PEDIGREE_STRENGTH_MULTIPLIER[fitnessCtx.pedigreeStrength];
+    const totalScaler = hourScaler * progressionScaler * deloadScaler * reverseBias * experienceFactor * pedigreeFactor;
 
-    return templates.map(t => ({
-      ...t,
-      duration: Math.max(20, Math.round(t.baseDuration * totalScaler)),
-      distanceTargetKm: t.distanceTargetKm
-        ? Math.round(t.distanceTargetKm * totalScaler * 10) / 10
-        : null,
-    }));
+    const sessions = templates.map(t => {
+      // Long run: distance-canonical with per-distance base/ceiling tables
+      if (t.purpose === 'run_long') {
+        return { ...t, ...this.sizeLongRun(weekNumber, totalWeeks, phase, isDeload, fitnessCtx) };
+      }
+      // Long swim (endurance session): distance-canonical
+      if (t.purpose === 'swim_endurance') {
+        return { ...t, ...this.sizeLongSwim(weekNumber, totalWeeks, phase, isDeload, fitnessCtx) };
+      }
+      // Long bike: race_rehearsal brick bike with bikeIntent==='endurance' is the long-ride equivalent
+      if (t.purpose === 'brick_bike' && t.bikeIntent === 'endurance') {
+        return { ...t, ...this.sizeLongBike(weekNumber, totalWeeks, phase, isDeload, fitnessCtx) };
+      }
+      // Brick run: time-canonical duration (from totalScaler) + distance target in build/peak
+      if (t.purpose === 'brick_run') {
+        const dur = Math.max(20, Math.round(t.baseDuration * totalScaler));
+        const distKm = (phase === 'build' || phase === 'peak')
+          ? this.brickRunDistanceKm(dur, fitnessCtx)
+          : null;
+        return { ...t, duration: dur, distanceTargetKm: distKm };
+      }
+      // All other sessions: flat scaler
+      return {
+        ...t,
+        duration: Math.max(20, Math.round(t.baseDuration * totalScaler)),
+        distanceTargetKm: t.distanceTargetKm
+          ? Math.round(t.distanceTargetKm * totalScaler * 10) / 10
+          : null,
+      };
+    });
+
+    // Long-run % cap: standalone run_long should not exceed LONG_RUN_VOLUME_FRACTION of total run time.
+    // Per methodology 'Universal rules — long run as % of running volume'.
+    // Only applied to sprint/olympic: for 70.3/140.6 the absolute ceiling table is the binding
+    // constraint (28-32 km peak) — applying the % cap to long-course plans over-constrains because
+    // the template's other-run sessions (~3h) are too few to allow the methodology-specified peaks.
+    const longRunIdx = sessions.findIndex(s => s.purpose === 'run_long');
+    if (longRunIdx !== -1 && (distance === 'sprint' || distance === 'olympic')) {
+      const otherRunMins = sessions
+        .filter(s => s.discipline === 'run' && s.purpose !== 'run_long')
+        .reduce((sum, s) => sum + s.duration, 0);
+      if (otherRunMins > 0) {
+        const maxLongRunMins = otherRunMins * (LONG_RUN_VOLUME_FRACTION / (1 - LONG_RUN_VOLUME_FRACTION));
+        const lr = sessions[longRunIdx];
+        if (lr.duration > maxLongRunMins) {
+          const cappedDuration = this.roundDurationToFive(maxLongRunMins);
+          const easyPace = fitnessCtx.runThresholdSecPerKm !== null
+            ? fitnessCtx.runThresholdSecPerKm + 75
+            : TRI_DEFAULT_EASY_PACE_SEC_KM[fitnessCtx.experienceLevel];
+          const cappedKm = this.roundDistance(cappedDuration * 60 / easyPace);
+          sessions[longRunIdx] = { ...lr, duration: cappedDuration, distanceTargetKm: cappedKm };
+        }
+      }
+    }
+
+    return sessions;
   }
 
   // -- Tier 4+ template (sprint=10, olympic=10, 70.3=10-11, 140.6=11-12) -----
@@ -372,7 +485,7 @@ export class TriathlonPlanTemplateService {
 
       // Bike intervals
       this.triSession('bike', 'bike_intervals', 'key', 70, 'hard', 'bike', null,
-        ['swim', 'cross_train'], undefined, 'intervals'),
+        ['swim', 'cross_train'], undefined, 'ftp'),
 
       // Brick pair: bike_long replaced by linked brick (bike + brick_run same day)
       ...this.buildBrickPair(distance, phase, longBikeDuration, brickVariant),
@@ -442,7 +555,7 @@ export class TriathlonPlanTemplateService {
 
       // Bike intervals
       this.triSession('bike', 'bike_intervals', 'key', 65, 'hard', 'bike', null,
-        ['swim'], undefined, 'intervals'),
+        ['swim'], undefined, 'ftp'),
 
       // Brick pair: replaces bike_long + run_long (brick run IS the long run at this tier)
       ...this.buildBrickPair(distance, phase, longBikeDuration, brickVariant),
@@ -572,7 +685,7 @@ export class TriathlonPlanTemplateService {
         // Full-volume race-rehearsal — last build weeks for 70.3/140.6 only
         bikeDuration = longBikeDuration;
         runDuration = distance === '140_6' ? 90 : 60;
-        bikeIntent = 'long';
+        bikeIntent = 'endurance';
         runIntentVal = 'quality';
         intensity = 'moderate';
         break;
@@ -834,7 +947,7 @@ export class TriathlonPlanTemplateService {
     const hasFTP = ftpWatts !== null && hasPowerMeter;
     const hasHR = lthrBpm !== null;
 
-    if (intent === 'intervals') {
+    if (intent === 'ftp') {
       // Sweet-spot (Z3 high) or VO2max depending on phase
       // Per methodology 'Bike — intervals': sprint/olympic use VO2max intervals in build+peak
       // (race duration is short, VO2max ceiling is the limiter). 70.3/140.6 stay at sweet-spot
@@ -893,7 +1006,7 @@ export class TriathlonPlanTemplateService {
       };
     }
 
-    if (intent === 'long' || intent === 'race_pace') {
+    if (intent === 'endurance' || intent === 'race_pace') {
       // Long aerobic ride — Z2 with race-pace surges in build/peak
       const raceSegments = (phase === 'build' || phase === 'peak') && distance !== 'sprint';
 
@@ -1113,5 +1226,131 @@ export class TriathlonPlanTemplateService {
   private parseDate(value: string): Date | null {
     const parsed = new Date(`${value}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  // -- Fitness context resolution --------------------------------------------
+
+  private resolveFitnessContext(params: TriathlonPlanParams, settings: SchedulerSettings): TriFitnessContext {
+    // Prefer user-set weeklyHours from settings; fall back to the standard-hours value
+    // that the controller derives from tier/distance when the user hasn't configured one.
+    const weeklyHours = settings.weeklyHours ?? params.weeklyHours;
+    return {
+      experienceLevel: params.experienceLevel,
+      pedigreeStrength: this.mapPedigreeStrength(settings.endurancePedigree),
+      weeklyHours,
+      tier: params.tier,
+      distance: params.distance,
+      runThresholdSecPerKm: settings.runThresholdSecPerKm ?? null,
+      cssSecondsPer100m: params.calibration.cssSecondsPer100m,
+    };
+  }
+
+  private mapPedigreeStrength(pedigree: TriEndurancePedigree | null): PedigreeStrength {
+    if (!pedigree || pedigree === 'none') return 'none';
+    if (pedigree === 'multiple') return 'strong';
+    return 'some'; // runner | cyclist | swimmer
+  }
+
+  // -- Long-session sizing methods -------------------------------------------
+
+  // Long run: distance-canonical. Duration derived from km × easy pace.
+  private sizeLongRun(
+    weekNumber: number, totalWeeks: number,
+    phase: PhaseLabel, isDeload: boolean,
+    ctx: TriFitnessContext,
+  ): { duration: number; distanceTargetKm: number } {
+    const { distance, experienceLevel, pedigreeStrength, weeklyHours, tier } = ctx;
+    const baseKm = TRI_LONG_RUN_BASE_KM[distance];
+    const ceiling = TRI_LONG_RUN_CEILING_KM[distance];
+    const stdHours = STANDARD_WEEKLY_HOURS[tier][distance];
+
+    const experienceFactor = TRI_EXPERIENCE_MULTIPLIER[experienceLevel];
+    const pedigreeFactor = PEDIGREE_STRENGTH_MULTIPLIER[pedigreeStrength];
+    const hoursFactor = Math.min(1.5, Math.max(0.65, weeklyHours / stdHours));
+    const scaledBaseKm = baseKm * experienceFactor * pedigreeFactor * hoursFactor;
+
+    const progressionScaler = this.computeProgressionScaler(weekNumber, phase, distance, totalWeeks);
+    let rawKm = scaledBaseKm * progressionScaler;
+    if (isDeload) rawKm *= 0.70;
+
+    const km = this.roundDistance(Math.min(rawKm, ceiling));
+    const easyPace = ctx.runThresholdSecPerKm !== null
+      ? ctx.runThresholdSecPerKm + 75
+      : TRI_DEFAULT_EASY_PACE_SEC_KM[experienceLevel];
+    const duration = this.roundDurationToFive(km * easyPace / 60);
+    return { duration, distanceTargetKm: km };
+  }
+
+  // Long bike: time-canonical (hours). Race-rehearsal brick bike only.
+  private sizeLongBike(
+    weekNumber: number, totalWeeks: number,
+    phase: PhaseLabel, isDeload: boolean,
+    ctx: TriFitnessContext,
+  ): { duration: number; distanceTargetKm: null } {
+    const { distance, experienceLevel, pedigreeStrength, weeklyHours, tier } = ctx;
+    const baseH = TRI_LONG_BIKE_BASE_H[distance];
+    const ceilingH = TRI_LONG_BIKE_CEILING_H[distance];
+    const stdHours = STANDARD_WEEKLY_HOURS[tier][distance];
+
+    const experienceFactor = TRI_EXPERIENCE_MULTIPLIER[experienceLevel];
+    const pedigreeFactor = PEDIGREE_STRENGTH_MULTIPLIER[pedigreeStrength];
+    const hoursFactor = Math.min(1.5, Math.max(0.65, weeklyHours / stdHours));
+    const scaledBaseH = baseH * experienceFactor * pedigreeFactor * hoursFactor;
+
+    const progressionScaler = this.computeProgressionScaler(weekNumber, phase, distance, totalWeeks);
+    let rawH = scaledBaseH * progressionScaler;
+    if (isDeload) rawH *= 0.70;
+
+    const hours = Math.min(rawH, ceilingH);
+    const duration = this.roundDurationToFive(hours * 60);
+    return { duration, distanceTargetKm: null };
+  }
+
+  // Long swim: distance-canonical (meters → stored as km for consistency).
+  private sizeLongSwim(
+    weekNumber: number, totalWeeks: number,
+    phase: PhaseLabel, isDeload: boolean,
+    ctx: TriFitnessContext,
+  ): { duration: number; distanceTargetKm: number } {
+    const { distance, experienceLevel, pedigreeStrength, weeklyHours, tier } = ctx;
+    const baseM = TRI_LONG_SWIM_BASE_M[distance];
+    const ceilingM = TRI_LONG_SWIM_CEILING_M[distance];
+    const stdHours = STANDARD_WEEKLY_HOURS[tier][distance];
+
+    const experienceFactor = TRI_EXPERIENCE_MULTIPLIER[experienceLevel];
+    const pedigreeFactor = PEDIGREE_STRENGTH_MULTIPLIER[pedigreeStrength];
+    const hoursFactor = Math.min(1.5, Math.max(0.65, weeklyHours / stdHours));
+    const scaledBaseM = baseM * experienceFactor * pedigreeFactor * hoursFactor;
+
+    const progressionScaler = this.computeProgressionScaler(weekNumber, phase, distance, totalWeeks);
+    let rawM = scaledBaseM * progressionScaler;
+    if (isDeload) rawM *= 0.70;
+
+    const meters = Math.round(Math.min(rawM, ceilingM) / 100) * 100; // round to 100m
+    const swimPace = ctx.cssSecondsPer100m !== null
+      ? ctx.cssSecondsPer100m + 8  // Z2 endurance: CSS + 8s/100m
+      : TRI_DEFAULT_SWIM_PACE_SEC_100M[experienceLevel];
+    const duration = this.roundDurationToFive((meters * swimPace) / 100 / 60);
+    return { duration, distanceTargetKm: meters / 1000 };
+  }
+
+  // Brick run: derives km from scaled duration × off-bike easy pace.
+  private brickRunDistanceKm(durationMin: number, ctx: TriFitnessContext): number {
+    // Off-bike pace is ~15 s/km slower than fresh-legs easy pace.
+    const easyPace = ctx.runThresholdSecPerKm !== null
+      ? ctx.runThresholdSecPerKm + 75
+      : TRI_DEFAULT_EASY_PACE_SEC_KM[ctx.experienceLevel];
+    const offBikePace = easyPace + 15;
+    return this.roundDistance(durationMin * 60 / offBikePace);
+  }
+
+  // -- Rounding helpers -------------------------------------------------------
+
+  private roundDistance(km: number): number {
+    return Math.round(km * 2) / 2; // round to nearest 0.5 km
+  }
+
+  private roundDurationToFive(minutes: number): number {
+    return Math.max(20, Math.round(minutes / 5) * 5);
   }
 }

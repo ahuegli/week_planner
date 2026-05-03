@@ -70,6 +70,8 @@ export interface SchedulerSettings {
   triathlonsCompleted?: number | null;
   endurancePedigree?: 'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple' | null;
   periodisationOverride?: 'traditional' | 'reverse' | null;
+  level?: 'novice' | 'beginner' | 'intermediate' | 'advanced' | null;
+  weeklyHours?: number | null;
 }
 
 export interface MealprepSettings {
@@ -170,6 +172,7 @@ export interface PlannedSession {
   isCarryForward: boolean;
   originalWeekNumber: number | null;
   discipline?: 'swim' | 'bike' | 'run' | 'brick' | 'strength' | 'mobility' | 'rest' | null;
+  bikeIntent?: 'endurance' | 'sweet_spot' | 'ftp' | 'recovery' | 'race_pace' | null;
   prescriptionData?: Record<string, unknown> | null;
 }
 
@@ -249,7 +252,7 @@ export interface ScheduleEntirePlanResult {
   }>;
 }
 
-export type IHaveTimeSuggestionKind = 'pending' | 'tomorrow' | 'mealprep' | 'recovery' | 'no-plan' | 'none';
+export type IHaveTimeSuggestionKind = 'pending' | 'tomorrow' | 'mealprep' | 'recovery' | 'no-plan' | 'task' | 'none';
 
 export interface IHaveTimeSuggestion {
   kind: IHaveTimeSuggestionKind;
@@ -261,6 +264,7 @@ export interface IHaveTimeSuggestion {
   description?: string;
   plannedSessionId?: string;
   eventId?: string;
+  noteId?: string;
 }
 
 export interface RescheduleConflictsResult {

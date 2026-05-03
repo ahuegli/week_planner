@@ -287,11 +287,52 @@
 
 <!-- Fixed action button (pre-workout state only) -->
 @if (pageState() === 'pre' && !notFound()) {
-  <div class="start-container">
-    @if (startButtonState() === 'completed') {
-      <button type="button" class="btn-primary btn-completed" disabled>Completed ✓</button>
+  <div class="start-container" [class.skip-picker-open]="skipOpen()">
+
+    <!-- Skip reason picker (inline panel) -->
+    @if (skipOpen()) {
+      <div class="skip-picker" role="dialog" aria-labelledby="skip-picker-title">
+        <p class="skip-picker-title" id="skip-picker-title">Why are you skipping?</p>
+        <div class="skip-reason-chips" role="group" aria-label="Skip reasons">
+          @for (reason of skipReasons; track reason) {
+            <button
+              type="button"
+              class="skip-reason-chip"
+              [class.is-selected]="skipReason() === reason"
+              (click)="selectSkipReason(reason)">
+              {{ reason }}
+            </button>
+          }
+        </div>
+        <div class="skip-picker-actions">
+          <button
+            type="button"
+            class="btn-primary skip-confirm-btn"
+            [disabled]="!skipReason() || isSaving()"
+            (click)="confirmSkip()">
+            {{ isSaving() ? 'Skipping…' : 'Skip session' }}
+          </button>
+          <button type="button" class="skip-cancel-btn" (click)="closeSkipPicker()">Cancel</button>
+        </div>
+      </div>
     } @else {
-      <button type="button" class="btn-primary" (click)="goToPostWorkout()">Complete Workout</button>
+      @if (startButtonState() === 'completed') {
+        <button type="button" class="btn-primary btn-completed" disabled>Completed ✓</button>
+      } @else if (startButtonState() === 'skipped') {
+        <button type="button" class="btn-primary btn-completed" disabled>Skipped</button>
+      } @else {
+        <button type="button" class="btn-primary" (click)="goToPostWorkout()">Complete Workout</button>
+        @if (linkedSession()) {
+          <button type="button" class="btn-skip-session" (click)="openSkipPicker()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+            </svg>
+            Skip session
+          </button>
+        }
+      }
     }
   </div>
 }

@@ -26,6 +26,56 @@ type SpeedWorkProgression = {
   distance: number | null;
 } | null;
 
+type RunnerLevel = 'novice' | 'beginner' | 'intermediate' | 'advanced';
+type DistanceBucket = '5k' | '10k' | 'half' | 'marathon';
+
+interface FitnessContext {
+  goalDistanceKm: number | null;
+  level: RunnerLevel;
+  weeklyHours: number | null;
+  runThresholdSecPerKm: number | null;
+}
+
+// Long run reference distance at intermediate level, standard hours, progressionScaler=1.0
+// (base phase end). Derived from methodology start/peak ranges; verified against test profiles.
+const LONG_RUN_BASE_KM: Record<DistanceBucket, number> = {
+  '5k': 11.5,
+  '10k': 13.5,
+  half: 14.5,
+  marathon: 24,
+};
+
+const LONG_RUN_CEILING_KM: Record<DistanceBucket, number> = {
+  '5k': 16,
+  '10k': 20,
+  half: 22,
+  marathon: 32,
+};
+
+// Standard weekly hours per distance (recreational training reference, approved values).
+const STANDARD_WEEKLY_HOURS_RUN: Record<DistanceBucket, number> = {
+  '5k': 4,
+  '10k': 5,
+  half: 6,
+  marathon: 8,
+};
+
+const LEVEL_MULTIPLIER: Record<RunnerLevel, number> = {
+  novice: 0.85,
+  beginner: 0.95,
+  intermediate: 1.05,
+  advanced: 1.15,
+};
+
+// Default easy pace (sec/km) when runThresholdSecPerKm is absent.
+// Per methodology: "novice ~6:30/km, advanced ~5:00/km".
+const DEFAULT_EASY_PACE_SEC_KM: Record<RunnerLevel, number> = {
+  novice: 390,
+  beginner: 360,
+  intermediate: 330,
+  advanced: 300,
+};
+
 const CYCLE_PHASE_RULES = {
   menstrual: { maxIntensity: 'moderate', priorityOverride: 'supporting' },
   follicular: { maxIntensity: 'hard', preferred: true },
@@ -46,6 +96,7 @@ export class PlanTemplateService {
     const planStartDate = this.resolvePlanStartDate(plan, totalWeeks);
     const raceMinutesPerKm = this.resolveRaceMinutesPerKm(plan);
     const availableDays = this.resolveAvailableDays(settings);
+    const fitnessCtx = this.resolveFitnessContext(plan, settings);
 
     const weeks: PlanWeek[] = [];
     const sessions: PlannedSession[] = [];
@@ -64,6 +115,7 @@ export class PlanTemplateService {
         totalWeeks,
         availableDays,
         raceMinutesPerKm,
+        fitnessCtx,
       );
 
       const tempWeekId = `week-${weekNumber}`;
@@ -181,6 +233,7 @@ export class PlanTemplateService {
     totalWeeks: number,
     availableDays: number,
     raceMinutesPerKm: number | null,
+    fitnessCtx: FitnessContext,
   ): TemplateSession[] {
     if (mode === 'race') {
       return this.generateRaceWeekTemplate(
@@ -190,6 +243,7 @@ export class PlanTemplateService {
         totalWeeks,
         availableDays,
         raceMinutesPerKm,
+        fitnessCtx,
       );
     }
 
@@ -211,10 +265,11 @@ export class PlanTemplateService {
     totalWeeks: number,
     availableDays: number,
     raceMinutesPerKm: number | null,
+    fitnessCtx: FitnessContext,
   ): TemplateSession[] {
     const template: TemplateSession[] = [];
 
-    const longRun = this.calculateLongRunProgression(weekNumber, totalWeeks, phase, isDeload);
+    const longRun = this.calculateLongRunProgression(weekNumber, totalWeeks, phase, isDeload, fitnessCtx);
     if (longRun) {
       template.push(
         this.session('long_run', 'endurance_progression', 'key', longRun.duration, 'moderate', longRun.distance, 'long', [
@@ -417,33 +472,47 @@ export class PlanTemplateService {
     totalWeeks: number,
     phase: PlanWeekPhase,
     isDeload: boolean,
+    ctx: FitnessContext,
   ): LongRunProgression {
-    if (phase === 'taper') {
-      if (weekNumber === totalWeeks) {
-        return null;
-      }
-
-      return { duration: 60, distance: 10 };
+    // Race week: no long run
+    if (phase === 'taper' && weekNumber === totalWeeks) {
+      return null;
     }
 
-    if (phase === 'peak') {
-      return { duration: 95, distance: 18 };
-    }
+    const bucket = this.resolveDistanceBucket(ctx.goalDistanceKm);
+    const baseKm = LONG_RUN_BASE_KM[bucket];
+    const ceiling = LONG_RUN_CEILING_KM[bucket];
+    const stdHours = STANDARD_WEEKLY_HOURS_RUN[bucket];
 
-    const loadIndex = this.resolveRaceLoadIndex(weekNumber, totalWeeks);
-    const baselineDuration = Math.min(95, 60 + (loadIndex - 1) * 5);
-    const baselineDistance = Math.min(16, 10 + Math.max(0, loadIndex - 1));
+    const levelFactor = LEVEL_MULTIPLIER[ctx.level];
+    const hoursFactor = ctx.weeklyHours !== null
+      ? Math.min(1.50, Math.max(0.65, ctx.weeklyHours / stdHours))
+      : 1.0;
 
-    if (!isDeload) {
-      return {
-        duration: this.roundDurationToFive(baselineDuration),
-        distance: this.roundDistance(baselineDistance),
-      };
-    }
+    const scaledKm = baseKm * levelFactor * hoursFactor;
+
+    // Taper non-race weeks: fixed freshness reduction; other phases use linear ramp.
+    const progressionScaler = phase === 'taper'
+      ? 0.65
+      : this.computeRunProgressionScaler(weekNumber, phase, totalWeeks);
+
+    let rawKm = scaledKm * progressionScaler;
+    if (isDeload) rawKm *= 0.70;
+
+    const currentKm = Math.min(rawKm, ceiling);
+    const km = this.roundDistance(currentKm);
+
+    // Duration from distance × easy pace. Easy pace = threshold + 75 s/km buffer,
+    // or level-scaled default when threshold is absent.
+    const easyPaceSec = ctx.runThresholdSecPerKm !== null
+      ? ctx.runThresholdSecPerKm + 75
+      : DEFAULT_EASY_PACE_SEC_KM[ctx.level];
+
+    const durationMin = (km * easyPaceSec) / 60;
 
     return {
-      duration: this.roundDurationToFive(baselineDuration * 0.7),
-      distance: this.floorDistance(baselineDistance * 0.7),
+      duration: this.roundDurationToFive(durationMin),
+      distance: km,
     };
   }
 
@@ -795,5 +864,77 @@ export class PlanTemplateService {
 
   private floorDistance(value: number): number {
     return Math.max(1, Math.floor(value));
+  }
+
+  private resolveDistanceBucket(goalDistanceKm: number | null): DistanceBucket {
+    if (goalDistanceKm === null) return 'half';
+    if (goalDistanceKm <= 6) return '5k';
+    if (goalDistanceKm <= 12) return '10k';
+    if (goalDistanceKm <= 25) return 'half';
+    return 'marathon';
+  }
+
+  // Linear ramp within each phase, matching the triathlon service's computeProgressionScaler.
+  // Phase boundaries mirror resolvePhase() so scalers stay consistent.
+  private computeRunProgressionScaler(
+    weekNumber: number,
+    phase: PlanWeekPhase,
+    totalWeeks: number,
+  ): number {
+    const taperWeeks = 2;
+    const peakWeeks = 1;
+    const baseWeeks = Math.min(5, Math.max(3, Math.round(totalWeeks * 0.33)));
+    const buildWeeks = Math.max(1, totalWeeks - baseWeeks - peakWeeks - taperWeeks);
+
+    const baseEnd = baseWeeks;
+    const buildStart = baseEnd + 1;
+    const buildEnd = baseEnd + buildWeeks;
+    const peakStart = buildEnd + 1;
+    const peakEnd = buildEnd + peakWeeks;
+
+    const PHASE_RAMP: Record<string, [number, number]> = {
+      base:  [0.70, 1.00],
+      build: [0.90, 1.15],
+      peak:  [1.05, 1.15],
+    };
+
+    let phaseStart: number;
+    let phaseEnd: number;
+
+    switch (phase) {
+      case 'base':
+        phaseStart = 1;
+        phaseEnd = baseEnd;
+        break;
+      case 'build':
+        phaseStart = buildStart;
+        phaseEnd = buildEnd;
+        break;
+      case 'peak':
+        phaseStart = peakStart;
+        phaseEnd = peakEnd;
+        break;
+      default:
+        return 1.0;
+    }
+
+    const phaseDuration = phaseEnd - phaseStart;
+    const t = phaseDuration <= 0
+      ? 0
+      : Math.max(0, Math.min(1, (weekNumber - phaseStart) / phaseDuration));
+
+    const [lo, hi] = PHASE_RAMP[phase] ?? [1.0, 1.0];
+    return lo + t * (hi - lo);
+  }
+
+  private resolveFitnessContext(plan: TrainingPlan, settings: SchedulerSettings): FitnessContext {
+    const level: RunnerLevel = settings.level ?? 'intermediate';
+
+    return {
+      goalDistanceKm: this.parseDistanceToKm(plan.goalDistance ?? undefined),
+      level,
+      weeklyHours: settings.weeklyHours ?? null,
+      runThresholdSecPerKm: settings.runThresholdSecPerKm ?? null,
+    };
   }
 }

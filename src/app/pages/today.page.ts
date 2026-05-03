@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { UiFeedbackService } from '../shared/ui-feedback.service';
 import {
@@ -19,12 +19,18 @@ import { EventDetailModalComponent } from '../shared/event-detail-modal/event-de
 import { QuickLogModalComponent } from '../features/workout-log/quick-log-modal.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { AuthService } from '../core/services/auth.service';
-import { WeekDay, WorkoutLog } from '../core/models/app-data.models';
+import { Note, WeekDay, WorkoutLog } from '../core/models/app-data.models';
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
 }
+
+const RECAP_START_HOUR = 21;
+const RECAP_TRANSITION_MS = 300;
+const RECAP_MOBILE_MAX_WIDTH = 768;
+const RECAP_DISMISS_KEY_PREFIX = 'day_recap_dismissed_';
+const RECAP_TEST_NOW_KEY = 'day_recap_test_now';
 
 @Component({
   selector: 'app-today-page',
@@ -51,15 +57,17 @@ export class TodayPageComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly uiFeedback = inject(UiFeedbackService);
-  private readonly today = signal(new Date());
-  protected readonly selectedDate = signal(new Date());
+  private readonly initialNow = this.resolveCurrentDate();
+  private readonly today = signal(this.initialNow);
+  protected readonly selectedDate = signal(this.initialNow);
   protected readonly expandedEventId = signal<string | null>(null);
   protected readonly quickCreateOpen = signal(false);
   protected readonly quickCreateDraft = signal<CalendarEvent | null>(null);
   protected readonly quickLogOpen = signal(false);
   protected readonly editingWorkoutLogId = signal<string | null>(null);
-  private readonly nowMinutes = signal(new Date().getHours() * 60 + new Date().getMinutes());
+  private readonly nowMinutes = signal(this.initialNow.getHours() * 60 + this.initialNow.getMinutes());
   protected readonly hasLoaded = signal(false);
+  protected readonly recapState = signal<'hidden' | 'entering' | 'visible' | 'leaving'>('hidden');
   protected readonly cycleTrackingEnabled = computed(
     () => this.dataStore.schedulerSettings()?.cycleTrackingEnabled === true,
   );
@@ -133,6 +141,7 @@ export class TodayPageComponent {
   });
 
   protected readonly selectedDateString = computed(() => this.toDateString(this.selectedDate()));
+  protected readonly todayHour = computed(() => this.today().getHours());
   protected readonly tomorrowDateString = computed(() => {
     const tomorrow = new Date(this.today());
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -192,6 +201,26 @@ export class TodayPageComponent {
     () => this.pastEvents().length > 0 || this.futureEvents().length > 0,
   );
 
+  protected readonly remindersDueToday = computed<Note[]>(() => {
+    const today = this.todayDateString();
+    return this.dataStore.notes()
+      .filter(
+        (n) =>
+          n.noteType === 'reminder' &&
+          n.dueDate !== null &&
+          n.dueDate <= today &&
+          !n.completed,
+      )
+      .sort((a, b) => {
+        const timeA = a.dueTime ?? '';
+        const timeB = b.dueTime ?? '';
+        if (timeA && timeB) return timeA.localeCompare(timeB);
+        if (timeA) return -1;
+        if (timeB) return 1;
+        return a.title.localeCompare(b.title);
+      });
+  });
+
   protected readonly todayOffPlanLogs = computed(() => {
     const dateStr = this.selectedDateString();
     return this.dataStore.workoutLogs()
@@ -223,8 +252,110 @@ export class TodayPageComponent {
     return this.dataStore.getWorkoutLogById(id);
   });
 
+  protected readonly completedWorkoutEventsToday = computed(() =>
+    this.dataStore
+      .eventsForDay(this.todayDateString())
+      .filter((event) => event.type === 'workout' && event.status === 'completed'),
+  );
+
+  protected readonly completedOffPlanWorkoutLogsToday = computed(() =>
+    this.dataStore
+      .workoutLogs()
+      .filter((log) => !log.plannedSessionId && this.toDateString(new Date(log.completedAt)) === this.todayDateString()),
+  );
+
+  protected readonly recapCompletedWorkoutsCount = computed(() =>
+    this.completedWorkoutEventsToday().length + this.completedOffPlanWorkoutLogsToday().length,
+  );
+
+  protected readonly recapCompletedTasksCount = computed(() =>
+    this.dataStore
+      .notes()
+      .filter(
+        (note) =>
+          note.noteType === 'task' &&
+          note.completed &&
+          note.completedAt !== null &&
+          this.toDateString(new Date(note.completedAt)) === this.todayDateString(),
+      ).length,
+  );
+
+  protected readonly recapWorkoutDurationMinutes = computed(() => {
+    const fromEvents = this.completedWorkoutEventsToday().reduce((sum, event) => {
+      const direct = event.duration ?? event.durationMinutes;
+      if (direct && direct > 0) {
+        return sum + direct;
+      }
+
+      const diff = timeToMinutes(event.endTime) - timeToMinutes(event.startTime);
+      return diff > 0 ? sum + diff : sum;
+    }, 0);
+
+    const fromOffPlanLogs = this.completedOffPlanWorkoutLogsToday().reduce(
+      (sum, log) => sum + (log.actualDuration ?? log.plannedDuration ?? 0),
+      0,
+    );
+
+    return fromEvents + fromOffPlanLogs;
+  });
+
+  protected readonly recapStreakDays = computed(() => {
+    const doneTasks = this.dataStore
+      .notes()
+      .filter((note) => note.noteType === 'task' && note.completed && note.completedAt)
+      .map((note) => this.toDateString(new Date(note.completedAt!)));
+
+    const workoutDays = this.dataStore.workoutLogs().map((log) => this.toDateString(new Date(log.completedAt)));
+    const completionDays = new Set([...doneTasks, ...workoutDays]);
+
+    let streak = 0;
+    const cursor = new Date(this.today());
+
+    while (completionDays.has(this.toDateString(cursor))) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
+  });
+
+  protected readonly recapTomorrowSummary = computed(() => {
+    const workouts = this.tomorrowWorkoutEvents();
+    if (workouts.length === 0) {
+      return 'Free day tomorrow — rest up.';
+    }
+
+    if (workouts.length > 1) {
+      return 'Multiple sessions tomorrow';
+    }
+
+    const first = workouts[0];
+    const duration = this.previewDuration(first);
+    return duration
+      ? `Tomorrow: ${first.title}, ${duration}`
+      : `Tomorrow: ${first.title}`;
+  });
+
+  protected readonly recapShouldRender = computed(() => this.recapState() !== 'hidden');
+  protected readonly recapIsVisible = computed(() => this.recapState() === 'visible' || this.recapState() === 'entering');
+  protected readonly recapIsLeaving = computed(() => this.recapState() === 'leaving');
+
   constructor() {
     this.load();
+
+    effect(() => {
+      if (!this.hasLoaded()) {
+        return;
+      }
+
+      if (this.recapState() !== 'hidden') {
+        return;
+      }
+
+      if (this.shouldShowRecap()) {
+        this.openRecap();
+      }
+    });
   }
 
   private async load(): Promise<void> {
@@ -317,6 +448,14 @@ export class TodayPageComponent {
     void this.router.navigate(['/notes']);
   }
 
+  protected async completeReminder(note: Note): Promise<void> {
+    await this.dataStore.toggleNoteComplete(note.id, true);
+  }
+
+  protected navigateToNote(note: Note): void {
+    void this.router.navigate(['/notes'], { queryParams: { id: note.id } });
+  }
+
   protected formatInviteDate(dateStr: string): string {
     if (!dateStr) return '';
     const date = new Date(`${dateStr}T00:00:00`);
@@ -343,6 +482,15 @@ export class TodayPageComponent {
     }
 
     await this.router.navigate(['/week'], { queryParams: { date: this.tomorrowDateString() } });
+  }
+
+  protected dismissRecap(): void {
+    this.setDismissedForToday();
+    this.recapState.set('leaving');
+
+    setTimeout(() => {
+      this.recapState.set('hidden');
+    }, RECAP_TRANSITION_MS);
   }
 
   protected previewDuration(event: CalendarEvent): string | null {
@@ -391,6 +539,15 @@ export class TodayPageComponent {
     return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
   }
 
+  protected recapDurationLabel(): string {
+    const minutes = this.recapWorkoutDurationMinutes();
+    if (minutes <= 0) {
+      return '';
+    }
+
+    return this.formatDuration(minutes);
+  }
+
   private buildDraftEvent(type: 'workout' | 'shift'): CalendarEvent {
     const date = this.selectedDateString();
     const day = this.dayOfWeekIndex(date);
@@ -437,6 +594,76 @@ export class TodayPageComponent {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private resolveCurrentDate(): Date {
+    try {
+      const override = localStorage.getItem(RECAP_TEST_NOW_KEY);
+      if (override) {
+        const parsed = new Date(override);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    } catch {
+      // localStorage may be unavailable in some contexts
+    }
+
+    return new Date();
+  }
+
+  private shouldShowRecap(): boolean {
+    if (this.todayHour() < RECAP_START_HOUR) {
+      return false;
+    }
+
+    if (this.isSmallViewport()) {
+      return false;
+    }
+
+    if (this.recapCompletedWorkoutsCount() + this.recapCompletedTasksCount() === 0) {
+      return false;
+    }
+
+    if (this.wasDismissedToday()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private openRecap(): void {
+    this.recapState.set('entering');
+    setTimeout(() => {
+      this.recapState.set('visible');
+    }, 16);
+  }
+
+  private dismissalKeyForToday(): string {
+    return `${RECAP_DISMISS_KEY_PREFIX}${this.todayDateString()}`;
+  }
+
+  private wasDismissedToday(): boolean {
+    try {
+      return localStorage.getItem(this.dismissalKeyForToday()) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private setDismissedForToday(): void {
+    try {
+      localStorage.setItem(this.dismissalKeyForToday(), '1');
+    } catch {
+      // localStorage may be unavailable in some contexts
+    }
+  }
+
+  private isSmallViewport(): boolean {
+    const layoutWidth = window.innerWidth;
+    const physicalWidth = window.screen?.width ?? layoutWidth;
+    const effectiveWidth = Math.min(layoutWidth, physicalWidth);
+    return effectiveWidth <= RECAP_MOBILE_MAX_WIDTH;
   }
 
   private resolveWeekMeta(date: string): { phase: string; weekNumber: number } | null {

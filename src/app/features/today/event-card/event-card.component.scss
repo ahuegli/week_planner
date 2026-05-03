@@ -5,7 +5,7 @@
   border-radius: 12px;
   padding: 12px 16px 12px 20px;
   margin-bottom: 12px;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.16s ease, box-shadow 0.16s ease;
 
   &::before {
     content: '';
@@ -22,12 +22,18 @@
   }
 
   &.is-brick {
-    border-color: rgba(124, 95, 168, 0.32);
-    box-shadow: inset 0 0 0 999px rgba(124, 95, 168, 0.08);
+    border-color: color-mix(in srgb, #7c5fa8 32%, var(--color-border));
+    background: color-mix(in srgb, #7c5fa8 8%, var(--color-card));
 
     &::before {
       width: 4px;
       background: #7c5fa8;
+    }
+
+    &:hover,
+    &:focus-within {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(124, 95, 168, 0.16);
     }
   }
 }
@@ -58,14 +64,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-style: italic;
   color: var(--color-text-secondary);
 }
 
 .off-bike-icon {
   color: #7c5fa8;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
 }
 
@@ -155,21 +161,23 @@
 .brick-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 5px;
+  font-size: 12px;
   font-weight: 700;
   color: #7c5fa8;
-  background: rgba(124, 95, 168, 0.16);
-  border: 1px solid rgba(124, 95, 168, 0.25);
-  padding: 2px 9px;
+  background: rgba(124, 95, 168, 0.18);
+  border: 1px solid rgba(124, 95, 168, 0.3);
+  padding: 3px 10px;
   border-radius: 999px;
   line-height: 1;
   white-space: nowrap;
 }
 
 .brick-icon {
-  font-size: 10px;
+  width: 11px;
+  height: 11px;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .check-in {
