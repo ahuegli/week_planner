@@ -1,5 +1,196 @@
 # Session notes
 
+## 2026-05-03 — WP11B Parts 2B + 3B: shared notes in API + frontend share UI
+
+### Part 2B — findAllByUser includes shared notes (backend)
+
+**Files modified (3):**
+- `backend/src/note/note.module.ts` — added `NoteShare` entity + `UserModule` imports to avoid circular dep
+- `backend/src/note/note.service.ts` — rewrote `findAllByUser` to include shared notes + their sub-tasks; 4 queries (owned notes, active shares, shared parents IN, sub-tasks IN); `NoteWithShareInfo` interface adds `isOwner`, `sharedBy`, `permission`
+- `src/app/core/models/app-data.models.ts` — added `isOwner?`, `sharedBy?`, `permission?` to `Note` interface
+
+**Query count:** 4 SQL + N deduped user lookups (usually 1-2). No N+1 on notes.
+
+**Verification:** GET /notes as owner returns `isOwner: true`; GET /notes as recipient returns shared project + 2 sub-tasks with `isOwner: false`, correct `sharedBy.email`; revoke removes them.
+
+**Edge case noted:** If a note type is changed to 'reminder' after sharing, the read-time filter in `findAllByUser` defensively excludes it from the recipient's response.
+
+### Part 3B — Frontend share UI (notes page + settings)
+
+**Files created (1):**
+- `src/app/core/services/note-share-api.service.ts` — `listOutgoing`, `listIncoming`, `create`, `delete` endpoints
+
+**Files modified (5):**
+- `src/app/core/models/app-data.models.ts` — added `NoteShare` + `CreateNoteSharePayload` interfaces
+- `src/app/core/services/data-store.service.ts` — added `outgoingNoteShares`/`incomingNoteShares` signals; `loadNoteShares`, `grantNoteShare`, `revokeNoteShare` methods; injected `NoteShareApiService`
+- `src/app/pages/notes.page.ts` — share button on owned project cards (network icon); "Shared by" badge on received projects; share panel bottom-sheet modal with existing share list + email/permission form + revoke; non-owner projects hide delete button
+- `src/app/pages/settings.page.ts` — `outgoingNoteShares`/`incomingNoteShares` computed; `noteTitle()` helper; `toggleNoteSharing`, `revokeNoteShareFromSettings`, `notePermissionLabel` methods
+- `src/app/pages/settings.page.html` — "Note Shares" accordion after existing "Sharing" accordion; outgoing list (project title → recipient) + revoke; incoming list (project title from owner) + stop receiving
+
+### Pending (WP11B)
+- Part 4B — acceptance testing (owner + recipient cross-browser flows)
+
+---
+
+## 2026-05-02 — WP11B Part 1B: note_shares backend module
+
+### Files created (5) + modified (1)
+- `backend/src/note-share/note-share.entity.ts` — `note_shares` table: ownerId, recipientId, noteId (uuid), permission enum ('view'|'collaborate'), active, timestamps. Unique index on [ownerId, recipientId, noteId].
+- `backend/src/note-share/note-share.dto.ts` — `CreateNoteShareDto` (recipientEmail, noteId, permission optional), `UpdateNoteShareDto` (permission optional, active optional)
+- `backend/src/note-share/note-share.service.ts` — `grant`, `revoke`, `findOutgoing`, `findIncoming`, `update`; `NoteShareWithEmails` interface adds ownerEmail/recipientEmail
+- `backend/src/note-share/note-share.controller.ts` — 5 endpoints: `GET /outgoing`, `GET /incoming`, `POST /`, `PUT /:id`, `DELETE /:id`
+- `backend/src/note-share/note-share.module.ts` — imports TypeOrmModule, UserModule, NoteModule
+- `backend/src/app.module.ts` — added NoteShareModule after CalendarShareModule
+
+### Rejection guards in grant()
+Two pre-flight checks after `noteService.findOne(noteId, ownerId)`:
+1. `note.noteType === 'reminder'` → 400 "Reminders cannot be shared"
+2. `note.parentNoteId` → 400 "Sub-tasks share via their parent project. Share the project instead."
+
+### Verification outcomes (all pass)
+1. Share reminder → 400 ✓
+2. Share sub-task → 400 with sub-task message ✓
+3. Share project → 201 with id, noteId, permission=collaborate, active=true ✓
+4. GET /outgoing → count=1, correct noteId + recipientEmail, active=true ✓
+5. DELETE → 204; GET /outgoing shows active=false ✓
+
+### Pending (WP11B)
+- Part 2B — `findAllForUser` in note.service.ts: owned notes + notes shared with userId via active note_shares; `isOwner: false` + `sharedBy` on shared notes
+- Part 3B — frontend share UI on project cards + settings page accordion
+- Part 4B — acceptance testing
+
+---
+
+## 2026-05-02 — WP11A Part 4A: Edit modal sub-task affordance
+
+### Files modified (1)
+- `src/app/pages/notes.page.ts` — added bottom-sheet edit modal + pencil edit button on all 3 card types
+
+### What was built
+No edit modal existed prior — created it entirely within the notes page component (no new files). Modal is a fixed-position bottom sheet (slides up from bottom, max 85vh, scrollable body) rendered via `@if (editingNote(); as note)`.
+
+**Edit fields:** title (required), body/description, due date, due time. For non-reminders: estimated duration + sub-tasks section.
+
+**Sub-tasks in modal:** Each row shows a status cycle button (same SVGs as Part 3A), an inline `<input>` for title editing (saves on blur via `saveSubtaskTitle` — immediate API call, no batching), and a delete button. Plus row at bottom shows the same add-sub-task inline input pattern from Part 3A. All sub-task operations are immediate; the modal Save only persists the parent note's title/body/dates/duration.
+
+**"Becomes a project" flow:** Adding the first sub-task from within the modal creates it immediately via `dataStore.addNote({ parentNoteId })`. `subtasksByParent` computed updates reactively, so after closing the modal the card re-renders as a project card with no explicit reload.
+
+**Reminders:** The "Estimated duration" and "Sub-tasks" section are hidden (`@if note.noteType !== 'reminder'`). Reminders can still have due date/time edited.
+
+### New signals (9)
+`editingNote`, `editTitle`, `editBody`, `editDueDate`, `editDueTime`, `editDuration`, `editSaving`, `editAddingSubtask`, `editNewSubtaskTitle`
+
+### New methods (5)
+`openEditModal`, `closeEditModal`, `saveEdit`, `submitEditSubtask`, `saveSubtaskTitle`
+
+### Build
+Frontend build: clean, 0 errors.
+
+### Pending (WP11B+)
+- WP11B — note_shares table, NoteShareService + controller, share UI
+- WP11C — sub-task claiming/assignment, member dropdown, avatar bubbles
+- WP11D — AI sub-task generation (PREMIUM, requires WP7A)
+- WP13 — off-plan workout logging
+- WP14 — production hardening
+
+---
+
+## 2026-05-02 — WP11A Part 3A: Frontend three-mode Notes UI
+
+### Files modified (4)
+- `src/app/core/models/app-data.models.ts` — `Note` interface extended with `description`, `parentNoteId`, `assignedUserId`, `subtaskStatus`, `noteType`; `CreateNotePayload` gets all new fields; `UpdateNotePayload` uses `Omit` to correctly allow nullable `parentNoteId`/`assignedUserId`/`subtaskStatus`
+- `src/app/core/services/note-api.service.ts` — added `getSubTasks`, `claimSubTask`, `unassignSubTask`, `updateSubTaskStatus` methods
+- `src/app/core/services/data-store.service.ts` — added `subtasksByParent` computed signal (Map<parentId, Note[]>); updated `addNote` tempNote with new fields; added `updateSubTaskStatus`, `claimSubTask`, `unassignSubTask` methods
+- `src/app/pages/notes.page.ts` — full three-mode rewrite: Projects pill added, filter logic updated, `sortedNotes` now excludes sub-tasks from top-level, `visibleNotes` uses `subtasksByParent` to classify tasks vs projects, three-branch `@for` rendering (task / project / reminder), project cards show sub-task list with cycling status icons and inline add, reminder cards hide all scheduling affordances
+
+### Sub-task status icon cycling approach
+Status cycles `not_started → in_progress → done → not_started` on tap via `cycleSubTaskStatus()`. Three SVG states: dashed circle (○ grey), quarter-arc over faded circle (amber), check-circle (primary blue). Color applied via `.status-not-started`, `.status-in-progress`, `.status-done` CSS classes on the button. All optimistic — state updates immediately before API call, rolls back on error.
+
+### Verification outcomes
+- Frontend build: clean, 0 errors
+- Angular dev server: compiled at http://localhost:4200
+- Backend API: `GET /api/v1/notes` returns 6 notes (2 top-level, 4 sub-tasks) with all new fields populated correctly
+- Notes page now renders filter strip with 4 pills: All | Tasks | Projects | Reminders
+
+### Pending (WP11A final)
+- Part 4A — edit modal sub-task affordance (inline list editor in note edit modal)
+
+---
+
+## 2026-05-02 — WP11A Part 2A: Note service + controller sub-task endpoints
+
+### Files modified (3)
+- `backend/src/note/note.service.ts` — added `findSubTasksOf`, `claimSubTask`, `unassignSubTask`, `updateSubTaskStatus`; imported `BadRequestException`, `ConflictException`
+- `backend/src/note/note.controller.ts` — added 4 endpoints: `GET /:id/sub-tasks`, `POST /:id/claim`, `POST /:id/unassign`, `PUT /:id/subtask-status`; imported `UpdateSubtaskStatusDto`
+- `backend/src/note/note.dto.ts` — added `UpdateSubtaskStatusDto` with `@IsEnum` status field
+
+### Design decision: claimSubTask conflict behavior
+**409 ConflictException** when sub-task already assigned (not idempotent). Rationale: explicit conflict surfaces "someone else claimed it" cases for future sharing. Frontend should show a refresh prompt. A second claim by the *same* user also 409s — clean unassign-then-claim flow if needed.
+
+### Security scope (WP11A, pre-sharing)
+All 4 methods call `findOne(id, userId)` first, so cross-user access returns 404. When WP11B adds sharing, `findSubTasksOf` and `claimSubTask` will need separate logic to handle collaborators (their sub-tasks won't share the owner's userId).
+
+### Verification outcomes
+- `GET /:id/sub-tasks`: returns array of 2 sub-tasks ✓
+- Empty array for note with no children (no 404) ✓
+- `POST /:id/claim`: sets `assignedUserId` to caller's userId ✓
+- Duplicate claim: 409 ✓
+- `PUT /:id/subtask-status`: persists `in_progress` ✓
+- `POST /:id/unassign`: clears `assignedUserId` to null ✓
+- Claim on parent note (not a sub-task): 400 ✓
+- User B access to user A's sub-task: 404 ✓
+
+### Pending (WP11A continuation)
+- Part 3A — frontend three-mode UI (Tasks / Projects / Reminders filter strip)
+- Part 4A — edit modal sub-task affordance
+
+---
+
+## 2026-05-02 — WP11A Part 1A: Note entity + DTO
+
+### Files modified (3)
+- `backend/src/note/note.entity.ts` — added `description`, `assignedUserId`, `subtaskStatus` enum, `noteType` enum (default 'task'); added self-referential `@ManyToOne(() => Note, onDelete: 'CASCADE')` for `parentNoteId` + inverse `@OneToMany subTasks`; imported `OneToMany`
+- `backend/src/note/note.dto.ts` — added `description`, `parentNoteId`, `assignedUserId`, `subtaskStatus`, `noteType` to both `CreateNoteDto` and `UpdateNoteDto` (all optional); added `IsEnum` import
+- `docs/wp11_specs.md` — updated Part 1A data model spec to document the `@ManyToOne` cascade decision
+
+### Verification outcomes
+- Backend built clean (0 errors)
+- TypeORM `synchronize` ran without errors on startup; enums `note_subtaskstatus_enum` and `note_notetype_enum` created in Supabase
+- Existing notes default cleanly to `noteType='task'` (DB-level default confirmed)
+- `subtaskStatus` persists via `CreateNoteDto` after fix (was missing from Create, only in Update — caught and fixed before declaring done)
+- CASCADE verified: created parent + 4 sub-tasks; DELETE parent → all 4 sub-tasks returned 404 ✓
+
+### Fix during execution
+Initial DTO omitted `subtaskStatus` and `assignedUserId` from `CreateNoteDto` (only had them in `UpdateNoteDto`). The `whitelist: true` ValidationPipe stripped them on POST. Fixed by adding all 5 new fields to `CreateNoteDto`; rebuilt.
+
+### Pending (WP11A continuation)
+- Part 2A — service: `findSubTasksOf`, `claimSubTask`, `unassignSubTask`, `updateSubTaskStatus`
+- Part 3A — frontend three-mode UI (Tasks / Projects / Reminders filter strip)
+- Part 4A — edit modal sub-task affordance
+
+---
+
+## 2026-05-01 — Bug fixes: triathlon plan path + constraint checker
+
+### Files modified (3)
+- `src/app/features/plan/quick-plan-switch/quick-plan-switch.component.ts` — skip `generatePlanTemplate` for triathlon plans (match onboarding pattern; triathlon template is built internally by `generate-plan`)
+- `src/app/core/services/data-store.service.ts` — `generatePlanTemplate` now throws on error (was swallowing silently); `scheduleEntirePlan` shows toast when `unplacedSessions.length > 0`
+- `backend/src/domain/constraint-checker.service.ts` — fixed `tooCloseBefore` logical contradiction (was always-false); added `endMin` param to `violatesMinimumRestBetweenWorkouts`; added `inferWorkoutTypeFromSessionType` fallback in `violatesSameTypeOnSameDay` for events with no `workoutType`; imported `WorkoutType`
+
+### Verification outcomes
+- Bug A: triathlon quick-switch plan → week 1 has bike/run/swim/strength disciplines immediately, no reset needed
+- Bug B (workoutType present): same-discipline placement returns isValid: false ✓
+- Bug B (sessionType fallback): missing workoutType event inferred from sessionType, blocks same-discipline ✓
+- Bug B (tooCloseBefore): 17:30 session blocked before 20:30 session (120-min gap) ✓
+- Regression: half marathon plan — 12 weeks, 45 events, correct session types ✓
+
+### Pending
+- WP12C Part 4C smoke test (manual browser walkthrough)
+- WP12B/12C polish: brick visual treatment, distance/pace targets for triathlon
+- Decision: WP10 task gamification vs WP15 landing page next
+
+---
+
 ## Tuesday session — WP12B + WP12C shipped
 
 Shipped:

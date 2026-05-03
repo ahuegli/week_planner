@@ -101,7 +101,37 @@
         />
       }
     } @else {
-      <p class="page-subtitle">Your day is clear — add a shift or workout to get started</p>
+      <div class="today-empty-state">
+        <p class="page-subtitle">Your day is clear — add a shift or workout to get started</p>
+        <div class="empty-affordance-chips" role="group" aria-label="Quick add actions">
+          <button type="button" class="affordance-chip" (click)="openQuickCreate('workout')" aria-label="Add workout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6.5 6.5 11 11"/>
+              <path d="m21 3-4 4"/>
+              <path d="m7 17-4 4"/>
+              <path d="m3 3 4 4"/>
+              <path d="m17 17 4 4"/>
+            </svg>
+            <span>+ Workout</span>
+          </button>
+
+          <button type="button" class="affordance-chip" (click)="openTaskCreate()" aria-label="Add task">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <path d="m9 11 3 3 5-5"/>
+            </svg>
+            <span>+ Task</span>
+          </button>
+
+          <button type="button" class="affordance-chip" (click)="openQuickCreate('shift')" aria-label="Add shift">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v16"/>
+            </svg>
+            <span>+ Shift</span>
+          </button>
+        </div>
+      </div>
     }
   </div>
 
@@ -133,9 +163,11 @@
   </div>
 
   <!-- Daily tip -->
-  <div class="content-pad">
-    <app-daily-tip-card [tip]="tip" />
-  </div>
+  @if (showCycleAwareTip()) {
+    <div class="content-pad">
+      <app-daily-tip-card [tip]="tip" />
+    </div>
+  }
 
   <!-- Did You Know -->
   <div class="content-pad">
@@ -169,3 +201,11 @@
 
 <!-- Fixed bottom actions + sheet -->
 <app-i-have-time [selectedDate]="selectedDateString()" />
+
+<app-event-detail-modal
+  [open]="quickCreateOpen()"
+  [event]="quickCreateDraft()"
+  mode="create"
+  (closeRequested)="closeQuickCreate()"
+  (saveRequested)="saveQuickCreate($event)"
+/>

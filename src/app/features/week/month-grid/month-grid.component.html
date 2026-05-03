@@ -90,7 +90,7 @@
           <button type="button" class="event-summary" (click)="toggleEvent(event)" [attr.aria-expanded]="isExpanded(event)">
             <div class="event-body">
               <div class="event-top">
-                <p class="event-title">{{ event.title }}</p>
+                <p class="event-title">{{ displayTitleForEvent(event) }}</p>
                 <div class="event-type-wrap">
                   <span class="event-type">{{ eventTypeLabel(event) }}</span>
                   @if (isBrickLinked(event)) {
@@ -193,103 +193,23 @@
 
     @if (quickAddMode()) {
       <div class="sheet-options">
-        @if (!quickAddType()) {
-          <button type="button" class="sheet-option" (click)="chooseQuickAdd('shift')">
-            <span class="dot dot-shift"></span>
-            <span>Add Work Shift</span>
-          </button>
-          <button type="button" class="sheet-option" (click)="chooseQuickAdd('workout')">
-            <span class="dot dot-workout"></span>
-            <span>Add Workout</span>
-          </button>
-          <button type="button" class="sheet-option" (click)="chooseQuickAdd('personal')">
-            <span class="dot dot-personal"></span>
-            <span>Add Personal Event</span>
-          </button>
-          <button type="button" class="sheet-option" (click)="chooseQuickAdd('mealprep')">
-            <span class="dot dot-mealprep"></span>
-            <span>Add Meal Prep</span>
-          </button>
-          <button type="button" class="sheet-option cancel" (click)="closeQuickAddOptions()">Cancel</button>
-        } @else {
-          <div class="sheet-form">
-            <div class="day-selector">
-              <div class="day-selector-head">
-                <label class="field-label">Day</label>
-                @if (quickAddType() !== 'shift' && selectedDatePreview()) {
-                  <span class="day-preview">{{ selectedDatePreview() }}</span>
-                }
-              </div>
-              <div class="day-pills" [attr.aria-label]="quickAddType() === 'shift' ? 'Select one or more days' : 'Select a day'">
-                @for (choice of weekDayChoices(); track choice.date) {
-                  <button
-                    type="button"
-                    class="day-pill"
-                    [class.is-selected]="selectedDayIndices().includes(choice.index)"
-                    [attr.aria-pressed]="selectedDayIndices().includes(choice.index)"
-                    (click)="toggleQuickAddDay(choice.index)"
-                  >
-                    <span>{{ choice.shortLabel }}</span>
-                    <span class="day-pill-date">{{ choice.dayNumber }}</span>
-                  </button>
-                }
-              </div>
-              @if (quickAddType() === 'shift') {
-                <p class="day-help">Select one or more days</p>
-              }
-            </div>
-
-            <label class="field-label">Title</label>
-            <input class="input" type="text" [value]="title()" (input)="title.set($any($event.target).value)" />
-
-            <div class="grid-two">
-              <div>
-                <label class="field-label">Start time</label>
-                <input class="input" type="time" [value]="startTime()" (input)="startTime.set($any($event.target).value)" />
-              </div>
-              <div>
-                <label class="field-label">End time</label>
-                <input class="input" type="time" [value]="endTime()" (input)="endTime.set($any($event.target).value)" />
-              </div>
-            </div>
-
-            @if (quickAddType() === 'shift') {
-              <label class="field-label">Commute (minutes)</label>
-              <input class="input" type="number" min="0" [value]="commuteMinutes()" (input)="commuteMinutes.set(+$any($event.target).value || 0)" />
-            }
-
-            @if (quickAddType() === 'workout') {
-              <label class="field-label">Workout type</label>
-              <select class="input" [value]="workoutType()" (change)="workoutType.set($any($event.target).value)">
-                <option value="running">Running</option>
-                <option value="biking">Biking</option>
-                <option value="strength">Strength</option>
-                <option value="yoga">Yoga</option>
-                <option value="swimming">Swimming</option>
-              </select>
-
-              <label class="field-label">Duration (minutes)</label>
-              <input class="input" type="number" min="15" [value]="workoutDuration()" (input)="workoutDuration.set(+$any($event.target).value || 45)" />
-
-              <label class="field-label">Intensity</label>
-              <select class="input" [value]="workoutIntensity()" (change)="workoutIntensity.set($any($event.target).value)">
-                <option value="easy">Easy</option>
-                <option value="moderate">Moderate</option>
-                <option value="hard">Hard</option>
-              </select>
-            }
-
-            @if (quickAddType() === 'mealprep') {
-              <label class="field-label">Duration (minutes)</label>
-              <input class="input" type="number" min="30" [value]="mealprepDuration()" (input)="mealprepDuration.set(+$any($event.target).value || 90)" />
-            }
-
-            <div class="quick-add-actions">
-              <button type="button" class="sheet-option" (click)="quickAddType.set(null)">Back</button>
-              <button type="button" class="sheet-option" [disabled]="!canSubmitQuickAdd()" (click)="submitQuickAdd()">Add event</button>
-            </div>
-          </div>
-        }
+        <button type="button" class="sheet-option" (click)="chooseQuickAdd('shift')">
+          <span class="dot dot-shift"></span>
+          <span>Add Work Shift</span>
+        </button>
+        <button type="button" class="sheet-option" (click)="chooseQuickAdd('workout')">
+          <span class="dot dot-workout"></span>
+          <span>Add Workout</span>
+        </button>
+        <button type="button" class="sheet-option" (click)="chooseQuickAdd('personal')">
+          <span class="dot dot-personal"></span>
+          <span>Add Personal Event</span>
+        </button>
+        <button type="button" class="sheet-option" (click)="chooseQuickAdd('mealprep')">
+          <span class="dot dot-mealprep"></span>
+          <span>Add Meal Prep</span>
+        </button>
+        <button type="button" class="sheet-option cancel" (click)="closeQuickAddOptions()">Cancel</button>
       </div>
     }
   </section>
@@ -297,6 +217,7 @@
   <app-event-detail-modal
     [open]="editingEvent() !== null"
     [event]="editingEvent()"
+    [mode]="editorMode()"
     [openTo]="editingEventOpenTo()"
     [showSuggestedSlotNote]="showSuggestedSlotHint()"
     (closeRequested)="closeEditor()"

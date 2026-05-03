@@ -25,6 +25,9 @@ function getDurationBucket(minutes: number, thresholds: { medium: number; long: 
 const WEIGHT_LOSS_NOTE =
   'Weight loss mode: keep this mostly moderate and sustainable for 40+ minutes when possible to maximize fat-burning while preserving recovery.';
 
+const TRIATHLON_CONTEXT_NOTE =
+  'Triathlon combines swim, bike, and run with phase-based progression. Brick workouts usually appear in build phase to train transitions.';
+
 const ENDURANCE_SESSION_KEYS = new Set<string>([
   'easy_run',
   'long_run',
@@ -448,8 +451,13 @@ function inferSessionKey(rawSessionType: string, sportType?: string | null): str
   const sport = normalizeSport(sportType);
 
   const exactMap: Record<string, string> = {
+    run: 'easy_run',
+    running: 'easy_run',
     easy_run: 'easy_run',
     long_run: 'long_run',
+    ride: 'easy_ride',
+    bike: 'easy_ride',
+    cycling: 'easy_ride',
     tempo: 'tempo_run',
     tempo_run: 'tempo_run',
     intervals: 'intervals_run',
@@ -466,6 +474,8 @@ function inferSessionKey(rawSessionType: string, sportType?: string | null): str
     tempo_ride: 'tempo_ride',
     intervals_ride: 'intervals_ride',
     hill_reps_ride: 'hill_reps_ride',
+    swim: 'easy_swim',
+    swimming: 'easy_swim',
     easy_swim: 'easy_swim',
     long_swim: 'long_swim',
     intervals_swim: 'intervals_swim',
@@ -564,8 +574,9 @@ function fallbackForSport(sportType?: string | null): WorkoutDescription {
   if (sport === 'triathlon') {
     return {
       whatToDo:
-        'Triathlon combines swim, bike, and run with phase-based progression. Brick workouts usually appear in build phase to train transitions.',
-      whyItHelps: 'Balanced training across disciplines builds race-specific durability and transition confidence.',
+        'Follow the planned session focus at controlled effort, and avoid stacking hard intensity on consecutive days unless specifically prescribed.',
+      whyItHelps:
+        'Consistent, well-balanced training across swim, bike, and run builds fitness while keeping fatigue manageable.',
     };
   }
 
@@ -574,6 +585,10 @@ function fallbackForSport(sportType?: string | null): WorkoutDescription {
       'Running follows base, build, peak, and taper. Keep easy days truly easy and focus quality on key sessions.',
     whyItHelps: 'A phased structure builds fitness steadily while managing fatigue.',
   };
+}
+
+function shouldIncludeTriathlonContext(sportType: string | null | undefined, sessionKey: string): boolean {
+  return normalizeSport(sportType) === 'triathlon' && (sessionKey === 'brick_workout' || sessionKey === 'open_water_swim');
 }
 
 const DURATION_THRESHOLDS: Partial<Record<string, { medium: number; long: number; very_long?: number }>> = {
@@ -609,9 +624,8 @@ export function getWorkoutDescription(
         if (mode === 'weight_loss' && ENDURANCE_SESSION_KEYS.has(key)) {
           result = { whatToDo: result.whatToDo, whyItHelps: `${result.whyItHelps} ${WEIGHT_LOSS_NOTE}` };
         }
-        const sport = normalizeSport(sportType);
-        if (sport === 'triathlon' && key !== 'brick_workout' && key !== 'open_water_swim') {
-          result = { whatToDo: result.whatToDo, whyItHelps: `${result.whyItHelps} In triathlon plans, this works best when balanced against the other two disciplines in the same week.` };
+        if (shouldIncludeTriathlonContext(sportType, key)) {
+          result = { whatToDo: `${result.whatToDo} ${TRIATHLON_CONTEXT_NOTE}`, whyItHelps: result.whyItHelps };
         }
         return result;
       }
@@ -628,11 +642,10 @@ export function getWorkoutDescription(
     };
   }
 
-  const sport = normalizeSport(sportType);
-  if (sport === 'triathlon' && key !== 'brick_workout' && key !== 'open_water_swim') {
+  if (shouldIncludeTriathlonContext(sportType, key)) {
     return {
-      whatToDo: fallback.whatToDo,
-      whyItHelps: `${fallback.whyItHelps} In triathlon plans, this works best when balanced against the other two disciplines in the same week.`,
+      whatToDo: `${fallback.whatToDo} ${TRIATHLON_CONTEXT_NOTE}`,
+      whyItHelps: fallback.whyItHelps,
     };
   }
 

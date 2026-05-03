@@ -1,11 +1,6 @@
-### WP11 — Notes as three-mode system + shareable projects
-
-Here is the full content for docs/v2_roadmap.md. Replace the file 
-with this exact content:
-
 # v2 Roadmap
 
-## App architecture (decided Sunday session)
+## App architecture (locked)
 
 Three pillars + one foundation:
 - Foundation: Calendar (substrate, sharing lives here)
@@ -22,129 +17,266 @@ Premium tier: AI features sit on top of free tier.
 - AI weekly review — premium
 - AI plan adaptation — premium
 
-## WP queue (priority order)
+---
 
-### WP12 — Triathlon support (PRIORITY — ships before public launch)
-Beta user prepares for triathlon. Currently tri mode reroutes to run plans.
-- Plan templates: sprint, olympic, 70.3, 140.6
-- Session types: swim, bike, brick (back-to-back bike+run)
-- Sport-aware scheduling: pool access, longer time blocks for bike, brick rules
-- Sport-aware UI and stats
-- Plan-template engine branches on sportType
-- Estimate: 8-12 hours
-- Methodology in triathlon_methodology.md
+## Status snapshot (end of Wednesday session)
 
-### WP13 — Off-plan workout logging
-Currently can only log workouts that started as planned sessions. Need:
-- "Log a workout" button on Today opens post-workout form without linkedSessionId
-- Stats include these
-- Estimate: 1-2 hours
+**Beta-ready right now for gf + 2-5 close friends.**
 
-### WP10 — Task gamification (light)
-Parallel to workout badges. No deep RPG.
-- Task categories (quick admin, long admin, errand, etc.)
-- Task-specific badges
-- Completion animation + optional sound
+Ships needed before public-ish beta:
+- WP13 (off-plan logging, ~1-2h)
+- WP14 (production hardening, ~2-3h)
+- WP15 (landing page, ~3-5h)
+
+Optional polish: WP10 task gamification, Bundle 3 distance/pace targets.
+
+---
+
+## Shipped (Sat–Wed)
+
+### Core platform
+- WP1 — Workout page with pre/post views
+- WP2 — Cycle-aware scheduling (with parked scoring math edge case)
+- WP3 + WP3C — Notes system + slot suggestion
+- WP4 — Sharing suite: 3 modes (full, busy_only, workouts_only) + 
+  invitations + accepted-invitee bubbles + deleted-account handling
+- WP5 — Stats dashboard with badges
+- WP6 — Conflict resolution
+- WP7A — AI coach infrastructure (UI parked, /coach now shows 
+  coming-soon page)
+
+### Triathlon (WP12 — fully shipped)
+- WP12A — Foundation: entity schema, plan generator, sport-aware UI, 
+  plan creation with calibration
+- WP12B — Bricks: linked-session generation, scheduling rules, 
+  visual treatment, volume progression
+- WP12C — Race-day plan: entity, generator, compact UI, run 
+  threshold pacing
+- Bundle 1 — Settings persistence (wake/bedtime, preferred times, 
+  max training days)
+- Bundle 2 — Load distribution (latest-free-day priority, 
+  retroactive reschedule prompt)
+
+### Engineering polish shipped this week
+- Discipline persistence on calendar events (linkedNextSessionId, 
+  sessionType, discipline columns)
+- triathlonDistance normalization (frontend payload + DTO validator 
+  + DB migration)
+- Same-day same-discipline placement fix
+- Symmetric rest-period check (tooCloseBefore)
+- Unplaced-sessions surfacing (no more silent placement loss)
+- 40+ state-aware motivational messages (triathlon + task safe-guarded)
+- 4 empty-state copy improvements
+- completionRateColor zero-state fix
+- Brick visual polish + duration-aware workout descriptions
+- Edit form auto-adjust end time
+- RouterLink warning cleanup
+- Race-day "too far" copy + error toast + cycle phase tooltip
+- Time-of-day greeting on Today
+- Loading states + tomorrow's preview + delete confirmation
+- Skip cycle option in onboarding
+- Notes filter strip + settings access
+- "Scheduler settings" → "Schedule preferences" rename
+- Run threshold field for race-day pacing
+- Coming-soon page for /coach
+- Compact race-day plan UI (no emoji)
+
+---
+
+## Outstanding WP queue (priority order)
+
+### WP13 — Off-plan workout logging (1-2h CC)
+**Status:** spec written (`docs/wp13_spec.md`)
+
+Currently can only log workouts that started as planned sessions. 
+Real users do unplanned things — yoga class, spontaneous run, hike. 
+Need:
+- "Log a workout" button on Today
+- Quick-log form (type / duration / optional distance / optional energy)
+- WorkoutLog entity accepts null plannedSessionId
+- Logs count toward stats and streaks
+- Visible marker for off-plan vs planned in history
+
+**Beta blocker:** moderate — gap is real but not catastrophic for 
+v0 beta.
+
+### WP10 — Task gamification (3-4h CC)
+**Status:** spec written (`docs/wp10_spec.md`)
+
+Mirror existing workout badge/streak system on the task half:
+- Task categories (quick_admin, long_admin, errand, deep_work, 
+  personal, other)
+- 8 task badges (First step, Quick wins, Deep diver, etc.)
+- Completion animations
 - Streak counter on Notes page
-- Goblin Tools-style AI task breakdown — PREMIUM
-- Estimate: 3-4 hours
 
-### WP11 — Notes as three-mode system + shareable projects (revised)
+Stats motivational messages already have safe-guarded task-aware 
+predicates that activate when WP10 wires the fields.
 
-Notes tab holds three information types:
+**Beta blocker:** no. Ships polish, not core function.
 
-1. Tasks/To-dos (current behavior — already shipped via WP3+WP3C)
-   - Single actionable items
-   - Optional duration, due date, "find time" scheduling
-   - Shareable (gets WP4-style sharing applied)
+### WP14 — Production hardening (2-3h CC)
+**Status:** spec written (`docs/wp14_spec.md`)
 
-2. Projects (larger tasks with sub-tasks)
-   - A note becomes a project when sub-tasks are added (no formal 
-     distinction in UI top-level — discovery via "edit task" → "add 
-     sub-task" affordance)
-   - Sub-tasks are unassigned by default; can be assigned to a member 
-     or claimed by someone in the share group
-   - Status per sub-task: not started / in progress / done
-   - Visual: bullet list with status icons (similar to training plan)
-   - Description field on the project itself
-   - Shareable (multi-user collaboration via WP4 share infrastructure)
+Three pieces:
+- Rate limiting on AI coach endpoint (NestJS Throttler)
+- 401-not-500 for stale JWT (custom exception filter)
+- Migration system replacing `synchronize: true` (TypeORM CLI)
 
-3. Reminders / standalone notes
-   - Plain text, no scheduling, no sub-tasks
-   - For things like "remember this password" or quick captures
-   - NOT shareable by default (privacy)
-   - Optional category labels
+**Beta blocker:** required before any beta beyond trusted circle.
 
-Data model:
-- Note entity gets `description: text | null` and `parentNoteId: 
-  uuid | null` (self-reference for sub-tasks)
-- Sub-tasks store `assignedUserId: uuid | null` (nullable — claimable)
-- Sub-task status enum: 'not_started' | 'in_progress' | 'done'
-- Note type enum: 'task' | 'reminder' (project = task with subtasks)
+### WP11 — Notes as projects + sharing (8-12h CC)
+**Status:** spec written (`docs/wp11_spec.md`)
 
-UI flow:
-- Click task → edit modal → optional "Add sub-tasks" affordance 
-  appears below
-- Once sub-tasks added, the note renders as a project with bullet 
-  list on the Notes page
-- Assignment dropdown on each sub-task: shows current user, "Claim 
-  it", or list of project members (if shared)
+Three-mode notes system: tasks / projects / reminders. Projects 
+are tasks with sub-tasks, shareable via WP4-pattern infrastructure. 
+Sub-tasks unassigned-by-default, claimable.
 
-Sharing layer:
-- Reuses WP4 calendar-share infrastructure pattern
-- New `note_shares` table: ownerId / recipientId / noteId / 
-  permission ('view' | 'collaborate')
+- Note entity gets description, parentNoteId, assignedUserId, 
+  subtaskStatus
+- New note_shares table mirroring calendar_shares
+- Three-mode UI on Notes page
+- AI sub-task generation (PREMIUM tier)
 
-AI sub-task generation — PREMIUM tier:
-- "This feels too big" button on tasks
-- AI breaks task into 3-5 micro-steps (Goblin Tools pattern)
-- Uses existing AI coach infrastructure once unparked
+**Beta blocker:** no. Big feature, save for post-launch.
 
-Estimate: 8-12 hours (significant new entity relationships, 
-collaboration logic, three-mode UI affordances)
+### WP15 — Public landing page + signup (3-5h)
+**Status:** spec written (`docs/wp15_spec.md`)
 
-### WP14 — Production hardening
-- Rate limiting on AI coach endpoint
-- 401-instead-of-500 for stale JWT users
-- Migration system replacing synchronize: true
-- Estimate: 2-3 hours
+Single-page marketing site at `/` with hero, feature trio, how-it-
+works, sign-up CTA. Refreshed signup flow. No tracking pixels.
 
-### WP15 — Public landing page + signup flow
-For going beyond friends-and-family beta. TBD.
+**Beta blocker:** required before sharing beyond direct friends.
 
-### Architectural cleanup (low priority, post-v1)
+### Bundle 3 — Distance, pace, and zone targets (2-3h CC)
+**Status:** queued, not specced
+
+Currently workouts show only duration. Add:
+- Distance target (km) computed from duration + pace
+- Pace target anchored to threshold pace, CSS, or FTP
+- Zone descriptor ("Z2 easy", "Z4 threshold") in workout view
+
+Run plans already have km. Triathlon doesn't. Polish, not 
+beta-blocker.
+
+---
+
+## Parked bugs (non-blocking, documented)
+
+- **WP4 invite button missing on Today/Week views.** Workaround: 
+  invite via Month view. Real fix is architectural cleanup below.
+- **WP2 cycle scoring math.** Long runs default to Sunday on free 
+  days regardless of cycle phase. Magnitude tuning needed.
+- **Stale JWT 500 errors.** Workaround: clear localStorage + 
+  relogin. WP14 fixes properly.
+- **True beginner week-1 intensity.** Volume scaler doesn't 
+  conservatize enough for first-timers with no endurance pedigree.
+- **Settings reschedule banner.** Fixed but auto-resolves silently 
+  before user sees it. Low priority.
+
+---
+
+## Architectural cleanup (post-v1)
+
 Four separate event-rendering components (day-row, month-grid, 
-event-card, current-week-card) duplicate similar manage-row UI 
-(Edit/Delete/Mark as done/Skip/Invite). Extract a shared 
-event-card-actions component. Required to add new features cleanly. 
-Fixes the WP4 invite-button-visibility gap as a side effect.
+event-card, current-week-card) duplicate manage-row UI. Extract a 
+shared event-card-actions component:
+- Single source of truth for Edit / Delete / Mark as done / Skip / 
+  Invite buttons
+- Resolves WP4 invite button gap as side effect
+- Required cleanly before adding any new event action
 
-### Progressive overload — long-session threshold adjustment (v2 / post-v1)
-Currently long-session threshold is user-defined in settings, 
-static. Future: engine tracks completed long sessions, auto-suggests 
-threshold bumps when athlete hits current limit consistently 
-("you've hit 4h three weeks in a row — ready for 4:30?"). Could be 
-surfaced via AI coach as gentle nudge rather than auto-applied. 
-Builds on top of existing workout-log + AI infrastructure once 
-WP7A unparked.
+Estimate: 3-5h. Defer until post-v1.
 
-## Bundle 3 — Distance, pace, and zone targets
+---
 
-Currently workouts show only duration. Need to add:
-- Distance target (km) computed from duration + intended pace
-- Pace target (min/km) anchored to threshold pace, CSS, or FTP
-- Zone description ("Z2 easy", "Z4 threshold") in workout view
-- Visible on workout page and event cards
+## v2+ ideas (not yet specced)
 
-Methodology:
-- Run pace zones from runThreshold setting (or RPE fallback)
-- Swim pace zones from CSS (or RPE fallback)
-- Bike power zones from FTP (or HR fallback, already partially done)
+### Progressive overload — long-session threshold auto-adjustment
+Engine tracks completed long sessions, auto-suggests threshold 
+bumps when athlete hits current limit consistently ("you've hit 4h 
+three weeks in a row — ready for 4:30?"). Surfaced via AI coach 
+as gentle nudge. Builds on workout-log + AI infrastructure post-WP7A 
+unpark.
 
-Files touched: triathlon-plan-template.service.ts, plan-template.
-service.ts (run plans too), workout-descriptions.ts, workout.page.ts, 
-day-row, event-card, month-grid event titles.
+### Race-day plan — adaptive
+Currently generated once from static calibration. Should update 
+dynamically over the lead-up:
+- **Pace adaptation:** if user trained consistently at target → 
+  keep, if slower → conservatize -3-5%, if faster → optional stretch
+- **Effort adaptation:** RPE trends shift recommended targets
+- **Transition adaptation:** brick practice frequency → confidence 
+  boost or buffer time
+- **Fueling adaptation:** logged GI distress → more conservative
+- **Cycle awareness:** luteal-phase race → +10% hydration, 
+  conservative pace
+- **Auto-regeneration:** final 4 weeks weekly, locked in final week
 
-Estimated: 2-3h CC. Push after WP12B bug fixes ship.
+Estimate: 4-6h post-WP14.
+
+### Race-day plan — compact UI polish
+Already shipped this week. Adaptive version above is the next layer.
+
+### Other v2 ideas
+- Photos attached to workout logs
+- GPS route capture
+- Heart rate / power data import (Strava, Garmin)
+- AI-detected duplicate logging
+- Cross-user task leaderboards (probably never)
+- Notification system for streak warnings
+
+---
+
+## Tool delegation rules (learned this week)
+
+- **CC** for: entity design, scoring engine, methodology logic, 
+  multi-file scaffolding (anything touching data-store.service.ts 
+  or app-data.models.ts AND backend together)
+- **Copilot Agent** for: UI rendering after data shape is set, 
+  single-file fixes, doc updates, motivational/copy expansions, 
+  smoke test walkthroughs
+- Wait for CC to finalize data model before Copilot does UI on top
+- Don't pre-allocate parts to tools — decide each as it comes based 
+  on quota and energy
 
 
+  ### AI-categorized session typing (v2 / premium)
+Free-text session input ("pilates class", "trail run with friends") 
+recognized by AI and categorized into engine-known types. Premium 
+feature — uses AI quota. Falls back to dropdown picker for free 
+tier. Builds on existing AI coach infrastructure post-WP7A unpark.
+
+### Dark mode (v2)
+
+Currently no theme system. Needs:
+- Define dark color palette as CSS variable overrides
+- [data-theme="dark"] selector pattern
+- Persist preference to scheduler settings + localStorage fallback
+- Audit all components for hardcoded colors that bypass variables
+- Visual QA across every page
+
+Estimate: 2-3h Copilot/CC mix. Real implementation, not toggle 
+wiring.
+
+### Reminder notifications (v2)
+
+When a reminder has a due date, surface it to the user when the 
+date approaches:
+- In-app banner on Today page when reminder is due today
+- Toast or inline alert when due in next hour (if time set)
+- Optional: browser push notifications (requires PWA setup or 
+  service worker)
+- Optional: email reminder for users who opt in
+
+Implementation tiers:
+- Tier 1 (in-app only): Today page reads reminders due today, 
+  shows them in a "Due today" section. ~30 min.
+- Tier 2 (toast on date): cron-like check on app focus, fire 
+  toast if due time crossed. ~1h.
+- Tier 3 (browser push): service worker + push API. Requires 
+  HTTPS, user permission, more setup. ~3-4h.
+- Tier 4 (email): backend cron + SMTP integration. Out of scope 
+  until v2 has SMTP set up for password resets etc.
+
+Start with Tier 1 — biggest user value for least work. Build up 
+as needed based on actual user behavior.

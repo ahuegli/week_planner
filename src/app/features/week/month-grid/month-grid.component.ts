@@ -50,6 +50,7 @@ export class MonthGridComponent {
   protected readonly selectedDate = signal<string | null>(null);
   protected readonly quickAddMode = signal(false);
   protected readonly quickAddType = signal<'shift' | 'workout' | 'personal' | 'mealprep' | null>(null);
+  protected readonly isCreatingEvent = signal(false);
   protected readonly expandedEventIds = signal<string[]>([]);
   protected readonly editingEventId = signal<string | null>(null);
   protected readonly editingEventOpenTo = signal<'edit' | 'invite'>('edit');
@@ -109,6 +110,16 @@ export class MonthGridComponent {
     }).format(new Date(`${firstDate}T00:00:00`));
   });
 
+  protected readonly taskDerivedEventIds = computed(
+    () =>
+      new Set(
+        this.dataStore
+          .notes()
+          .map((note) => note.linkedCalendarEventId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+  );
+
   protected readonly selectedEvents = computed(() => {
     const date = this.selectedDate();
     if (!date) {
@@ -121,6 +132,8 @@ export class MonthGridComponent {
   protected readonly editingEvent = computed(
     () => this.editingEventDraft() ?? this.selectedEvents().find((event) => event.id === this.editingEventId()) ?? null,
   );
+
+  protected readonly editorMode = computed<'edit' | 'create'>(() => (this.isCreatingEvent() ? 'create' : 'edit'));
 
   protected readonly workoutDeleteEvent = computed(
     () => this.selectedEvents().find((event) => event.id === this.workoutDeleteEventId()) ?? null,
@@ -155,9 +168,11 @@ export class MonthGridComponent {
     this.selectedDate.set(day.date);
     this.quickAddMode.set(false);
     this.quickAddType.set(null);
+    this.isCreatingEvent.set(false);
     this.selectedDayIndices.set([]);
     this.expandedEventIds.set([]);
     this.editingEventId.set(null);
+    this.editingEventDraft.set(null);
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
   }
@@ -166,9 +181,11 @@ export class MonthGridComponent {
     this.selectedDate.set(null);
     this.quickAddMode.set(false);
     this.quickAddType.set(null);
+    this.isCreatingEvent.set(false);
     this.selectedDayIndices.set([]);
     this.expandedEventIds.set([]);
     this.editingEventId.set(null);
+    this.editingEventDraft.set(null);
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
   }
@@ -176,6 +193,7 @@ export class MonthGridComponent {
   protected showQuickAddOptions(): void {
     this.quickAddMode.set(true);
     this.quickAddType.set(null);
+    this.isCreatingEvent.set(false);
     this.selectedDayIndices.set([this.selectedDayIndex()]);
   }
 
@@ -199,6 +217,7 @@ export class MonthGridComponent {
   protected openEditor(event: CalendarEvent): void {
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
+    this.isCreatingEvent.set(false);
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
     this.editingEventOpenTo.set('edit');
@@ -208,6 +227,7 @@ export class MonthGridComponent {
   protected openEditorForInvite(event: CalendarEvent): void {
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
+    this.isCreatingEvent.set(false);
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
     this.editingEventOpenTo.set('invite');
@@ -215,6 +235,7 @@ export class MonthGridComponent {
   }
 
   protected closeEditor(): void {
+    this.isCreatingEvent.set(false);
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
     this.editingEventOpenTo.set('edit');
@@ -222,7 +243,13 @@ export class MonthGridComponent {
   }
 
   protected async saveEvent(updatedEvent: CalendarEvent): Promise<void> {
-    await this.dataStore.updateCalendarEvent(updatedEvent.id, updatedEvent);
+    if (this.isCreatingEvent()) {
+      await this.dataStore.addCalendarEvent(this.toCreatePayload(updatedEvent));
+    } else {
+      await this.dataStore.updateCalendarEvent(updatedEvent.id, updatedEvent);
+    }
+
+    this.isCreatingEvent.set(false);
     this.editingEventDraft.set(null);
     this.showSuggestedSlotHint.set(false);
     this.editingEventId.set(null);
@@ -315,9 +342,12 @@ export class MonthGridComponent {
 
   protected chooseQuickAdd(type: 'shift' | 'workout' | 'personal' | 'mealprep'): void {
     this.quickAddType.set(type);
-    this.title.set(this.defaultTitle(type));
-    this.startTime.set(type === 'workout' ? '17:00' : type === 'mealprep' ? '18:00' : '08:00');
-    this.endTime.set(type === 'workout' ? '17:45' : type === 'mealprep' ? '19:30' : '16:00');
+    this.isCreatingEvent.set(true);
+    this.showSuggestedSlotHint.set(false);
+    this.editingEventOpenTo.set('edit');
+    this.editingEventId.set(null);
+    this.editingEventDraft.set(this.buildDraftEvent(type));
+    this.quickAddMode.set(false);
     this.selectedDayIndices.set([this.selectedDayIndex()]);
   }
 
@@ -416,6 +446,7 @@ export class MonthGridComponent {
   protected closeQuickAddOptions(): void {
     this.quickAddMode.set(false);
     this.quickAddType.set(null);
+    this.isCreatingEvent.set(false);
     this.selectedDayIndices.set([]);
   }
 
@@ -579,13 +610,13 @@ export class MonthGridComponent {
     const labels: MonthEventLabel[] = [];
     const dayEvents = this.dataStore.eventsForDay(day.date);
 
-    const workoutCount = dayEvents.filter((event) => event.type === 'workout').length;
+    const workoutEvents = dayEvents.filter((event) => event.type === 'workout');
+    const personalEvents = dayEvents.filter((event) => event.type === 'custom-event' || event.type === 'personal');
     const hasMealPrep = dayEvents.some((event) => event.type === 'mealprep');
-    const hasPersonal = dayEvents.some((event) => event.type === 'custom-event' || event.type === 'personal');
 
-    if (workoutCount > 0) {
-      for (let i = 0; i < workoutCount; i += 1) {
-        labels.push({ type: 'workout', title: workoutCount > 1 ? `Workout ${i + 1}` : 'Workout' });
+    if (workoutEvents.length > 0) {
+      for (const workoutEvent of workoutEvents) {
+        labels.push({ type: 'workout', title: this.displayTitleForEvent(workoutEvent) });
       }
     }
 
@@ -593,8 +624,10 @@ export class MonthGridComponent {
       labels.push({ type: 'mealprep', title: 'Meal Prep' });
     }
 
-    if (hasPersonal) {
-      labels.push({ type: 'personal', title: 'Personal' });
+    if (personalEvents.length > 0) {
+      for (const personalEvent of personalEvents) {
+        labels.push({ type: 'personal', title: this.displayTitleForEvent(personalEvent) });
+      }
     }
 
     return labels;
@@ -634,6 +667,34 @@ export class MonthGridComponent {
     }
   }
 
+  protected displayTitleForEvent(event: CalendarEvent): string {
+    const title = this.baseEventTitle(event);
+    if (this.isTaskDerivedEvent(event)) {
+      return `[Task] ${title}`;
+    }
+    return title;
+  }
+
+  private baseEventTitle(event: CalendarEvent): string {
+    const title = event.title?.trim();
+
+    if (event.type === 'personal' || event.type === 'custom-event') {
+      return title && title.length > 0 ? title : 'Personal';
+    }
+
+    return title && title.length > 0 ? title : 'Event';
+  }
+
+  private isTaskDerivedEvent(event: CalendarEvent): boolean {
+    if (this.taskDerivedEventIds().has(event.id)) {
+      return true;
+    }
+
+    return (event.type === 'personal' || event.type === 'custom-event')
+      && event.isPersonal === true
+      && event.isManuallyPlaced === false;
+  }
+
   private durationFromTimes(startTime: string, endTime: string): number {
     const [startHours, startMinutes] = startTime.split(':').map(Number);
     const [endHours, endMinutes] = endTime.split(':').map(Number);
@@ -651,6 +712,69 @@ export class MonthGridComponent {
       return 'Personal Event';
     }
     return 'Meal Prep';
+  }
+
+  private buildDraftEvent(type: 'shift' | 'workout' | 'personal' | 'mealprep'): CalendarEvent {
+    const date = this.selectedDate() ?? this.toDateString(new Date());
+    const base: CalendarEvent = {
+      id: `new-${type}-${Date.now()}`,
+      title: this.defaultTitle(type),
+      type: 'custom-event',
+      day: this.dayOfWeekIndex(date),
+      date,
+      startTime: type === 'workout' ? '17:00' : type === 'mealprep' ? '18:00' : '08:00',
+      endTime: type === 'workout' ? '17:45' : type === 'mealprep' ? '19:30' : '16:00',
+      isManuallyPlaced: true,
+    };
+
+    if (type === 'shift') {
+      return {
+        ...base,
+        type: 'shift',
+        title: 'Work Shift',
+        commuteMinutes: 30,
+      };
+    }
+
+    if (type === 'workout') {
+      return {
+        ...base,
+        type: 'workout',
+        title: 'Workout',
+        duration: 45,
+        durationMinutes: 45,
+        intensity: 'moderate',
+        priority: 'supporting',
+        sessionType: 'running',
+      };
+    }
+
+    if (type === 'mealprep') {
+      return {
+        ...base,
+        type: 'mealprep',
+        title: 'Meal Prep',
+        duration: 90,
+        durationMinutes: 90,
+      };
+    }
+
+    return {
+      ...base,
+      type: 'custom-event',
+      title: 'Personal Event',
+      isPersonal: true,
+    };
+  }
+
+  private toCreatePayload(event: CalendarEvent): Partial<CalendarEvent> {
+    const { id, ...payload } = event;
+    return payload;
+  }
+
+  private dayOfWeekIndex(date: string): number {
+    const parsed = new Date(`${date}T00:00:00`);
+    return (parsed.getDay() + 6) % 7;
   }
 
   private selectedDayIndex(): number {

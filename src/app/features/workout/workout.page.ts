@@ -7,7 +7,6 @@ import { WorkoutLogApiService } from '../../core/services/workout-log-api.servic
 import { getWorkoutDescription } from '../../core/utils/workout-descriptions';
 import { getWorkoutStructure, WorkoutStep } from '../../core/utils/workout-structure';
 import { EnergyRating } from '../../core/models/app-data.models';
-import { cycleTrackingEnabled } from '../../shared/state/cycle-ui.state';
 
 type WorkoutPageState = 'pre' | 'during' | 'post';
 type StartButtonState = 'start' | 'completed';
@@ -227,7 +226,7 @@ export class WorkoutPageComponent {
   });
 
   protected readonly cyclePhaseInfo = computed<{ phase: string; cycleDay: number } | null>(() => {
-    if (!cycleTrackingEnabled()) return null;
+    if (this.dataStore.schedulerSettings()?.cycleTrackingEnabled !== true) return null;
     const profile = this.dataStore.cycleProfile();
     if (!profile?.lastPeriodStart || profile.mode !== 'natural') return null;
     const dateStr = this.event()?.date;

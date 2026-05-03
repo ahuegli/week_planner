@@ -4,6 +4,7 @@ import {
   Column,
   Index,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
@@ -24,6 +25,9 @@ export class Note {
 
   @Column({ type: 'text', nullable: true })
   body: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
   @Column({ type: 'date', nullable: true })
   dueDate: string | null;
@@ -46,6 +50,33 @@ export class Note {
   @ManyToOne(() => CalendarEvent, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'linkedCalendarEventId' })
   linkedCalendarEvent: CalendarEvent | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  parentNoteId: string | null;
+
+  @ManyToOne(() => Note, (note) => note.subTasks, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'parentNoteId' })
+  parentNote: Note | null;
+
+  @OneToMany(() => Note, (note) => note.parentNote)
+  subTasks: Note[];
+
+  @Column({ type: 'uuid', nullable: true })
+  assignedUserId: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['not_started', 'in_progress', 'done'],
+    nullable: true,
+  })
+  subtaskStatus: 'not_started' | 'in_progress' | 'done' | null;
+
+  @Column({
+    type: 'enum',
+    enum: ['task', 'reminder'],
+    default: 'task',
+  })
+  noteType: 'task' | 'reminder';
 
   @Column({ default: false })
   completed: boolean;

@@ -311,30 +311,46 @@ export interface Note {
   userId: string;
   title: string;
   body: string | null;
+  description: string | null;
   dueDate: string | null;
   dueTime: string | null;
   isScheduled: boolean;
   estimatedDurationMinutes: number | null;
   wantsScheduling: boolean;
   linkedCalendarEventId: string | null;
+  parentNoteId: string | null;
+  assignedUserId: string | null;
+  subtaskStatus: 'not_started' | 'in_progress' | 'done' | null;
+  noteType: 'task' | 'reminder';
   completed: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  isOwner?: boolean;
+  sharedBy?: { id: string; email: string };
+  permission?: 'view' | 'collaborate';
 }
 
 export interface CreateNotePayload {
   title: string;
   body?: string;
+  description?: string;
   dueDate?: string;
   dueTime?: string;
   estimatedDurationMinutes?: number;
   wantsScheduling?: boolean;
+  parentNoteId?: string;
+  assignedUserId?: string;
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done';
+  noteType?: 'task' | 'reminder';
 }
 
-export type UpdateNotePayload = Partial<CreateNotePayload> & {
+export type UpdateNotePayload = Partial<Omit<CreateNotePayload, 'parentNoteId' | 'assignedUserId' | 'subtaskStatus'>> & {
   completed?: boolean;
   linkedCalendarEventId?: string | null;
+  parentNoteId?: string | null;
+  assignedUserId?: string | null;
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done' | null;
 };
 
 export interface SlotCandidate {
@@ -556,6 +572,26 @@ export interface UpdateCalendarSharePayload {
 }
 
 export type UpdateEnergyCheckInPayload = Partial<CreateEnergyCheckInPayload>;
+
+// ── Note Sharing ──────────────────────────────────────────────────────
+
+export interface NoteShare {
+  id: string;
+  ownerId: string;
+  ownerEmail: string;
+  recipientId: string;
+  recipientEmail: string;
+  noteId: string;
+  permission: 'view' | 'collaborate';
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreateNoteSharePayload {
+  recipientEmail: string;
+  noteId: string;
+  permission?: 'view' | 'collaborate';
+}
 
 export interface SymptomLog {
   id: string;

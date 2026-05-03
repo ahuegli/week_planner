@@ -69,6 +69,9 @@ export class CalendarEvent {
   @Column({ type: 'uuid', nullable: true })
   linkedPriorSessionId: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
+
   @Column()
   userId: string;
 

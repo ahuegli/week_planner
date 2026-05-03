@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
 import { AuthService } from '../core/services/auth.service';
 import { DataStoreService } from '../core/services/data-store.service';
-import { CalendarShare, CycleProfile } from '../core/models/app-data.models';
+import { CalendarShare, CycleProfile, NoteShare } from '../core/models/app-data.models';
 
 @Component({
   selector: 'app-settings-page',
@@ -48,7 +48,6 @@ export class SettingsPageComponent {
     return Math.round((plan.currentWeek / plan.totalWeeks) * 100);
   });
 
-  protected readonly darkMode = signal(true);
   protected readonly workoutReminders = signal(true);
   protected readonly checkinPrompts = signal(true);
   protected readonly weeklySummary = signal(true);
@@ -118,6 +117,19 @@ export class SettingsPageComponent {
   protected readonly editingShareId = signal<string | null>(null);
   protected readonly editingShareLevel = signal<string>('full');
 
+  protected readonly outgoingNoteShares = computed(() => this.dataStore.outgoingNoteShares());
+  protected readonly incomingNoteShares = computed(() => this.dataStore.incomingNoteShares());
+  private readonly noteMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const note of this.dataStore.notes()) {
+      map.set(note.id, note.title);
+    }
+    return map;
+  });
+  protected noteTitle(noteId: string): string {
+    return this.noteMap().get(noteId) ?? 'Project';
+  }
+
   protected readonly shareLevelOptions = [
     { value: 'full' as const, label: 'Full access', sub: ' sees your full calendar' },
     { value: 'busy_only' as const, label: 'Busy/free only', sub: ' sees when you\'re busy or free, not what you\'re doing' },
@@ -157,10 +169,6 @@ export class SettingsPageComponent {
 
   protected isOpen(key: string): boolean {
     return this.openSections().includes(key);
-  }
-
-  protected toggleSignal(target: ReturnType<typeof signal<boolean>>): void {
-    target.update((value) => !value);
   }
 
   protected adjustSignal(target: ReturnType<typeof signal<number>>, delta: number, min: number, max: number): void {
@@ -373,6 +381,22 @@ export class SettingsPageComponent {
     }
   }
 
+  protected async toggleNoteSharing(): Promise<void> {
+    const wasOpen = this.isOpen('noteSharing');
+    this.toggleSection('noteSharing');
+    if (!wasOpen) {
+      await this.dataStore.loadNoteShares();
+    }
+  }
+
+  protected async revokeNoteShareFromSettings(shareId: string): Promise<void> {
+    await this.dataStore.revokeNoteShare(shareId);
+  }
+
+  protected notePermissionLabel(permission: NoteShare['permission']): string {
+    return permission === 'collaborate' ? 'Can edit' : 'View only';
+  }
+
   protected showShareForm(): void {
     this.shareFormVisible.set(true);
     this.shareError.set(null);
@@ -496,6 +520,9 @@ export class SettingsPageComponent {
       this.openSections.update((s) => [...s, openSection]);
       if (openSection === 'sharing') {
         await this.dataStore.loadShares();
+      }
+      if (openSection === 'noteSharing') {
+        await this.dataStore.loadNoteShares();
       }
     }
   }

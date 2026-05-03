@@ -48,7 +48,7 @@
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
                     }
-                    <p class="event-title">{{ event.type === 'workout' ? sessionTypeLabel(event) : event.title }}</p>
+                    <p class="event-title">{{ eventDisplayTitle(event) }}</p>
                     @if (event.type === 'workout' && event.intensity) {
                       <span class="intensity-dot" [style.background]="intensityColor(event)"></span>
                     }
@@ -138,7 +138,7 @@
                           <p class="detail-row"><span class="detail-label">Commute:</span> {{ event.commuteMinutes }} min each way</p>
                         }
                       } @else if (event.type === 'personal') {
-                        <p class="detail-row"><span class="detail-label">Event:</span> {{ event.title }}</p>
+                        <p class="detail-row"><span class="detail-label">Event:</span> {{ eventDisplayTitle(event) }}</p>
                       } @else if (event.type === 'mealprep') {
                         <p class="detail-row"><span class="detail-label">Duration:</span> {{ durationLabel(event) }}</p>
                       }

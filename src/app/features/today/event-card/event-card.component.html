@@ -4,7 +4,7 @@
   [class.is-brick]="brickLinked()"
   [style.--bar-color]="barColor()"
   role="article"
-  [attr.aria-label]="displayEvent().title"
+  [attr.aria-label]="displayTitle()"
 >
   <button
     type="button"
@@ -15,7 +15,7 @@
   >
     <div class="summary-main">
       <div class="event-header">
-        <span class="event-title">{{ displayEvent().title }}</span>
+        <span class="event-title">{{ displayTitle() }}</span>
         @if (brickLinked()) {
           <span class="brick-badge"><span class="brick-icon" aria-hidden="true">&rarr;</span>Brick</span>
         }

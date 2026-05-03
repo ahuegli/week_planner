@@ -56,13 +56,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/workout/workout.page').then((m) => m.WorkoutPageComponent),
   },
-  // TODO: re-enable when WP7A is fixed (rate limit + model ID
-  // verification + UI input field)
-  // {
-  //   path: 'coach',
-  //   canActivate: [authGuard],
-  //   loadComponent: () => import('./features/coach/coach.page').then((m) => m.CoachPageComponent),
-  // },
+  {
+    path: 'coach',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/coach/coach.page').then((m) => m.CoachPageComponent),
+  },
   {
     path: '**',
     redirectTo: 'login',

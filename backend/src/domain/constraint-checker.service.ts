@@ -5,6 +5,7 @@ import {
   SchedulerSettings,
   WeekContext,
   Workout,
+  WorkoutType,
   isEnduranceType,
 } from '../shared/models';
 import { toMinutes } from '../shared/utils/time-utils';
@@ -72,7 +73,7 @@ export class ConstraintCheckerService {
 
     if (
       type === 'workout' &&
-      this.violatesMinimumRestBetweenWorkouts(day, startMin, ctx.alreadyPlaced)
+      this.violatesMinimumRestBetweenWorkouts(day, startMin, endMin, ctx.alreadyPlaced)
     ) {
       return true;
     }
@@ -355,6 +356,7 @@ export class ConstraintCheckerService {
   private violatesMinimumRestBetweenWorkouts(
     day: number,
     startMin: number,
+    endMin: number,
     alreadyPlaced: CalendarEvent[],
   ): boolean {
     const MIN_REST_MINUTES = 180;
@@ -365,9 +367,10 @@ export class ConstraintCheckerService {
       const workoutStart = toMinutes(workout.startTime);
       const workoutEnd = toMinutes(workout.endTime);
 
+      // New session starts less than MIN_REST_MINUTES after an existing session ends.
       const tooCloseAfter = startMin < workoutEnd + MIN_REST_MINUTES && startMin >= workoutEnd;
-      const tooCloseBefore =
-        startMin + MIN_REST_MINUTES > workoutStart && startMin + MIN_REST_MINUTES <= workoutStart;
+      // New session ends less than MIN_REST_MINUTES before an existing session starts.
+      const tooCloseBefore = endMin > workoutStart - MIN_REST_MINUTES && endMin <= workoutStart;
 
       if (tooCloseAfter || tooCloseBefore) {
         return true;
@@ -385,11 +388,23 @@ export class ConstraintCheckerService {
     const sameDayWorkouts = alreadyPlaced.filter((e) => e.type === 'workout' && e.day === day);
 
     for (const existing of sameDayWorkouts) {
-      if (existing.workoutType === workout.workoutType) {
+      const existingType = existing.workoutType ?? this.inferWorkoutTypeFromSessionType(existing.sessionType);
+      if (existingType === workout.workoutType) {
         return true;
       }
     }
 
     return false;
+  }
+
+  private inferWorkoutTypeFromSessionType(sessionType: string | undefined): WorkoutType | undefined {
+    if (!sessionType) return undefined;
+    const s = sessionType.toLowerCase();
+    if (s.includes('run') || s === 'tempo' || s === 'intervals' || s === 'hill_reps') return 'running';
+    if (s === 'swim' || s.includes('swim')) return 'swimming';
+    if (s === 'bike' || s === 'brick' || s.includes('bike') || s.includes('cycl')) return 'biking';
+    if (s === 'strength' || s === 'hiit') return 'strength';
+    if (s === 'yoga' || s === 'mobility') return 'yoga';
+    return undefined;
   }
 }

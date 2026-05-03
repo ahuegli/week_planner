@@ -57,16 +57,11 @@
           </svg>
         </a>
 
-        <div class="setting-row">
-          <span>Dark mode</span>
-          <button type="button" class="switch" [class.on]="darkMode()" (click)="toggleSignal(darkMode)"><span></span></button>
-        </div>
-
         <div class="setting-block">
           <p class="block-title">Notification preferences</p>
-          <div class="setting-row"><span>Workout reminders</span><button type="button" class="switch" [class.on]="workoutReminders()" (click)="toggleSignal(workoutReminders)"><span></span></button></div>
-          <div class="setting-row"><span>Check-in prompts</span><button type="button" class="switch" [class.on]="checkinPrompts()" (click)="toggleSignal(checkinPrompts)"><span></span></button></div>
-          <div class="setting-row"><span>Weekly summary</span><button type="button" class="switch" [class.on]="weeklySummary()" (click)="toggleSignal(weeklySummary)"><span></span></button></div>
+          <div class="setting-row"><span>Workout reminders</span><button type="button" class="switch" [class.on]="workoutReminders()" (click)="workoutReminders.set(!workoutReminders())"><span></span></button></div>
+          <div class="setting-row"><span>Check-in prompts</span><button type="button" class="switch" [class.on]="checkinPrompts()" (click)="checkinPrompts.set(!checkinPrompts())"><span></span></button></div>
+          <div class="setting-row"><span>Weekly summary</span><button type="button" class="switch" [class.on]="weeklySummary()" (click)="weeklySummary.set(!weeklySummary())"><span></span></button></div>
         </div>
 
         <div class="setting-block">
@@ -346,8 +341,8 @@
           <option>2 hours</option>
         </select>
 
-        <div class="setting-row"><span>Prefer weekends</span><button type="button" class="switch" [class.on]="mealPrepWeekends()" (click)="toggleSignal(mealPrepWeekends)"><span></span></button></div>
-        <div class="setting-row"><span>FridgeMate integration</span><button type="button" class="switch" [class.on]="fridgeMateConnected()" (click)="toggleSignal(fridgeMateConnected)"><span></span></button></div>
+        <div class="setting-row"><span>Prefer weekends</span><button type="button" class="switch" [class.on]="mealPrepWeekends()" (click)="mealPrepWeekends.set(!mealPrepWeekends())"><span></span></button></div>
+        <div class="setting-row"><span>FridgeMate integration</span><button type="button" class="switch" [class.on]="fridgeMateConnected()" (click)="fridgeMateConnected.set(!fridgeMateConnected())"><span></span></button></div>
 
         @if (fridgeMateConnected()) {
           <p class="connected-text"><span class="green-dot"></span> Connected to FridgeMate</p>
@@ -386,7 +381,7 @@
               <p class="block-title">Optimize training around your menstrual cycle</p>
               <p class="subtle-text">We'll adjust workout intensity and recovery based on your cycle phase</p>
             </div>
-            <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="toggleSignal(cycleTrackingEnabled)"><span></span></button>
+            <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="cycleTrackingEnabled.set(!cycleTrackingEnabled())"><span></span></button>
           </div>
         </div>
 
@@ -517,6 +512,59 @@
         </div>
 
         <p class="info-text">Sharing is one-way. They'll need to share back if you want to see theirs.</p>
+
+      </div>
+    }
+  </article>
+
+  <article class="accordion-card">
+    <button type="button" class="accordion-header" (click)="toggleNoteSharing()">
+      <h2>Note Shares</h2>
+      <span class="chevron" [class.open]="isOpen('noteSharing')" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+    @if (isOpen('noteSharing')) {
+      <div class="accordion-content">
+
+        <div class="setting-block">
+          <p class="block-title">Projects I share</p>
+          @if (outgoingNoteShares().length === 0) {
+            <p class="info-text">You haven't shared any projects yet. Use the share button on a project card.</p>
+          } @else {
+            @for (share of outgoingNoteShares(); track share.id) {
+              <div class="share-row">
+                <div style="flex: 1; min-width: 0;">
+                  <span class="share-email">{{ noteTitle(share.noteId) }}</span>
+                  <span class="info-text" style="margin: 0;"> → {{ share.recipientEmail }}</span>
+                </div>
+                <span class="share-badge-btn" style="cursor: default;">{{ notePermissionLabel(share.permission) }}</span>
+                <button type="button" class="text-link share-danger" (click)="revokeNoteShareFromSettings(share.id)">Revoke</button>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="setting-block">
+          <p class="block-title">Projects shared with me</p>
+          @if (incomingNoteShares().length === 0) {
+            <p class="info-text">No one has shared a project with you.</p>
+          } @else {
+            @for (share of incomingNoteShares(); track share.id) {
+              <div class="share-row">
+                <div style="flex: 1; min-width: 0;">
+                  <span class="share-email">{{ noteTitle(share.noteId) }}</span>
+                  <span class="info-text" style="margin: 0;"> from {{ share.ownerEmail }}</span>
+                </div>
+                <button type="button" class="text-link share-danger" (click)="revokeNoteShareFromSettings(share.id)">Stop receiving</button>
+              </div>
+            }
+          }
+        </div>
+
+        <p class="info-text">Share a project using the share button on its card in the Notes tab.</p>
 
       </div>
     }

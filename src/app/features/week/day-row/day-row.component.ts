@@ -87,6 +87,16 @@ export class DayRowComponent {
     !this.visibleEvents().some((event) => event.type === 'shift' || event.type === 'busy'),
   );
 
+  protected readonly taskDerivedEventIds = computed(
+    () =>
+      new Set(
+        this.dataStore
+          .notes()
+          .map((note) => note.linkedCalendarEventId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+  );
+
   protected eventColor(event: CalendarEvent): string {
     switch (event.type) {
       case 'workout':
@@ -180,6 +190,38 @@ export class DayRowComponent {
     };
 
     return map[sessionType] ?? event.title;
+  }
+
+  protected eventDisplayTitle(event: CalendarEvent): string {
+    const baseTitle = event.type === 'workout'
+      ? this.sessionTypeLabel(event)
+      : this.baseEventTitle(event);
+
+    if (this.isTaskDerivedEvent(event)) {
+      return `[Task] ${baseTitle}`;
+    }
+
+    return baseTitle;
+  }
+
+  private baseEventTitle(event: CalendarEvent): string {
+    const title = event.title?.trim();
+
+    if (event.type === 'personal' || event.type === 'custom-event') {
+      return title && title.length > 0 ? title : 'Personal';
+    }
+
+    return title && title.length > 0 ? title : 'Event';
+  }
+
+  private isTaskDerivedEvent(event: CalendarEvent): boolean {
+    if (this.taskDerivedEventIds().has(event.id)) {
+      return true;
+    }
+
+    return (event.type === 'personal' || event.type === 'custom-event')
+      && event.isPersonal === true
+      && event.isManuallyPlaced === false;
   }
 
   protected priorityLabel(event: CalendarEvent): string {

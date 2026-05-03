@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { UiFeedbackService } from '../shared/ui-feedback.service';
 import {
+  CalendarEvent,
   MOCK_DID_YOU_KNOW,
   MOCK_REMINDER,
   MOCK_TIP,
@@ -14,10 +15,10 @@ import { NowMarkerComponent } from '../features/today/now-marker/now-marker.comp
 import { WeekSnapshotComponent } from '../features/today/week-snapshot/week-snapshot.component';
 import { IHaveTimeComponent } from '../features/today/i-have-time/i-have-time.component';
 import { DidYouKnowComponent } from '../features/today/did-you-know/did-you-know.component';
+import { EventDetailModalComponent } from '../shared/event-detail-modal/event-detail-modal.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { AuthService } from '../core/services/auth.service';
-import { CalendarEvent, WeekDay } from '../core/models/app-data.models';
-import { cycleTrackingEnabled } from '../shared/state/cycle-ui.state';
+import { WeekDay } from '../core/models/app-data.models';
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -37,6 +38,7 @@ function timeToMinutes(time: string): number {
     WeekSnapshotComponent,
     IHaveTimeComponent,
     DidYouKnowComponent,
+    EventDetailModalComponent,
   ],
   templateUrl: './today.page.html',
   styleUrl: './today.page.scss',
@@ -50,9 +52,13 @@ export class TodayPageComponent {
   private readonly today = signal(new Date());
   protected readonly selectedDate = signal(new Date());
   protected readonly expandedEventId = signal<string | null>(null);
+  protected readonly quickCreateOpen = signal(false);
+  protected readonly quickCreateDraft = signal<CalendarEvent | null>(null);
   private readonly nowMinutes = signal(new Date().getHours() * 60 + new Date().getMinutes());
   protected readonly hasLoaded = signal(false);
-  protected readonly cycleTrackingEnabled = cycleTrackingEnabled;
+  protected readonly cycleTrackingEnabled = computed(
+    () => this.dataStore.schedulerSettings()?.cycleTrackingEnabled === true,
+  );
   protected readonly pendingInvitations = computed(() => this.dataStore.pendingInvitations());
   protected readonly errorInvitationId = signal<string | null>(null);
 
@@ -112,6 +118,7 @@ export class TodayPageComponent {
   protected readonly showCycleBanner = computed(
     () => this.cycleTrackingEnabled() && !!this.currentPhase() && this.currentPhase()!.phase !== 'unknown',
   );
+  protected readonly showCycleAwareTip = computed(() => this.cycleTrackingEnabled());
 
   protected readonly todayDateString = computed(() => {
     const value = this.today();
@@ -233,6 +240,25 @@ export class TodayPageComponent {
     void this.router.navigate(['/coach']);
   }
 
+  protected openQuickCreate(type: 'workout' | 'shift'): void {
+    this.quickCreateDraft.set(this.buildDraftEvent(type));
+    this.quickCreateOpen.set(true);
+  }
+
+  protected closeQuickCreate(): void {
+    this.quickCreateOpen.set(false);
+    this.quickCreateDraft.set(null);
+  }
+
+  protected async saveQuickCreate(event: CalendarEvent): Promise<void> {
+    await this.dataStore.addCalendarEvent(this.toCreatePayload(event));
+    this.closeQuickCreate();
+  }
+
+  protected openTaskCreate(): void {
+    void this.router.navigate(['/notes']);
+  }
+
   protected formatInviteDate(dateStr: string): string {
     if (!dateStr) return '';
     const date = new Date(`${dateStr}T00:00:00`);
@@ -305,6 +331,47 @@ export class TodayPageComponent {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
     return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+  }
+
+  private buildDraftEvent(type: 'workout' | 'shift'): CalendarEvent {
+    const date = this.selectedDateString();
+    const day = this.dayOfWeekIndex(date);
+
+    const base: CalendarEvent = {
+      id: `new-${type}-${Date.now()}`,
+      title: type === 'workout' ? 'Workout' : 'Work Shift',
+      type,
+      day,
+      date,
+      startTime: type === 'workout' ? '17:00' : '08:00',
+      endTime: type === 'workout' ? '17:45' : '16:00',
+      isManuallyPlaced: true,
+    };
+
+    if (type === 'workout') {
+      return {
+        ...base,
+        duration: 45,
+        durationMinutes: 45,
+        intensity: 'moderate',
+        priority: 'supporting',
+        sessionType: 'running',
+      };
+    }
+
+    return {
+      ...base,
+      commuteMinutes: 30,
+    };
+  }
+
+  private toCreatePayload(event: CalendarEvent): Partial<CalendarEvent> {
+    const { id, ...payload } = event;
+    return payload;
+  }
+
+  private dayOfWeekIndex(date: string): number {
+    return (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
   }
 
   private toDateString(date: Date): string {

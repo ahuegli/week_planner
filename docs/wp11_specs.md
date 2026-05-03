@@ -49,7 +49,20 @@
 In `backend/src/note/note.entity.ts`:
 ```typescript
 @Column({ type: 'text', nullable: true }) description: string | null;
-@Column({ type: 'uuid', nullable: true }) parentNoteId: string | null;
+
+// Self-referential relation — parentNoteId as @ManyToOne with onDelete: 'CASCADE'.
+// Decision: raw uuid column was ruled out in favour of a proper TypeORM relation so
+// that deleting a parent note automatically cascade-deletes all its sub-tasks.
+@Column({ type: 'uuid', nullable: true })
+parentNoteId: string | null;
+
+@ManyToOne(() => Note, (note) => note.subTasks, { nullable: true, onDelete: 'CASCADE' })
+@JoinColumn({ name: 'parentNoteId' })
+parentNote: Note | null;
+
+@OneToMany(() => Note, (note) => note.parentNote)
+subTasks: Note[];
+
 @Column({ type: 'uuid', nullable: true }) assignedUserId: string | null;
 @Column({ type: 'enum', enum: ['not_started', 'in_progress', 'done'], nullable: true })
 subtaskStatus: 'not_started' | 'in_progress' | 'done' | null;

@@ -27,7 +27,7 @@
       @if (phaseLabel()) {
         <p class="session-context">{{ phaseLabel() }}</p>
       }
-      @if (cyclePhaseLabel()) {
+      @if (cyclePhaseInfo() && cyclePhaseLabel()) {
         <div
           class="cycle-phase-tooltip"
           (mouseenter)="showCyclePhaseTooltipOnHover()"

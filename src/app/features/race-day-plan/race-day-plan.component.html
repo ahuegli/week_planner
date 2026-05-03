@@ -18,23 +18,144 @@
 
     @if (raceDayPlan(); as plan) {
       <div class="section-grid">
-        @for (section of sections(); track section.key) {
-          <article class="section-card">
-            <h4>{{ section.title }}</h4>
-            @if (section.rows.length > 0) {
-              <dl>
-                @for (row of section.rows; track row.label + row.value) {
-                  <div class="kv-row">
-                    <dt>{{ row.label }}</dt>
-                    <dd>{{ row.value }}</dd>
+        <article class="section-card">
+          <h4 class="section-heading">Pacing</h4>
+          @if (pacingRows().length > 0) {
+            <div class="pacing-list">
+              @for (row of pacingRows(); track row.key) {
+                <div class="pacing-row">
+                  <div class="discipline-label">
+                    @if (row.key === 'swim') {
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14c1.5 0 2.5 1 4 1s2.5-1 4-1 2.5 1 4 1 2.5-1 4-1 2.5 1 4 1"/><path d="M4 10c2.5-3.5 4.5-5 8-5s5.5 1.5 8 5"/></svg>
+                    } @else if (row.key === 'bike') {
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M10 18 8 9h6l2 9"/><path d="M10 9 8 6"/></svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4 9 8l4 4"/><path d="M11 20 7 16l4-4"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/></svg>
+                    }
+                    <span>{{ row.label }}</span>
                   </div>
+                  <span class="pacing-target">{{ row.target }}</span>
+                  <span class="pacing-rpe">RPE {{ row.rpe }}</span>
+                </div>
+                @if (row.subtitle) {
+                  <p class="pacing-subtitle">{{ row.subtitle }}</p>
                 }
-              </dl>
-            } @else {
-              <p class="empty-copy">No details yet.</p>
+              }
+            </div>
+          } @else {
+            <p class="empty-copy">No pacing details yet.</p>
+          }
+        </article>
+
+        <article class="section-card">
+          <h4 class="section-heading">Fueling</h4>
+          @if (fuelingSteps().length > 0) {
+            <div class="fueling-chain">
+              @for (step of fuelingSteps(); track step.time + step.label; let isLast = $last) {
+                <div class="timeline-pill">
+                  <p class="timeline-title">{{ step.time }} {{ step.label }}</p>
+                  <p class="timeline-detail">{{ step.detail }}</p>
+                </div>
+                @if (!isLast) {
+                  <span class="timeline-connector" aria-hidden="true">&#8250;</span>
+                }
+              }
+            </div>
+          } @else {
+            <p class="empty-copy">No fueling details yet.</p>
+          }
+        </article>
+
+        <article class="section-card">
+          <h4 class="section-heading">Hydration</h4>
+          <div class="hydration-pill-row" role="tablist" aria-label="Hydration conditions">
+            @for (condition of hydrationConditions(); track condition.key) {
+              <button
+                type="button"
+                class="hydration-pill"
+                [class.selected]="hydrationSelection() === condition.key"
+                [attr.aria-selected]="hydrationSelection() === condition.key"
+                (click)="setHydrationSelection(condition.key)"
+              >
+                {{ condition.label }}
+              </button>
             }
-          </article>
-        }
+          </div>
+          @if (selectedHydrationCondition(); as selectedCondition) {
+            <div class="hydration-detail">
+              <div class="hydration-metric">
+                <span class="metric-label">Fluid</span>
+                <span class="metric-value">{{ selectedCondition.mlPerHour }} ml/h</span>
+              </div>
+              <p class="timeline-detail">{{ selectedCondition.electrolytes }}</p>
+              @if (selectedCondition.note) {
+                <p class="timeline-detail hydration-note">{{ selectedCondition.note }}</p>
+              }
+            </div>
+          }
+        </article>
+
+        <article class="section-card">
+          <h4 class="section-heading">Transitions</h4>
+          @if (transitionCards().length > 0) {
+            <div class="transition-grid">
+              @for (card of transitionCards(); track card.key) {
+                <article class="transition-card">
+                  <div class="transition-head">
+                    <p class="transition-title">{{ card.label }}</p>
+                    <span class="transition-target">Target {{ card.targetSeconds }}s</span>
+                  </div>
+                  @if (card.steps.length > 0) {
+                    <ol class="transition-list">
+                      @for (step of card.steps; track step) {
+                        <li>{{ step }}</li>
+                      }
+                    </ol>
+                  } @else {
+                    <p class="empty-copy">No checklist yet.</p>
+                  }
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="empty-copy">No transition details yet.</p>
+          }
+        </article>
+
+        <article class="section-card">
+          <h4 class="section-heading">Contingencies</h4>
+          @if (contingencyItems().length > 0) {
+            <div class="chip-row">
+              @for (item of contingencyItems(); track item.key) {
+                <button
+                  type="button"
+                  class="contingency-chip"
+                  [class.selected]="isContingencyExpanded(item.key)"
+                  (click)="toggleContingency(item.key)"
+                >
+                  {{ item.label }}
+                </button>
+              }
+            </div>
+
+            @for (item of contingencyItems(); track item.key) {
+              @if (isContingencyExpanded(item.key)) {
+                <article class="contingency-detail">
+                  <p class="contingency-trigger"><span>Trigger:</span> {{ item.trigger }}</p>
+                  @if (item.actions.length > 0) {
+                    <ul>
+                      @for (action of item.actions; track action) {
+                        <li>{{ action }}</li>
+                      }
+                    </ul>
+                  }
+                </article>
+              }
+            }
+          } @else {
+            <p class="empty-copy">No contingency details yet.</p>
+          }
+        </article>
       </div>
 
       <div class="action-row">

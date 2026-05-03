@@ -19,6 +19,7 @@ import { WorkoutLogModule } from './workout-log/workout-log.module';
 import { StatsModule } from './stats/stats.module';
 import { AiModule } from './ai/ai.module';
 import { CalendarShareModule } from './calendar-share/calendar-share.module';
+import { NoteShareModule } from './note-share/note-share.module';
 import { EventInvitationModule } from './event-invitation/event-invitation.module';
 import { RaceDayPlanModule } from './race-day-plan/race-day-plan.module';
 
@@ -54,6 +55,7 @@ const databaseImports = USE_DATABASE
       StatsModule,
       AiModule,
       CalendarShareModule,
+      NoteShareModule,
       EventInvitationModule,
       RaceDayPlanModule,
     ]

@@ -278,7 +278,7 @@ export class PlanPageComponent {
 
   private toSessionSummary(session: PlannedSession, weekStartDate: string): PlanWeekSummary['sessions'][number] {
     const scheduledDateLabel = this.resolveSessionScheduledDateLabel(session, weekStartDate);
-    const carryForwardLabel = this.buildCarryForwardLabel(session, scheduledDateLabel);
+    const carryForwardLabel = this.buildSessionStamp(session, scheduledDateLabel);
 
     return {
       id: session.id,
@@ -325,16 +325,14 @@ export class PlanPageComponent {
     return matchingWeek?.weekNumber ?? plan.currentWeek ?? 1;
   }
 
-  private buildCarryForwardLabel(session: PlannedSession, scheduledDateLabel?: string): string | undefined {
+  private buildSessionStamp(session: PlannedSession, scheduledDateLabel?: string): string {
+    const scheduleLabel = scheduledDateLabel ?? 'Not yet scheduled';
+
     if (!session.isCarryForward || !session.originalWeekNumber) {
-      return undefined;
+      return scheduleLabel;
     }
 
-    if (!scheduledDateLabel) {
-      return `Carried from Week ${session.originalWeekNumber}`;
-    }
-
-    return `Carried from Week ${session.originalWeekNumber} · ${scheduledDateLabel}`;
+    return `Carried from Week ${session.originalWeekNumber} · ${scheduleLabel}`;
   }
 
   private resolveSessionScheduledDateLabel(session: PlannedSession, weekStartDate: string): string | undefined {

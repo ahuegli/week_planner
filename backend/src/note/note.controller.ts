@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { NoteService } from './note.service';
-import { CreateNoteDto, ToggleCompleteDto, UpdateNoteDto } from './note.dto';
+import { CreateNoteDto, ToggleCompleteDto, UpdateNoteDto, UpdateSubtaskStatusDto } from './note.dto';
 
 @Controller('notes')
 @UseGuards(JwtAuthGuard)
@@ -11,6 +11,11 @@ export class NoteController {
   @Get()
   findAll(@Request() req) {
     return this.noteService.findAllByUser(req.user.userId);
+  }
+
+  @Get(':id/sub-tasks')
+  findSubTasks(@Request() req, @Param('id') id: string) {
+    return this.noteService.findSubTasksOf(id, req.user.userId);
   }
 
   @Get(':id')
@@ -37,5 +42,25 @@ export class NoteController {
   @HttpCode(204)
   remove(@Request() req, @Param('id') id: string) {
     return this.noteService.remove(id, req.user.userId);
+  }
+
+  @Post(':id/claim')
+  claimSubTask(@Request() req, @Param('id') id: string) {
+    return this.noteService.claimSubTask(id, req.user.userId);
+  }
+
+  @Post(':id/unassign')
+  @HttpCode(200)
+  unassignSubTask(@Request() req, @Param('id') id: string) {
+    return this.noteService.unassignSubTask(id, req.user.userId);
+  }
+
+  @Put(':id/subtask-status')
+  updateSubtaskStatus(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateSubtaskStatusDto,
+  ) {
+    return this.noteService.updateSubTaskStatus(id, req.user.userId, dto.status);
   }
 }

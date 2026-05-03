@@ -14,7 +14,20 @@ type EventFormValue = {
   intensity: '' | NonNullable<CalendarEvent['intensity']>;
   priority: '' | NonNullable<CalendarEvent['priority']>;
   sessionType: string;
+  notes: string;
 };
+
+const SESSION_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'running', label: 'Running' },
+  { value: 'cycling', label: 'Cycling' },
+  { value: 'swimming', label: 'Swimming' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'yoga_mobility', label: 'Yoga / Mobility' },
+  { value: 'pilates', label: 'Pilates' },
+  { value: 'hiit', label: 'HIIT / Cross-training' },
+  { value: 'walking_hiking', label: 'Walking / Hiking' },
+  { value: 'other', label: 'Other' },
+];
 
 @Component({
   selector: 'app-event-detail-modal',
@@ -32,6 +45,7 @@ export class EventDetailModalComponent {
 
   readonly open = input(false);
   readonly event = input<CalendarEvent | null>(null);
+  readonly mode = input<'edit' | 'create'>('edit');
   readonly showSuggestedSlotNote = input(false);
   readonly openTo = input<'edit' | 'invite'>('edit');
 
@@ -45,6 +59,8 @@ export class EventDetailModalComponent {
   protected readonly inviteSending = signal(false);
   protected readonly inviteError = signal<string | null>(null);
 
+  protected readonly sessionTypeOptions = SESSION_TYPE_OPTIONS;
+
   protected readonly form = this.formBuilder.nonNullable.group({
     title: '',
     startTime: '',
@@ -55,9 +71,16 @@ export class EventDetailModalComponent {
     intensity: '' as EventFormValue['intensity'],
     priority: '' as EventFormValue['priority'],
     sessionType: '',
+    notes: '',
   });
 
+  protected readonly isCreateMode = computed(() => this.mode() === 'create');
+
   protected readonly canInvite = computed(() => {
+    if (this.isCreateMode()) {
+      return false;
+    }
+
     const t = this.event()?.type;
     return t === 'workout' || t === 'custom-event' || t === 'personal';
   });
@@ -67,7 +90,7 @@ export class EventDetailModalComponent {
   protected readonly isWorkout = computed(() => this.event()?.type === 'workout');
   protected readonly isShift = computed(() => this.event()?.type === 'shift');
   protected readonly isMealPrep = computed(() => this.event()?.type === 'mealprep');
-  protected readonly isPersonal = computed(() => this.event()?.type === 'personal');
+  protected readonly isPersonal = computed(() => this.event()?.type === 'personal' || this.event()?.type === 'custom-event');
   protected readonly typeLabel = computed(() => {
     switch (this.event()?.type) {
       case 'workout':
@@ -77,6 +100,7 @@ export class EventDetailModalComponent {
       case 'mealprep':
         return 'Meal Prep';
       case 'personal':
+      case 'custom-event':
         return 'Personal Event';
       case 'oncall':
         return 'On-call';
@@ -168,6 +192,7 @@ export class EventDetailModalComponent {
       endTime: raw.endTime,
       day: selectedDay,
       date: selectedPill?.date ?? activeEvent.date,
+      notes: raw.notes.trim() || undefined,
     };
 
     if (activeEvent.type === 'shift') {
@@ -268,6 +293,7 @@ export class EventDetailModalComponent {
       intensity: event.intensity ?? '',
       priority: event.priority ?? '',
       sessionType: event.sessionType ?? '',
+      notes: event.notes ?? '',
     };
   }
 

@@ -59,6 +59,25 @@ export class EventCardComponent {
 
   protected readonly displayEvent = computed<CalendarEvent>(() => this.event());
 
+  protected readonly taskDerivedEventIds = computed(
+    () =>
+      new Set(
+        this.dataStore
+          .notes()
+          .map((note) => note.linkedCalendarEventId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+  );
+
+  protected readonly displayTitle = computed(() => {
+    const event = this.displayEvent();
+    const title = this.baseEventTitle(event);
+    if (this.isTaskDerivedEvent(event)) {
+      return `[Task] ${title}`;
+    }
+    return title;
+  });
+
   protected readonly effectiveStatus = computed(() => this.displayEvent().status);
 
   protected readonly barColor = computed(() => {
@@ -392,5 +411,23 @@ export class EventCardComponent {
   protected bubbleColor(email: string): string {
     const hash = [...email].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
     return EventCardComponent.BUBBLE_COLORS[hash % EventCardComponent.BUBBLE_COLORS.length];
+  }
+
+  private baseEventTitle(event: CalendarEvent): string {
+    const title = event.title?.trim();
+    if (event.type === 'personal' || event.type === 'custom-event') {
+      return title && title.length > 0 ? title : 'Personal';
+    }
+    return title && title.length > 0 ? title : 'Event';
+  }
+
+  private isTaskDerivedEvent(event: CalendarEvent): boolean {
+    if (this.taskDerivedEventIds().has(event.id)) {
+      return true;
+    }
+
+    return (event.type === 'personal' || event.type === 'custom-event')
+      && event.isPersonal === true
+      && event.isManuallyPlaced === false;
   }
 }

@@ -33,4 +33,23 @@ export class NoteApiService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE}/notes/${id}`);
   }
+
+  getSubTasks(parentNoteId: string): Observable<Note[]> {
+    return this.http.get<Note[]>(`${API_BASE}/notes/${parentNoteId}/sub-tasks`);
+  }
+
+  claimSubTask(noteId: string): Observable<Note> {
+    return this.http.post<Note>(`${API_BASE}/notes/${noteId}/claim`, {});
+  }
+
+  unassignSubTask(noteId: string): Observable<Note> {
+    return this.http.post<Note>(`${API_BASE}/notes/${noteId}/unassign`, {});
+  }
+
+  updateSubTaskStatus(
+    noteId: string,
+    status: 'not_started' | 'in_progress' | 'done',
+  ): Observable<Note> {
+    return this.http.put<Note>(`${API_BASE}/notes/${noteId}/subtask-status`, { status });
+  }
 }
