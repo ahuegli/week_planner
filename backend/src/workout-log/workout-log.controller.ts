@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpCode, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WorkoutLogService } from './workout-log.service';
 import { CreateWorkoutLogDto, UpdateWorkoutLogDto } from './workout-log.dto';
@@ -32,5 +32,11 @@ export class WorkoutLogController {
   @Put(':id')
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateWorkoutLogDto) {
     return this.workoutLogService.update(id, req.user.userId, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async remove(@Request() req, @Param('id') id: string) {
+    return this.workoutLogService.remove(id, req.user.userId);
   }
 }

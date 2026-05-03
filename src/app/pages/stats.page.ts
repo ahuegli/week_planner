@@ -6,6 +6,7 @@ import { StatsSummary, StreakStats, WeeklyStats, SportStats } from '../core/mode
 import { StatsApiService } from '../core/services/stats-api.service';
 import { MiniBarChartComponent, ChartBar } from '../features/stats/components/mini-bar-chart.component';
 import { calculateBadges, Badge } from '../features/stats/utils/badge-calculator';
+import { calculateTaskBadges } from '../features/stats/utils/task-badge-calculator';
 
 const RING_R = 36;
 export const RING_C = +(2 * Math.PI * RING_R).toFixed(2);
@@ -68,6 +69,10 @@ export class StatsPageComponent {
 
   protected readonly badges = computed<Badge[]>(() =>
     calculateBadges(this.summary(), this.streaks(), this.sportStats()),
+  );
+
+  protected readonly taskBadges = computed<Badge[]>(() =>
+    calculateTaskBadges(this.summary()),
   );
 
   protected readonly motivationalMessage = computed<string>(() => {

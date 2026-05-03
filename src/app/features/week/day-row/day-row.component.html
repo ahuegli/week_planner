@@ -19,6 +19,7 @@
           @for (event of group.events; track event.id) {
             <article
               class="event-pill"
+              [class.is-off-plan-logged]="isOffPlanLoggedEvent(event)"
               [class.is-expanded]="isExpanded(event)"
               [class.is-completed]="event.status === 'completed'"
               [class.is-skipped]="event.status === 'skipped'"
@@ -49,6 +50,9 @@
                       </svg>
                     }
                     <p class="event-title">{{ eventDisplayTitle(event) }}</p>
+                    @if (isOffPlanLoggedEvent(event)) {
+                      <span class="logged-badge">Logged</span>
+                    }
                     @if (event.type === 'workout' && event.intensity) {
                       <span class="intensity-dot" [style.background]="intensityColor(event)"></span>
                     }
@@ -74,7 +78,11 @@
                   @if (isOffBikeRun(event)) {
                     <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
                   }
-                  <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+                  @if (isOffPlanLoggedEvent(event)) {
+                    <p class="event-time">Logged workout</p>
+                  } @else {
+                    <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+                  }
                 </div>
                 @if (event.type !== 'busy') {
                   <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -205,4 +213,10 @@
   (rescheduleRequested)="rescheduleWorkout($event)"
   (skipRequested)="skipWorkout($event)"
   (removeRequested)="removeWorkoutFromPlan($event)"
+/>
+
+<app-quick-log-modal
+  [open]="quickLogOpen()"
+  [logToEdit]="editingWorkoutLog()"
+  (closeRequested)="closeQuickLogEditor()"
 />

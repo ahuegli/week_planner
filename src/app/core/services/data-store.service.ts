@@ -34,6 +34,9 @@ import {
   UpdateNotePayload,
   WeeklyProgress,
   Workout,
+  WorkoutLog,
+  CreateWorkoutLogPayload,
+  UpdateWorkoutLogPayload,
 } from '../models/app-data.models';
 import { CalendarShareApiService } from './calendar-share-api.service';
 import { NoteShareApiService } from './note-share-api.service';
@@ -43,6 +46,7 @@ import { EnergyCheckInApiService } from './energy-check-in-api.service';
 import { NoteApiService } from './note-api.service';
 import { SymptomLogApiService } from './symptom-log-api.service';
 import { WorkoutApiService } from './workout-api.service';
+import { WorkoutLogApiService } from './workout-log-api.service';
 import { SettingsApiService } from './settings-api.service';
 import { PlanApiService } from './plan-api.service';
 import { CycleApiService } from './cycle-api.service';
@@ -90,6 +94,15 @@ export class DataStoreService {
   readonly sharedCalendarEvents = signal<CalendarEvent[]>([]);
   readonly pendingInvitations = signal<EventInvitation[]>([]);
   readonly outgoingInvitations = signal<EventInvitation[]>([]);
+  readonly workoutLogs = signal<WorkoutLog[]>([]);
+  readonly eventsWithOffPlanLogs = computed<CalendarEvent[]>(() => {
+    const baseEvents = this.calendarEvents();
+    const offPlanLogs = this.workoutLogs()
+      .filter((log) => !log.plannedSessionId)
+      .map((log) => this.toOffPlanCalendarEvent(log));
+
+    return [...baseEvents, ...offPlanLogs];
+  });
 
   readonly cycleStatusForDisplay = computed<CycleStatus | null>(() => {
     const profile = this.cycleProfile();
@@ -122,6 +135,7 @@ export class DataStoreService {
     private readonly calendarShareApi: CalendarShareApiService,
     private readonly eventInvitationApi: EventInvitationApiService,
     private readonly noteShareApi: NoteShareApiService,
+    private readonly workoutLogApi: WorkoutLogApiService,
   ) {}
 
   async loadAll(): Promise<void> {
@@ -133,17 +147,19 @@ export class DataStoreService {
     this.error.set(null);
 
     try {
-      const [events, workouts, schedulerSettings, mealprepSettings] = await Promise.all([
+      const [events, workouts, schedulerSettings, mealprepSettings, logs] = await Promise.all([
         firstValueFrom(this.calendarEventApi.getAll()),
         firstValueFrom(this.workoutApi.getAll()),
         firstValueFrom(this.settingsApi.getSchedulerSettings()),
         firstValueFrom(this.settingsApi.getMealprepSettings()),
+        firstValueFrom(this.workoutLogApi.getAll()),
       ]);
 
       this.calendarEvents.set(events.map((event) => this.normalizeCalendarEvent(event)));
       this.workouts.set(workouts);
       this.schedulerSettings.set(schedulerSettings);
       this.mealprepSettings.set(mealprepSettings);
+      this.workoutLogs.set(logs);
       await this.loadPlan();
 
       if (cycleTrackingEnabled()) {
@@ -161,6 +177,27 @@ export class DataStoreService {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async logUnlinkedWorkout(payload: CreateWorkoutLogPayload): Promise<WorkoutLog> {
+    const log = await firstValueFrom(this.workoutLogApi.create(payload));
+    this.workoutLogs.update((logs) => [...logs, log]);
+    return log;
+  }
+
+  async updateWorkoutLog(id: string, payload: UpdateWorkoutLogPayload): Promise<WorkoutLog> {
+    const updated = await firstValueFrom(this.workoutLogApi.update(id, payload));
+    this.workoutLogs.update((logs) => logs.map((log) => (log.id === id ? updated : log)));
+    return updated;
+  }
+
+  async deleteWorkoutLog(id: string): Promise<void> {
+    await firstValueFrom(this.workoutLogApi.delete(id));
+    this.workoutLogs.update((logs) => logs.filter((log) => log.id !== id));
+  }
+
+  getWorkoutLogById(id: string): WorkoutLog | null {
+    return this.workoutLogs().find((log) => log.id === id) ?? null;
   }
 
   async addCalendarEvent(event: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
@@ -1117,6 +1154,7 @@ export class DataStoreService {
       assignedUserId: payload.assignedUserId ?? null,
       subtaskStatus: payload.subtaskStatus ?? null,
       noteType: payload.noteType ?? 'task',
+      taskCategory: payload.taskCategory ?? 'other',
       completed: false,
       completedAt: null,
       createdAt: new Date().toISOString(),
@@ -1365,6 +1403,33 @@ export class DataStoreService {
     });
   }
 
+  eventsWithOffPlanLogsForDay(date: string): CalendarEvent[] {
+    return this.eventsWithOffPlanLogs()
+      .filter((event) => this.eventOccursOnDate(event, date))
+      .map((event) => this.toOccurrenceForDate(event, date))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
+
+  eventsWithOffPlanLogsForWeek(startDate: string): CalendarEvent[] {
+    const start = new Date(`${startDate}T00:00:00`);
+    const weeklyEvents: CalendarEvent[] = [];
+
+    for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + dayOffset);
+      weeklyEvents.push(...this.eventsWithOffPlanLogsForDay(this.toDateString(date)));
+    }
+
+    return weeklyEvents.sort((a, b) => {
+      const dateCompare = this.resolveEventDate(a).localeCompare(this.resolveEventDate(b));
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      return a.startTime.localeCompare(b.startTime);
+    });
+  }
+
   isLoaded(): boolean {
     return this.hasLoaded();
   }
@@ -1438,6 +1503,32 @@ export class DataStoreService {
       distanceTarget: event.distanceTarget ?? event.distanceKm,
       distanceKm: event.distanceKm ?? event.distanceTarget,
     } as CalendarEvent;
+  }
+
+  private toOffPlanCalendarEvent(log: WorkoutLog): CalendarEvent {
+    const completedDate = this.toDateString(new Date(log.completedAt));
+    const duration = log.actualDuration ?? 0;
+
+    return this.normalizeCalendarEvent({
+      id: `offplan-log-${log.id}`,
+      sourceWorkoutLogId: log.id,
+      loggedFromOffPlan: true,
+      title: log.title?.trim() || this.formatSessionName(log.sessionType),
+      type: 'workout',
+      day: this.dayOfWeekIndex(completedDate),
+      date: completedDate,
+      startTime: '23:59',
+      endTime: '23:59',
+      duration,
+      durationMinutes: duration,
+      sessionType: log.sessionType,
+      intensity: log.energyRating ?? undefined,
+      status: 'completed',
+      notes: log.notes,
+      distanceTarget: log.actualDistance,
+      distanceKm: log.actualDistance,
+      isManuallyPlaced: true,
+    } as CalendarEvent);
   }
 
   private toCalendarEventApiPayload(event: Partial<CalendarEvent>): Partial<CalendarEvent> {

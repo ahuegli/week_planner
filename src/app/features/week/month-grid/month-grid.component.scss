@@ -147,6 +147,11 @@
   text-overflow: ellipsis;
 }
 
+.event-pill--logged {
+  border-left-width: 3px;
+  font-weight: 600;
+}
+
 .more-label {
   font-size: 9px;
   color: var(--color-text-secondary);
@@ -303,6 +308,19 @@
   border-radius: 999px;
   padding: 2px 8px;
   flex-shrink: 0;
+}
+
+.logged-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--color-primary) 82%, var(--color-text) 18%);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card) 90%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1;
 }
 
 .brick-badge {

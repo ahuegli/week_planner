@@ -129,6 +129,11 @@
   box-shadow: 0 8px 16px rgba(45, 77, 122, 0.06);
 }
 
+.event-pill.is-off-plan-logged {
+  border-left-width: 3px;
+  border-left-color: color-mix(in srgb, var(--color-primary) 70%, #c4923a 30%) !important;
+}
+
 .event-summary {
   width: 100%;
   border: none;
@@ -190,6 +195,18 @@
   color: var(--color-primary);
   border-radius: 999px;
   padding: 1px 6px;
+}
+
+.logged-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--color-primary) 82%, var(--color-text) 18%);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card) 90%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+  border-radius: 4px;
+  padding: 1px 5px;
 }
 
 .brick-badge {

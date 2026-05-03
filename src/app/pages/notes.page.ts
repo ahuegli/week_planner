@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { SlotPickerDialogComponent } from '../components/slot-picker-dialog/slot-picker-dialog.component';
-import { CalendarEvent, Note, SlotCandidate } from '../core/models/app-data.models';
+import { CalendarEvent, Note, SlotCandidate, TaskCategory } from '../core/models/app-data.models';
 import { DataStoreService } from '../core/services/data-store.service';
+import { StatsApiService } from '../core/services/stats-api.service';
 import { SlotSuggestionService } from '../core/services/slot-suggestion.service';
 import { UiFeedbackService } from '../shared/ui-feedback.service';
 
@@ -28,6 +30,23 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
         <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'projects'" [attr.aria-selected]="activeFilter() === 'projects'" (click)="setFilter('projects')">Projects</button>
         <button type="button" class="filter-pill" [class.selected]="activeFilter() === 'reminders'" [attr.aria-selected]="activeFilter() === 'reminders'" (click)="setFilter('reminders')">Reminders</button>
       </div>
+
+      @if (tasksCompletedTotal() > 0) {
+        <div class="streak-wrap">
+          <button type="button" class="streak-pill" [class.active]="(streakDays() ?? 0) > 0"
+                  (click)="streakTooltipOpen.update(v => !v)" aria-label="Streak info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1.75"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 01-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/>
+            </svg>
+            <span>{{ (streakDays() ?? 0) > 0 ? streakDays() + ' day streak' : 'Start a new streak' }}</span>
+          </button>
+          @if (streakTooltipOpen()) {
+            <p class="streak-tooltip">Complete at least one task or workout per day to maintain your streak. Days with nothing scheduled don't count against you.</p>
+          }
+        </div>
+      }
 
       <article class="card add-card">
         @if (!formExpanded()) {
@@ -63,6 +82,11 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
                 />
               </div>
             } @else {
+              <div class="category-chip-row" role="group" aria-label="Task category">
+                @for (cat of TASK_CATEGORIES; track cat.value) {
+                  <button type="button" class="category-chip" [class.selected]="newCategory() === cat.value" (click)="newCategory.set(cat.value)">{{ cat.label }}</button>
+                }
+              </div>
               <div class="field-row">
                 <div class="field-group">
                   <label class="field-label">Due date</label>
@@ -131,7 +155,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
       @for (note of visibleNotes(); track note.id) {
 
         @if (noteMode(note) === 'project') {
-          <article class="card note-card project-card" [class.is-done]="note.completed">
+          <article class="card note-card project-card" [class.is-done]="note.completed" [class.completing]="completingNoteId() === note.id">
             <div class="note-row">
               <button
                 type="button"
@@ -166,6 +190,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
                         [class.status-not-started]="(sub.subtaskStatus ?? 'not_started') === 'not_started'"
                         [class.status-in-progress]="sub.subtaskStatus === 'in_progress'"
                         [class.status-done]="sub.subtaskStatus === 'done'"
+                        [class.subtask-anim]="animatingSubtaskId() === sub.id"
                         (click)="cycleSubTaskStatus(sub)"
                         [attr.aria-label]="'Cycle status, currently: ' + (sub.subtaskStatus ?? 'not started')"
                       >
@@ -228,7 +253,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
           </article>
 
         } @else if (noteMode(note) === 'reminder') {
-          <article class="card note-card reminder-card" [class.is-done]="note.completed">
+          <article class="card note-card reminder-card" [class.is-done]="note.completed" [class.completing]="completingNoteId() === note.id">
             <div class="note-row">
               <button
                 type="button"
@@ -266,7 +291,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
           </article>
 
         } @else {
-          <article class="card note-card" [class.is-done]="note.completed">
+          <article class="card note-card" [class.is-done]="note.completed" [class.completing]="completingNoteId() === note.id">
             <div class="note-row">
               <button
                 type="button"
@@ -332,6 +357,18 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
 
       }
 
+      @if (showConfetti()) {
+        <div class="confetti-overlay" aria-hidden="true">
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+          <span class="confetti-p"></span>
+        </div>
+      }
       <div class="bottom-spacer"></div>
     </section>
 
@@ -382,6 +419,11 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
             </div>
 
             @if (note.noteType !== 'reminder') {
+              <div class="category-chip-row" role="group" aria-label="Task category">
+                @for (cat of TASK_CATEGORIES; track cat.value) {
+                  <button type="button" class="category-chip" [class.selected]="editCategory() === cat.value" (click)="editCategory.set(cat.value)">{{ cat.label }}</button>
+                }
+              </div>
               <div class="field-group">
                 <label class="field-label">Estimated duration (min)</label>
                 <input
@@ -405,6 +447,7 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
                         [class.status-not-started]="(sub.subtaskStatus ?? 'not_started') === 'not_started'"
                         [class.status-in-progress]="sub.subtaskStatus === 'in_progress'"
                         [class.status-done]="sub.subtaskStatus === 'done'"
+                        [class.subtask-anim]="animatingSubtaskId() === sub.id"
                         (click)="cycleSubTaskStatus(sub)"
                         [attr.aria-label]="'Cycle status, currently: ' + (sub.subtaskStatus ?? 'not started')"
                       >
@@ -652,14 +695,58 @@ import { UiFeedbackService } from '../shared/ui-feedback.service';
     .text-danger { background: none; border: none; padding: 0; font-size: 12px; font-weight: 600; color: #c0392b; cursor: pointer; text-decoration: underline; flex-shrink: 0; }
 
     .bottom-spacer { height: 80px; }
+
+    .category-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .category-chip { border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .category-chip.selected { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+    .category-chip:hover:not(.selected) { border-color: var(--color-primary); color: var(--color-primary); }
+
+    .streak-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .streak-pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border); border-radius: 999px; padding: 5px 12px 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--color-card); color: var(--color-text-secondary); align-self: flex-start; }
+    .streak-pill.active { color: #C4923A; border-color: rgba(196, 146, 58, 0.35); background: rgba(196, 146, 58, 0.07); }
+    .streak-pill.active svg { stroke: #C4923A; }
+    .streak-tooltip { margin: 0; font-size: 12px; line-height: 1.55; color: var(--color-text-secondary); background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 9px 12px; }
+
+    @keyframes card-pulse { 0%,100% { transform:scale(1); } 45% { transform:scale(1.03); } }
+    .note-card.completing { animation: card-pulse 320ms ease-out; }
+
+    @keyframes check-pop { 0% { opacity:0; transform:scale(.5); } 100% { opacity:1; transform:scale(1); } }
+    .note-card.completing .check-btn.checked svg { animation: check-pop 220ms ease-out; }
+
+    @keyframes arc-draw { 0% { opacity:0; transform:rotate(-30deg) scale(.7); } 100% { opacity:1; transform:rotate(0) scale(1); } }
+    @keyframes check-snap { 0% { transform:scale(0); opacity:0; } 65% { transform:scale(1.25); } 100% { transform:scale(1); opacity:1; } }
+    .subtask-status-btn.subtask-anim.status-in-progress svg { animation: arc-draw 220ms ease-out; }
+    .subtask-status-btn.subtask-anim.status-done svg { animation: check-snap 200ms ease-out; }
+
+    @keyframes confetti-fall { 0% { transform:translateY(0) rotate(0deg); opacity:1; } 100% { transform:translateY(160px) rotate(400deg); opacity:0; } }
+    .confetti-overlay { position:fixed; top:18%; left:0; right:0; height:200px; pointer-events:none; z-index:9999; overflow:hidden; }
+    .confetti-p { position:absolute; width:7px; height:7px; border-radius:2px; animation:confetti-fall 800ms ease-in forwards; }
+    .confetti-p:nth-child(1) { left:12%; background:#e74c3c; animation-delay:0ms; }
+    .confetti-p:nth-child(2) { left:24%; background:#f39c12; animation-delay:50ms; }
+    .confetti-p:nth-child(3) { left:38%; background:#2ecc71; animation-delay:20ms; }
+    .confetti-p:nth-child(4) { left:50%; background:#3498db; animation-delay:70ms; }
+    .confetti-p:nth-child(5) { left:62%; background:#9b59b6; animation-delay:35ms; }
+    .confetti-p:nth-child(6) { left:74%; background:#e74c3c; animation-delay:55ms; }
+    .confetti-p:nth-child(7) { left:84%; background:#f1c40f; animation-delay:15ms; }
+    .confetti-p:nth-child(8) { left:30%; background:#1abc9c; animation-delay:80ms; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotesPageComponent {
   private readonly dataStore = inject(DataStoreService);
+  private readonly statsApi = inject(StatsApiService);
   private readonly slotSuggestion = inject(SlotSuggestionService);
   private readonly uiFeedback = inject(UiFeedbackService);
   private readonly router = inject(Router);
+
+  protected readonly TASK_CATEGORIES: { value: TaskCategory; label: string }[] = [
+    { value: 'quick_admin', label: 'Quick' },
+    { value: 'long_admin', label: 'Long admin' },
+    { value: 'errand', label: 'Errand' },
+    { value: 'deep_work', label: 'Deep work' },
+    { value: 'personal', label: 'Personal' },
+    { value: 'other', label: 'Other' },
+  ];
 
   protected readonly subtasksByParent = this.dataStore.subtasksByParent;
 
@@ -705,6 +792,7 @@ export class NotesPageComponent {
   protected readonly newDueTime = signal('');
   protected readonly newDuration = signal('');
   protected readonly newWantsScheduling = signal(false);
+  protected readonly newCategory = signal<TaskCategory>('other');
   protected readonly saving = signal(false);
   protected readonly findingSlots = signal(false);
   protected readonly slotPickerOpen = signal(false);
@@ -725,6 +813,7 @@ export class NotesPageComponent {
   protected readonly editDueDate = signal('');
   protected readonly editDueTime = signal('');
   protected readonly editDuration = signal('');
+  protected readonly editCategory = signal<TaskCategory>('other');
   protected readonly editSaving = signal(false);
   protected readonly editAddingSubtask = signal(false);
   protected readonly editNewSubtaskTitle = signal('');
@@ -734,6 +823,13 @@ export class NotesPageComponent {
   protected readonly noteSharePermission = signal<'view' | 'collaborate'>('collaborate');
   protected readonly noteShareError = signal<string | null>(null);
   protected readonly noteShareSubmitting = signal(false);
+
+  protected readonly completingNoteId = signal<string | null>(null);
+  protected readonly animatingSubtaskId = signal<string | null>(null);
+  protected readonly showConfetti = signal(false);
+  protected readonly streakDays = signal<number | null>(null);
+  protected readonly tasksCompletedTotal = signal<number>(0);
+  protected readonly streakTooltipOpen = signal(false);
 
   protected readonly canScheduleNote = computed(() => {
     const num = Number(this.newDuration());
@@ -756,6 +852,7 @@ export class NotesPageComponent {
 
   constructor() {
     void this.dataStore.loadNotes();
+    void this.loadStreakData();
     effect(() => {
       if (!this.canScheduleNote()) {
         this.newWantsScheduling.set(false);
@@ -794,7 +891,12 @@ export class NotesPageComponent {
       in_progress: 'done',
       done: 'not_started',
     };
-    void this.dataStore.updateSubTaskStatus(sub.id, next[current]);
+    const nextStatus = next[current];
+    if (nextStatus === 'in_progress' || nextStatus === 'done') {
+      this.animatingSubtaskId.set(sub.id);
+      setTimeout(() => this.animatingSubtaskId.set(null), 280);
+    }
+    void this.dataStore.updateSubTaskStatus(sub.id, nextStatus);
   }
 
   protected startAddSubtask(parentId: string): void {
@@ -821,6 +923,7 @@ export class NotesPageComponent {
     this.editDueDate.set(note.dueDate ?? '');
     this.editDueTime.set(note.dueTime ?? '');
     this.editDuration.set(note.estimatedDurationMinutes?.toString() ?? '');
+    this.editCategory.set(note.taskCategory ?? 'other');
     this.editAddingSubtask.set(false);
     this.editNewSubtaskTitle.set('');
   }
@@ -843,6 +946,7 @@ export class NotesPageComponent {
       dueDate: this.editDueDate() || undefined,
       dueTime: this.editDueTime() || undefined,
       estimatedDurationMinutes: duration && duration > 0 ? duration : undefined,
+      taskCategory: note.noteType !== 'reminder' ? this.editCategory() : undefined,
     });
     this.editSaving.set(false);
     this.closeEditModal();
@@ -912,6 +1016,7 @@ export class NotesPageComponent {
       dueTime: isReminder ? undefined : this.newDueTime() || undefined,
       estimatedDurationMinutes: duration && duration > 0 ? duration : undefined,
       wantsScheduling,
+      taskCategory: isReminder ? undefined : this.newCategory(),
     });
 
     this.resetForm();
@@ -968,11 +1073,20 @@ export class NotesPageComponent {
     this.newDueTime.set('');
     this.newDuration.set('');
     this.newWantsScheduling.set(false);
+    this.newCategory.set('other');
     this.formExpanded.set(false);
   }
 
   protected async toggleComplete(note: Note): Promise<void> {
+    const wasCompleting = !note.completed;
     await this.dataStore.toggleNoteComplete(note.id, !note.completed);
+    if (wasCompleting) {
+      this.completingNoteId.set(note.id);
+      setTimeout(() => this.completingNoteId.set(null), 350);
+      this.maybeShowConfetti();
+      this.checkBadgeEarned(note);
+      void this.loadStreakData();
+    }
   }
 
   protected async deleteNote(id: string): Promise<void> {
@@ -999,5 +1113,43 @@ export class NotesPageComponent {
     this.pendingNote.set(note);
     this.pendingSlots.set(slots);
     this.slotPickerOpen.set(true);
+  }
+
+  private async loadStreakData(): Promise<void> {
+    try {
+      const summary = await firstValueFrom(this.statsApi.getSummary());
+      this.streakDays.set(summary.taskStreakDays);
+      this.tasksCompletedTotal.set(summary.tasksCompletedTotal);
+    } catch {
+      // streak indicator is non-critical — silent failure is fine
+    }
+  }
+
+  private maybeShowConfetti(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('confetti_last_day') === today) return;
+    localStorage.setItem('confetti_last_day', today);
+    this.showConfetti.set(true);
+    setTimeout(() => this.showConfetti.set(false), 900);
+  }
+
+  private checkBadgeEarned(justCompleted: Note): void {
+    const completed = this.dataStore.notes().filter(
+      n => n.noteType === 'task' && !n.parentNoteId && n.completed,
+    );
+    const total = completed.length;
+    if (total === 1) { this.uiFeedback.show('Badge earned: First Step!'); return; }
+    if (total === 100) { this.uiFeedback.show('Badge earned: Centurion!'); return; }
+    const cat = justCompleted.taskCategory ?? 'other';
+    if (cat === 'other') return;
+    const catCount = completed.filter(n => n.taskCategory === cat).length;
+    if (cat === 'quick_admin' && catCount === 10) { this.uiFeedback.show('Badge earned: Quick Wins!'); return; }
+    if (cat === 'deep_work' && catCount === 5) { this.uiFeedback.show('Badge earned: Deep Diver!'); return; }
+    if (cat === 'errand' && catCount === 10) { this.uiFeedback.show('Badge earned: Errand Runner!'); return; }
+    const allCats = new Set(completed.map(n => n.taskCategory ?? 'other').filter(c => c !== 'other'));
+    const prevCats = new Set(
+      completed.filter(n => n.id !== justCompleted.id).map(n => n.taskCategory ?? 'other').filter(c => c !== 'other'),
+    );
+    if (allCats.size === 5 && prevCats.size === 4) { this.uiFeedback.show('Badge earned: Polymath!'); return; }
   }
 }

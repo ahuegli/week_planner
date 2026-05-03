@@ -78,6 +78,13 @@ export class Note {
   })
   noteType: 'task' | 'reminder';
 
+  @Column({
+    type: 'enum',
+    enum: ['quick_admin', 'long_admin', 'errand', 'deep_work', 'personal', 'other'],
+    default: 'other',
+  })
+  taskCategory: 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
+
   @Column({ default: false })
   completed: boolean;
 

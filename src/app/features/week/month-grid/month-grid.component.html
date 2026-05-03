@@ -43,6 +43,7 @@
           @for (label of visibleLabels(day); track $index) {
             <span
               class="event-pill"
+              [class.event-pill--logged]="label.loggedFromOffPlan"
               [title]="label.title"
               [style.border-left-color]="eventBorderColor(label.type)"
               [style.background]="eventBackground(label.type)"
@@ -93,6 +94,9 @@
                 <p class="event-title">{{ displayTitleForEvent(event) }}</p>
                 <div class="event-type-wrap">
                   <span class="event-type">{{ eventTypeLabel(event) }}</span>
+                  @if (isOffPlanLoggedEvent(event)) {
+                    <span class="logged-badge">Logged</span>
+                  }
                   @if (isBrickLinked(event)) {
                     <span class="brick-badge"><span class="brick-icon" aria-hidden="true">&rarr;</span>Brick</span>
                   }
@@ -101,7 +105,11 @@
               @if (isOffBikeRun(event)) {
                 <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
               }
-              <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+              @if (isOffPlanLoggedEvent(event)) {
+                <p class="event-time">Logged workout</p>
+              } @else {
+                <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+              }
 
               @if (event.type === 'workout') {
                 <div class="event-meta">
@@ -161,13 +169,15 @@
                 </div>
               }
 
-              <div class="action-row">
-                <button type="button" class="btn-primary action-primary" (click)="$event.stopPropagation(); markDone(event)">Mark as done</button>
-                <button type="button" class="action-text" (click)="$event.stopPropagation(); skipEvent(event)">Skip</button>
-                @if (isInviteable(event)) {
-                  <button type="button" class="action-text" (click)="$event.stopPropagation(); shareEvent(event)">Invite</button>
-                }
-              </div>
+              @if (!isOffPlanLoggedEvent(event)) {
+                <div class="action-row">
+                  <button type="button" class="btn-primary action-primary" (click)="$event.stopPropagation(); markDone(event)">Mark as done</button>
+                  <button type="button" class="action-text" (click)="$event.stopPropagation(); skipEvent(event)">Skip</button>
+                  @if (isInviteable(event)) {
+                    <button type="button" class="action-text" (click)="$event.stopPropagation(); shareEvent(event)">Invite</button>
+                  }
+                </div>
+              }
 
               <div class="manage-row">
                 <button type="button" class="action-text action-edit" (click)="$event.stopPropagation(); openEditor(event)">Edit</button>
@@ -233,5 +243,11 @@
     (rescheduleRequested)="rescheduleWorkout($event)"
     (skipRequested)="skipWorkout($event)"
     (removeRequested)="removeWorkoutFromPlan($event)"
+  />
+
+  <app-quick-log-modal
+    [open]="quickLogOpen()"
+    [logToEdit]="editingWorkoutLog()"
+    (closeRequested)="closeQuickLogEditor()"
   />
 }

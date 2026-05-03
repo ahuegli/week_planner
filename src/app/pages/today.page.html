@@ -55,7 +55,18 @@
 
   <!-- Your Day -->
   <div class="content-pad">
-    <p class="section-label">Your Day</p>
+    <div class="your-day-header">
+      <p class="section-label">Your Day</p>
+      <button type="button" class="log-workout-btn" (click)="openQuickLog()" aria-label="Log a workout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6.5 6.5 11 11"/><path d="m21 3-4 4"/><path d="m7 17-4 4"/>
+          <path d="m3 3 4 4"/><path d="m17 17 4 4"/>
+        </svg>
+        Log a workout
+      </button>
+    </div>
 
     @if (isLoading() && !hasLoaded()) {
       <div class="today-skeleton-list" aria-busy="true" aria-live="polite">
@@ -133,6 +144,24 @@
         </div>
       </div>
     }
+
+    @if (todayOffPlanLogs().length > 0) {
+      <div class="logged-today-section">
+        @for (log of todayOffPlanLogs(); track log.id) {
+          <button type="button" class="logged-card" (click)="editLoggedWorkout(log)">
+            <div class="logged-card-main">
+              <div class="logged-card-title-row">
+                <span class="logged-title">{{ log.title || labelForType(log.sessionType) }}</span>
+                <span class="logged-badge">Logged</span>
+              </div>
+              @if (formatLogMeta(log); as meta) {
+                <span class="logged-meta">{{ meta }}</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    }
   </div>
 
   @if (showCoachAdjustmentPrompt()) {
@@ -208,4 +237,11 @@
   mode="create"
   (closeRequested)="closeQuickCreate()"
   (saveRequested)="saveQuickCreate($event)"
+/>
+
+<app-quick-log-modal
+  [open]="quickLogOpen()"
+  [logToEdit]="editingWorkoutLog()"
+  (closeRequested)="closeQuickLog()"
+  (logSaved)="onLogSaved($event)"
 />

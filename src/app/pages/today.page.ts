@@ -16,9 +16,10 @@ import { WeekSnapshotComponent } from '../features/today/week-snapshot/week-snap
 import { IHaveTimeComponent } from '../features/today/i-have-time/i-have-time.component';
 import { DidYouKnowComponent } from '../features/today/did-you-know/did-you-know.component';
 import { EventDetailModalComponent } from '../shared/event-detail-modal/event-detail-modal.component';
+import { QuickLogModalComponent } from '../features/workout-log/quick-log-modal.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { AuthService } from '../core/services/auth.service';
-import { WeekDay } from '../core/models/app-data.models';
+import { WeekDay, WorkoutLog } from '../core/models/app-data.models';
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -39,6 +40,7 @@ function timeToMinutes(time: string): number {
     IHaveTimeComponent,
     DidYouKnowComponent,
     EventDetailModalComponent,
+    QuickLogModalComponent,
   ],
   templateUrl: './today.page.html',
   styleUrl: './today.page.scss',
@@ -54,6 +56,8 @@ export class TodayPageComponent {
   protected readonly expandedEventId = signal<string | null>(null);
   protected readonly quickCreateOpen = signal(false);
   protected readonly quickCreateDraft = signal<CalendarEvent | null>(null);
+  protected readonly quickLogOpen = signal(false);
+  protected readonly editingWorkoutLogId = signal<string | null>(null);
   private readonly nowMinutes = signal(new Date().getHours() * 60 + new Date().getMinutes());
   protected readonly hasLoaded = signal(false);
   protected readonly cycleTrackingEnabled = computed(
@@ -188,6 +192,13 @@ export class TodayPageComponent {
     () => this.pastEvents().length > 0 || this.futureEvents().length > 0,
   );
 
+  protected readonly todayOffPlanLogs = computed(() => {
+    const dateStr = this.selectedDateString();
+    return this.dataStore.workoutLogs()
+      .filter((log) => !log.plannedSessionId && this.toDateString(new Date(log.completedAt)) === dateStr)
+      .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  });
+
   protected readonly tomorrowWorkoutEvents = computed(() =>
     this.dataStore
       .eventsForDay(this.tomorrowDateString())
@@ -201,6 +212,15 @@ export class TodayPageComponent {
   protected readonly tomorrowAdditionalCount = computed(() => {
     const count = this.tomorrowWorkoutEvents().length;
     return count > 1 ? count - 1 : 0;
+  });
+
+  protected readonly editingWorkoutLog = computed<WorkoutLog | null>(() => {
+    const id = this.editingWorkoutLogId();
+    if (!id) {
+      return null;
+    }
+
+    return this.dataStore.getWorkoutLogById(id);
   });
 
   constructor() {
@@ -253,6 +273,44 @@ export class TodayPageComponent {
   protected async saveQuickCreate(event: CalendarEvent): Promise<void> {
     await this.dataStore.addCalendarEvent(this.toCreatePayload(event));
     this.closeQuickCreate();
+  }
+
+  protected openQuickLog(log?: WorkoutLog): void {
+    this.editingWorkoutLogId.set(log?.id ?? null);
+    this.quickLogOpen.set(true);
+  }
+
+  protected closeQuickLog(): void {
+    this.editingWorkoutLogId.set(null);
+    this.quickLogOpen.set(false);
+  }
+
+  protected onLogSaved(_log: WorkoutLog): void {
+    // workoutLogs signal already updated in data-store; computed todayOffPlanLogs reacts automatically
+  }
+
+  protected editLoggedWorkout(log: WorkoutLog): void {
+    this.openQuickLog(log);
+  }
+
+  protected labelForType(sessionType: string): string {
+    const map: Record<string, string> = {
+      running: 'Run', cycling: 'Ride', swimming: 'Swim',
+      strength: 'Strength', yoga_mobility: 'Yoga / Mobility',
+      pilates: 'Pilates', hiit: 'HIIT', walking_hiking: 'Walk / Hike', other: 'Workout',
+    };
+    return map[sessionType] ?? sessionType;
+  }
+
+  protected formatLogMeta(log: WorkoutLog): string {
+    const parts: string[] = [];
+    if (log.actualDuration) parts.push(this.formatDuration(log.actualDuration));
+    if (log.actualDistance) {
+      const d = log.actualDistance;
+      parts.push(`${d % 1 === 0 ? d.toFixed(0) : d.toFixed(1)} km`);
+    }
+    if (log.energyRating) parts.push(log.energyRating.charAt(0).toUpperCase() + log.energyRating.slice(1));
+    return parts.join(' · ');
   }
 
   protected openTaskCreate(): void {

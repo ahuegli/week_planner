@@ -10,6 +10,10 @@ export class CreateWorkoutLogDto {
   @IsString()
   calendarEventId?: string;
 
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @IsString()
   sessionType: string;
 
@@ -17,11 +21,13 @@ export class CreateWorkoutLogDto {
   @IsString()
   sportType?: string;
 
+  @IsOptional()
   @IsIn(['easy', 'moderate', 'hard'])
-  energyRating: EnergyRating;
+  energyRating?: EnergyRating;
 
+  @IsOptional()
   @IsNumber()
-  plannedDuration: number;
+  plannedDuration?: number;
 
   @IsOptional()
   @IsNumber()

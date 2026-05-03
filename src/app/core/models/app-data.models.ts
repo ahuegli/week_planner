@@ -32,6 +32,8 @@ export interface CalendarEvent {
   sessionType?: string;
   discipline?: string | null;
   energyRating?: 'easy' | 'moderate' | 'hard';
+  loggedFromOffPlan?: boolean;
+  sourceWorkoutLogId?: string;
 }
 
 export interface Workout {
@@ -306,6 +308,8 @@ export interface PlanCreatePayload {
 
 export type PlanUpdatePayload = Partial<PlanCreatePayload>;
 
+export type TaskCategory = 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
+
 export interface Note {
   id: string;
   userId: string;
@@ -322,6 +326,7 @@ export interface Note {
   assignedUserId: string | null;
   subtaskStatus: 'not_started' | 'in_progress' | 'done' | null;
   noteType: 'task' | 'reminder';
+  taskCategory: TaskCategory;
   completed: boolean;
   completedAt: string | null;
   createdAt: string;
@@ -343,6 +348,7 @@ export interface CreateNotePayload {
   assignedUserId?: string;
   subtaskStatus?: 'not_started' | 'in_progress' | 'done';
   noteType?: 'task' | 'reminder';
+  taskCategory?: TaskCategory;
 }
 
 export type UpdateNotePayload = Partial<Omit<CreateNotePayload, 'parentNoteId' | 'assignedUserId' | 'subtaskStatus'>> & {
@@ -367,12 +373,13 @@ export type EnergyRating = 'easy' | 'moderate' | 'hard';
 export interface WorkoutLog {
   id: string;
   userId: string;
-  plannedSessionId?: string;
+  plannedSessionId?: string | null;
   calendarEventId?: string;
+  title?: string;
   sessionType: string;
   sportType?: string;
-  energyRating: EnergyRating;
-  plannedDuration: number;
+  energyRating: EnergyRating | null;
+  plannedDuration: number | null;
   actualDuration?: number;
   actualDistance?: number;
   averagePace?: string;
@@ -390,10 +397,11 @@ export interface WorkoutLog {
 export interface CreateWorkoutLogPayload {
   plannedSessionId?: string;
   calendarEventId?: string;
+  title?: string;
   sessionType: string;
   sportType?: string;
-  energyRating: EnergyRating;
-  plannedDuration: number;
+  energyRating?: EnergyRating;
+  plannedDuration?: number;
   actualDuration?: number;
   actualDistance?: number;
   averagePace?: string;
@@ -479,6 +487,10 @@ export interface StatsSummary {
   activeSince: string | null;
   earlyBirdCount: number;
   nightOwlCount: number;
+  tasksCompletedTotal: number;
+  tasksCompletedThisWeek: number;
+  taskStreakDays: number;
+  tasksByCategory: Record<string, number>;
 }
 
 export interface WeeklyStatsWeek {

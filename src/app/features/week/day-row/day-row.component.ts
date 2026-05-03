@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { CalendarEvent, DaySchedule } from '../../../mock-data';
-import { PlanMode } from '../../../core/models/app-data.models';
+import { PlanMode, WorkoutLog } from '../../../core/models/app-data.models';
 import { workoutDisciplineBorderColor, workoutDisciplineBgColor } from '../../../shared/utils/discipline-colors.util';
 import { DataStoreService } from '../../../core/services/data-store.service';
 import { getWorkoutDescription, WorkoutDescription } from '../../../core/utils/workout-descriptions';
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
+import { QuickLogModalComponent } from '../../workout-log/quick-log-modal.component';
 
 interface GroupedEvents {
   label: 'AM' | 'PM';
@@ -22,7 +23,7 @@ type BrickEvent = CalendarEvent & {
 
 @Component({
   selector: 'app-day-row',
-  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent],
+  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent, QuickLogModalComponent],
   templateUrl: './day-row.component.html',
   styleUrl: './day-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,10 +48,28 @@ export class DayRowComponent {
   protected readonly showSuggestedSlotHint = signal(false);
   protected readonly confirmingDeleteEventId = signal<string | null>(null);
   protected readonly workoutDeleteEventId = signal<string | null>(null);
+  protected readonly editingWorkoutLogId = signal<string | null>(null);
+  protected readonly quickLogOpen = signal(false);
   protected readonly findingBestTime = signal(false);
   protected readonly whyExpandedIds = signal<string[]>([]);
 
-  protected readonly visibleEvents = computed(() => this.day().events);
+  protected readonly visibleEvents = computed(() => {
+    const baseEvents = this.day().events;
+    const offPlanEvents = this.dataStore
+      .eventsWithOffPlanLogsForDay(this.day().date)
+      .filter((event) => event.loggedFromOffPlan === true);
+
+    return [...baseEvents, ...offPlanEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  });
+
+  protected readonly editingWorkoutLog = computed<WorkoutLog | null>(() => {
+    const logId = this.editingWorkoutLogId();
+    if (!logId) {
+      return null;
+    }
+
+    return this.dataStore.getWorkoutLogById(logId);
+  });
 
   protected readonly editingEvent = computed(
     () => this.editingEventDraft() ?? this.visibleEvents().find((event) => event.id === this.editingEventId()) ?? null,
@@ -173,7 +192,16 @@ export class DayRowComponent {
   }
 
   protected onEventTap(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.eventToggle.emit(event.id);
+  }
+
+  protected isOffPlanLoggedEvent(event: CalendarEvent): boolean {
+    return event.loggedFromOffPlan === true;
   }
 
   protected sessionTypeLabel(event: CalendarEvent): string {
@@ -344,6 +372,11 @@ export class DayRowComponent {
   }
 
   protected openEditor(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
     this.editingEventDraft.set(null);
@@ -365,6 +398,11 @@ export class DayRowComponent {
   }
 
   protected requestDelete(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.editingEventId.set(null);
     if (event.type === 'workout') {
       this.confirmingDeleteEventId.set(null);
@@ -450,6 +488,21 @@ export class DayRowComponent {
 
     this.finishWorkoutDelete(event.id);
     this.uiFeedback.show('Session removed');
+  }
+
+  protected closeQuickLogEditor(): void {
+    this.quickLogOpen.set(false);
+    this.editingWorkoutLogId.set(null);
+  }
+
+  private openQuickLogEditor(event: CalendarEvent): void {
+    const logId = event.sourceWorkoutLogId;
+    if (!logId) {
+      return;
+    }
+
+    this.editingWorkoutLogId.set(logId);
+    this.quickLogOpen.set(true);
   }
 
   protected deletePrompt(event: CalendarEvent): string {

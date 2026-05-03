@@ -6,12 +6,15 @@ import { EventDetailModalComponent } from '../../../shared/event-detail-modal/ev
 import { DataStoreService } from '../../../core/services/data-store.service';
 import { getWorkoutDescription, WorkoutDescription } from '../../../core/utils/workout-descriptions';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
+import { QuickLogModalComponent } from '../../workout-log/quick-log-modal.component';
+import { WorkoutLog } from '../../../core/models/app-data.models';
 
 type MonthEventType = 'workout' | 'mealprep' | 'personal';
 
 interface MonthEventLabel {
   type: MonthEventType;
   title: string;
+  loggedFromOffPlan?: boolean;
 }
 
 interface DayChoice {
@@ -30,7 +33,7 @@ type BrickEvent = CalendarEvent & {
 
 @Component({
   selector: 'app-month-grid',
-  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent],
+  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent, QuickLogModalComponent],
   templateUrl: './month-grid.component.html',
   styleUrl: './month-grid.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,6 +61,8 @@ export class MonthGridComponent {
   protected readonly showSuggestedSlotHint = signal(false);
   protected readonly confirmingDeleteEventId = signal<string | null>(null);
   protected readonly workoutDeleteEventId = signal<string | null>(null);
+  protected readonly editingWorkoutLogId = signal<string | null>(null);
+  protected readonly quickLogOpen = signal(false);
   protected readonly findingBestTime = signal(false);
   protected readonly whyExpandedIds = signal<string[]>([]);
 
@@ -126,7 +131,16 @@ export class MonthGridComponent {
       return [];
     }
 
-    return this.dataStore.eventsForDay(date);
+    return this.dataStore.eventsWithOffPlanLogsForDay(date);
+  });
+
+  protected readonly editingWorkoutLog = computed<WorkoutLog | null>(() => {
+    const id = this.editingWorkoutLogId();
+    if (!id) {
+      return null;
+    }
+
+    return this.dataStore.getWorkoutLogById(id);
   });
 
   protected readonly editingEvent = computed(
@@ -198,6 +212,11 @@ export class MonthGridComponent {
   }
 
   protected toggleEvent(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.expandedEventIds.update((current) =>
       current.includes(event.id) ? current.filter((id) => id !== event.id) : [...current, event.id],
     );
@@ -215,6 +234,11 @@ export class MonthGridComponent {
   }
 
   protected openEditor(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
     this.isCreatingEvent.set(false);
@@ -256,6 +280,11 @@ export class MonthGridComponent {
   }
 
   protected requestDelete(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.editingEventId.set(null);
     if (event.type === 'workout') {
       this.confirmingDeleteEventId.set(null);
@@ -608,7 +637,7 @@ export class MonthGridComponent {
 
   protected dayEventLabels(day: MonthDay): MonthEventLabel[] {
     const labels: MonthEventLabel[] = [];
-    const dayEvents = this.dataStore.eventsForDay(day.date);
+    const dayEvents = this.dataStore.eventsWithOffPlanLogsForDay(day.date);
 
     const workoutEvents = dayEvents.filter((event) => event.type === 'workout');
     const personalEvents = dayEvents.filter((event) => event.type === 'custom-event' || event.type === 'personal');
@@ -616,7 +645,11 @@ export class MonthGridComponent {
 
     if (workoutEvents.length > 0) {
       for (const workoutEvent of workoutEvents) {
-        labels.push({ type: 'workout', title: this.displayTitleForEvent(workoutEvent) });
+        labels.push({
+          type: 'workout',
+          title: this.displayTitleForEvent(workoutEvent),
+          loggedFromOffPlan: workoutEvent.loggedFromOffPlan === true,
+        });
       }
     }
 
@@ -665,6 +698,25 @@ export class MonthGridComponent {
       default:
         return 'rgba(232, 229, 224, 0.3)';
     }
+  }
+
+  protected isOffPlanLoggedEvent(event: CalendarEvent): boolean {
+    return event.loggedFromOffPlan === true;
+  }
+
+  protected closeQuickLogEditor(): void {
+    this.quickLogOpen.set(false);
+    this.editingWorkoutLogId.set(null);
+  }
+
+  private openQuickLogEditor(event: CalendarEvent): void {
+    const logId = event.sourceWorkoutLogId;
+    if (!logId) {
+      return;
+    }
+
+    this.editingWorkoutLogId.set(logId);
+    this.quickLogOpen.set(true);
   }
 
   protected displayTitleForEvent(event: CalendarEvent): string {

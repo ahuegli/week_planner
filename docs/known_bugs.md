@@ -229,3 +229,19 @@ and verify each (sessionType × phase × duration bucket) message:
 Single-day Copilot task once WP11 done. Probably 1-2 hours of 
 content review + edits.
 
+## "I have time now" button not connected to task system
+
+Today page "I have time now" feature (slot suggestion for 
+unscheduled work) currently shows "You're all caught up" 
+regardless of unscheduled tasks. Should:
+- Read user's unscheduled notes (notes with hasn't been auto-placed 
+  via find-time, where dueDate exists OR estimatedDuration is set)
+- Pick a candidate based on: priority, due date proximity, fits 
+  available time slot
+- Suggest scheduling it now in the open time slot
+
+Original WP3C "find time" feature partially does this but the 
+Today-page "I have time now" entry point isn't wired correctly.
+
+~30 min Copilot fix once WP14 ships.
+

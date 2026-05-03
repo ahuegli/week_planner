@@ -56,6 +56,10 @@ export class CreateNoteDto {
   @IsOptional()
   @IsEnum(['task', 'reminder'])
   noteType?: 'task' | 'reminder';
+
+  @IsOptional()
+  @IsEnum(['quick_admin', 'long_admin', 'errand', 'deep_work', 'personal', 'other'])
+  taskCategory?: 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
 }
 
 export class UpdateNoteDto {
@@ -112,6 +116,10 @@ export class UpdateNoteDto {
   @IsOptional()
   @IsEnum(['task', 'reminder'])
   noteType?: 'task' | 'reminder';
+
+  @IsOptional()
+  @IsEnum(['quick_admin', 'long_admin', 'errand', 'deep_work', 'personal', 'other'])
+  taskCategory?: 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
 }
 
 export class ToggleCompleteDto {
