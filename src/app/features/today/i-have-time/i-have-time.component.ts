@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataStoreService } from '../../../core/services/data-store.service';
-import { IHaveTimeSuggestion } from '../../../core/models/app-data.models';
+import { IHaveTimeSuggestion, Note } from '../../../core/models/app-data.models';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
 
 @Component({
@@ -21,6 +21,7 @@ export class IHaveTimeComponent {
   protected readonly isOpen = signal(false);
   protected readonly isApplying = signal(false);
   protected readonly suggestion = signal<IHaveTimeSuggestion | null>(null);
+  private readonly skippedNoteIds = signal<Set<string>>(new Set());
 
   protected readonly hasSuggestion = computed(() => {
     const suggestion = this.suggestion();
@@ -29,7 +30,15 @@ export class IHaveTimeComponent {
 
   protected open(): void {
     this.isOpen.set(true);
-    this.suggestion.set(this.dataStore.getIHaveTimeSuggestion(this.resolveTargetDate()));
+    this.skippedNoteIds.set(new Set());
+    const planSuggestion = this.dataStore.getIHaveTimeSuggestion(this.resolveTargetDate());
+
+    if (planSuggestion.kind === 'none' || planSuggestion.kind === 'no-plan') {
+      const taskSuggestion = this.buildTaskSuggestion();
+      this.suggestion.set(taskSuggestion.kind !== 'none' ? taskSuggestion : planSuggestion);
+    } else {
+      this.suggestion.set(planSuggestion);
+    }
   }
 
   protected close(): void {
@@ -129,14 +138,109 @@ export class IHaveTimeComponent {
         return;
       }
 
+      if (suggestion.kind === 'task' && suggestion.noteId) {
+        const note = this.dataStore.notes().find((n) => n.id === suggestion.noteId);
+        if (!note) {
+          this.close();
+          return;
+        }
+
+        const duration = note.estimatedDurationMinutes ?? 30;
+        const endTime = this.addMinutes(startTime, duration);
+        const created = await this.dataStore.addCalendarEvent({
+          title: note.title,
+          type: 'custom-event',
+          day,
+          date: targetDate,
+          startTime,
+          endTime,
+          duration,
+          durationMinutes: duration,
+          isManuallyPlaced: true,
+        });
+
+        if (created) {
+          await this.dataStore.updateNote(note.id, { linkedCalendarEventId: created.id });
+          this.uiFeedback.show(`"${note.title}" added to your day`);
+          this.close();
+        } else {
+          this.uiFeedback.show('No open slot available right now.', 3000);
+          this.isApplying.set(false);
+        }
+        return;
+      }
+
       this.close();
     } finally {
       this.isApplying.set(false);
     }
   }
 
+  protected skipTask(): void {
+    const current = this.suggestion();
+    if (!current || current.kind !== 'task' || !current.noteId) {
+      this.close();
+      return;
+    }
+
+    this.skippedNoteIds.update((s) => new Set([...s, current.noteId!]));
+    this.suggestion.set(this.buildTaskSuggestion());
+  }
+
   protected askCoach(): void {
     void this.router.navigate(['/coach']);
+  }
+
+  private buildTaskSuggestion(): IHaveTimeSuggestion {
+    const skipped = this.skippedNoteIds();
+
+    const schedulable = this.dataStore.notes().filter(
+      (n) =>
+        n.noteType === 'task' &&
+        !n.completed &&
+        !skipped.has(n.id) &&
+        !n.linkedCalendarEventId,
+    );
+
+    if (schedulable.length === 0) {
+      return { kind: 'none', message: "You're all caught up! Enjoy your rest.", ctaLabel: null };
+    }
+
+    const withDuration = schedulable.filter(
+      (n) => typeof n.estimatedDurationMinutes === 'number' && n.estimatedDurationMinutes > 0,
+    );
+
+    if (withDuration.length === 0) {
+      return {
+        kind: 'none',
+        message: "You have tasks but none have an estimated duration. Add a duration to enable suggestions.",
+        ctaLabel: null,
+      };
+    }
+
+    const sorted = [...withDuration].sort((a, b) => {
+      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      const durDiff = (b.estimatedDurationMinutes ?? 0) - (a.estimatedDurationMinutes ?? 0);
+      if (durDiff !== 0) return durDiff;
+      return a.title.localeCompare(b.title);
+    });
+
+    const note = sorted[0];
+    const hasMore = sorted.length > 1;
+
+    return {
+      kind: 'task',
+      noteId: note.id,
+      message: hasMore
+        ? `Here's a task that fits the time you have.`
+        : `Here's a task you could do right now.`,
+      ctaLabel: 'Schedule it now',
+      sessionType: note.title,
+      duration: note.estimatedDurationMinutes ?? undefined,
+      description: note.body ?? note.description ?? undefined,
+    };
   }
 
   private addMinutes(startTime: string, durationMinutes: number): string {
@@ -161,3 +265,4 @@ export class IHaveTimeComponent {
     return `${year}-${month}-${day}`;
   }
 }
+

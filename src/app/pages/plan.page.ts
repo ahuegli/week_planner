@@ -8,6 +8,7 @@ import { QuickPlanSwitchComponent } from '../features/plan/quick-plan-switch/qui
 import { RaceDayPlanComponent } from '../features/race-day-plan/race-day-plan.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { PlannedSession, PlanWeekSummary, ScheduleEntirePlanResult } from '../core/models/app-data.models';
+import { roundToFriendlyDuration } from '../shared/utils/round-duration.util';
 
 @Component({
   selector: 'app-plan-page',
@@ -27,6 +28,10 @@ import { PlannedSession, PlanWeekSummary, ScheduleEntirePlanResult } from '../co
 export class PlanPageComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly router = inject(Router);
+
+  protected readonly isInitialLoading = computed(
+    () => this.dataStore.isLoading() && !this.dataStore.isLoaded(),
+  );
 
   protected readonly hasPlan = computed(() => !!this.dataStore.currentPlan());
   protected readonly hasSavedSettings = computed(() => this.dataStore.schedulerSettings() !== null);
@@ -274,13 +279,13 @@ export class PlanPageComponent {
 
   private toSessionSummary(session: PlannedSession, weekStartDate: string): PlanWeekSummary['sessions'][number] {
     const scheduledDateLabel = this.resolveSessionScheduledDateLabel(session, weekStartDate);
-    const carryForwardLabel = this.buildCarryForwardLabel(session, scheduledDateLabel);
+    const carryForwardLabel = this.buildSessionStamp(session, scheduledDateLabel);
 
     return {
       id: session.id,
       sessionType: session.sessionType,
       priority: session.priority,
-      duration: session.duration,
+      duration: roundToFriendlyDuration(session.duration),
       intensity: session.intensity,
       distanceTarget: session.distanceTarget ?? undefined,
       status: session.status,
@@ -321,16 +326,14 @@ export class PlanPageComponent {
     return matchingWeek?.weekNumber ?? plan.currentWeek ?? 1;
   }
 
-  private buildCarryForwardLabel(session: PlannedSession, scheduledDateLabel?: string): string | undefined {
+  private buildSessionStamp(session: PlannedSession, scheduledDateLabel?: string): string {
+    const scheduleLabel = scheduledDateLabel ?? 'Not yet scheduled';
+
     if (!session.isCarryForward || !session.originalWeekNumber) {
-      return undefined;
+      return scheduleLabel;
     }
 
-    if (!scheduledDateLabel) {
-      return `Carried from Week ${session.originalWeekNumber}`;
-    }
-
-    return `Carried from Week ${session.originalWeekNumber} · ${scheduledDateLabel}`;
+    return `Carried from Week ${session.originalWeekNumber} · ${scheduleLabel}`;
   }
 
   private resolveSessionScheduledDateLabel(session: PlannedSession, weekStartDate: string): string | undefined {

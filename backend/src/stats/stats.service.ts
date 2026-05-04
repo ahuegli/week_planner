@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { WorkoutLog } from '../workout-log/workout-log.entity';
 import { PlannedSession } from '../planned-session/planned-session.entity';
 import { PlanWeek } from '../plan-week/plan-week.entity';
 import { TrainingPlan } from '../training-plan/training-plan.entity';
+import { Note } from '../note/note.entity';
 
 @Injectable()
 export class StatsService {
@@ -17,6 +18,8 @@ export class StatsService {
     private readonly weekRepo: Repository<PlanWeek>,
     @InjectRepository(TrainingPlan)
     private readonly planRepo: Repository<TrainingPlan>,
+    @InjectRepository(Note)
+    private readonly noteRepo: Repository<Note>,
   ) {}
 
   private toDateString(date: Date): string {
@@ -27,7 +30,8 @@ export class StatsService {
     return `${y}-${m}-${day}`;
   }
 
-  private ratingToNum(r: string): number {
+  // null (energy not provided for off-plan logs) falls through to 2 = moderate
+  private ratingToNum(r: string | null): number {
     return r === 'easy' ? 1 : r === 'hard' ? 3 : 2;
   }
 
@@ -47,13 +51,60 @@ export class StatsService {
   }
 
   async getSummary(userId: string) {
-    const [logs, plan] = await Promise.all([
+    const [logs, plan, completedTopLevel, completedSubTasks] = await Promise.all([
       this.logRepo.find({ where: { userId }, order: { completedAt: 'ASC' } }),
       this.planRepo.findOne({
         where: { userId, status: 'active' },
         relations: ['weeks', 'weeks.sessions'],
       }),
+      this.noteRepo.find({
+        where: { userId, noteType: 'task', completed: true, parentNoteId: IsNull() },
+      }),
+      this.noteRepo.find({
+        where: { userId, noteType: 'task', subtaskStatus: 'done', parentNoteId: Not(IsNull()) },
+      }),
     ]);
+
+    const allCompletedTasks = [...completedTopLevel, ...completedSubTasks];
+
+    // ISO week start (Monday)
+    const today = new Date();
+    const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const weekMonday = new Date(today);
+    weekMonday.setDate(today.getDate() - daysFromMonday);
+    weekMonday.setHours(0, 0, 0, 0);
+    const weekMondayStr = this.toDateString(weekMonday);
+
+    const tasksCompletedThisWeek = allCompletedTasks.filter(t => {
+      const d = t.completedAt ?? t.updatedAt;
+      return d && this.toDateString(new Date(d)) >= weekMondayStr;
+    }).length;
+
+    const taskDateSet = new Set(
+      allCompletedTasks.map(t => {
+        const d = t.completedAt ?? t.updatedAt;
+        return d ? this.toDateString(new Date(d)) : null;
+      }).filter((d): d is string => d !== null),
+    );
+    const workoutDateSet = new Set(logs.map(l => this.toDateString(new Date(l.completedAt))));
+    const activityDateSet = new Set([...taskDateSet, ...workoutDateSet]);
+
+    let taskStreakDays = 0;
+    const streakCheck = new Date();
+    for (;;) {
+      if (activityDateSet.has(this.toDateString(streakCheck))) {
+        taskStreakDays++;
+        streakCheck.setDate(streakCheck.getDate() - 1);
+      } else break;
+    }
+
+    const tasksByCategory: Record<string, number> = {
+      quick_admin: 0, long_admin: 0, errand: 0, deep_work: 0, personal: 0, other: 0,
+    };
+    for (const task of allCompletedTasks) {
+      const cat = task.taskCategory ?? 'other';
+      tasksByCategory[cat] = (tasksByCategory[cat] ?? 0) + 1;
+    }
 
     const allSessions: PlannedSession[] = plan?.weeks
       ? plan.weeks.flatMap(w => w.sessions ?? [])
@@ -134,6 +185,10 @@ export class StatsService {
       activeSince: logs.length > 0 ? this.toDateString(logs[0].completedAt) : null,
       earlyBirdCount,
       nightOwlCount,
+      tasksCompletedTotal: allCompletedTasks.length,
+      tasksCompletedThisWeek,
+      taskStreakDays,
+      tasksByCategory,
     };
   }
 

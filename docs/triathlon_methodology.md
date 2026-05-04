@@ -168,9 +168,12 @@ heavy with strong aerobic base. Pace is closer to LT2/VO2max throughout.
 
 **Plan length:** 8–12 weeks
 **Brick frequency:** 1×/week minimum, 2× in peak phase
-**Long ride peaks:** 2–2.5 hours
-**Long run peaks:** 12–14 km
-**Long swim peaks:** 1500–2000m
+**Long-session progression (Sprint):**
+| Session | Starts | Peaks | % of running volume |
+|---|---|---|---|
+| Long run | 60 min / 8 km | 80 min / 12-14 km | 30-35% |
+| Long bike | 1.5h | 2-2.5h | — |
+| Long swim | 1000m | 1500-2000m | — |
 
 ### Olympic (1.5km / 40km / 10km)
 
@@ -185,9 +188,12 @@ endurance third.
 
 **Plan length:** 12–16 weeks
 **Brick frequency:** 1–2×/week, weekly in build phase
-**Long ride peaks:** 3–3.5 hours
-**Long run peaks:** 16–18 km
-**Long swim peaks:** 2500–3000m
+**Long-session progression (Olympic):**
+| Session | Starts | Peaks | % of running volume |
+|---|---|---|---|
+| Long run | 70 min / 10 km | 95 min / 16-18 km | 30-35% |
+| Long bike | 2h | 3-3.5h | — |
+| Long swim | 1500m | 2500-3000m | — |
 
 ### Half Ironman / 70.3 (1.9km / 90km / 21.1km)
 
@@ -205,9 +211,12 @@ fuelling becoming a key performance variable. Pace sits at LT1
 
 **Plan length:** 16–24 weeks
 **Brick frequency:** weekly in base, 2×/week in build
-**Long ride peaks:** 4–5 hours, with race-pace segments
-**Long run peaks:** 22–25 km
-**Long swim peaks:** 3500–4000m
+**Long-session progression (70.3):**
+| Session | Starts | Peaks | % of running volume |
+|---|---|---|---|
+| Long run | 80 min / 12 km | 110-125 min / 22-25 km | 30-35% |
+| Long bike | 2.5h | 4-5h | — |
+| Long swim | 2000m | 3500-4000m | — |
 **Race-rehearsal weekends:** 2–3 in build phase — long ride Saturday + medium-long run Sunday, training back-to-back fatigue
 
 ### Ironman / 140.6 (3.8km / 180km / 42.2km)
@@ -233,12 +242,19 @@ The engine should default reverse vs traditional based on an `experienceLevel` p
 
 **Plan length:** 24–30 weeks (true beginners 36+ weeks)
 **Brick frequency:** weekly in build, race-rehearsal blocks 4–6 weeks out
-**Long ride peaks:** 5–6 hours, race-pace segments inside
 **Long-ride caps for amateurs:** 5h for 70.3, 6h for 140.6. Above 6h, fatigue cost exceeds adaptation benefit. Substitute back-to-back 
 race-rehearsal days (long ride Sat + long run Sun) instead of pushing single rides longer.
 **Long-ride caps for amateurs:** 5h for 70.3, 6h for 140.6. Above 6h, fatigue cost exceeds adaptation benefit. Substitute back-to-back race-rehearsal days (long ride Sat + long run Sun) instead of pushing single rides longer.
-**Long run peaks:** 28–32 km (does not exceed marathon long-run cap)
-**Long swim peaks:** 4500–5000m (rarely beneficial above this)
+**Long-session progression (140.6):**
+| Session | Starts | Peaks | % of running volume |
+|---|---|---|---|
+| Long run | 90 min / 14 km | 140-180 min / 28-32 km | 30-35% |
+| Long bike | 3h | 5-6h | — |
+| Long swim | 2500m | 4500-5000m | — |
+
+**Note:** Long run for 140.6 caps at marathon long-run cap (32 km).
+Above 32 km, fatigue cost exceeds adaptation benefit. Substitute 
+back-to-back race-rehearsal days instead.
 **Race-rehearsal weekends:** 3–4 in build phase — long ride 5–6 hours Saturday + 2–2.5 hour run Sunday, training the consecutive-day load that mimics race demand
 
 **Common amateur error:** running too much in 140.6 build. Run injuries
@@ -430,9 +446,167 @@ km-only metrics undercount swim and bike load.
 - **Strides year-round** for run discipline (running methodology)
 - **Strength year-round**, never zeroed
 - **Sleep > supplements** — recovery debt accumulates faster across three disciplines than single-sport
+- **Long run as % of running volume**: 30-35% of weekly running 
+  volume across all triathlon distances. The percentage applies to 
+  RUNNING volume only, not total triathlon volume — running has its 
+  own injury/fatigue profile that doesn't dilute by adding bike or 
+  swim hours. An athlete running 4 hours/week gets long run capped 
+  at ~80 minutes regardless of how much bike/swim they're doing.
+
+## Canonical units per session type (shared with running methodology)
+
+Sessions are sized in different units depending on what the methodology
+actually optimizes. Forcing one unit on all sessions misrepresents
+methodology and produces poor plans. The engine treats each session
+type as canonical in the unit below; other units are derived.
+
+| Session type | Canonical unit | Intensity anchor | Used in plans |
+|---|---|---|---|
+| long_run | distance (km) | pace + RPE | run + tri |
+| easy_run | distance (km) | pace + RPE | run + tri |
+| run_intervals | time + reps | pace per rep + RPE | run + tri |
+| tempo_run | distance (km) | pace + RPE | run + tri |
+| marathon_pace_run | distance (km) | pace | run + tri |
+| recovery_run | time (min) | RPE | run + tri |
+| strides | reps × time | RPE | run + tri |
+| long_bike | time (h) | power/HR + RPE | tri |
+| sweet_spot_bike | time + intervals | % FTP | tri |
+| ftp_bike | time + intervals | % FTP | tri |
+| recovery_bike | time (min) | RPE | tri |
+| swim_endurance | distance (m) | pace per 100 + RPE | tri |
+| swim_threshold | distance + reps | CSS pace | tri |
+| swim_technique | time (min) | drill-anchored | tri |
+| brick_bike | time (h) | power/HR + RPE | tri |
+| brick_run | distance (km) OR time (min) | pace + RPE | tri |
+| strength | time (min) | RPE | run + tri |
+| mobility | time (min) | RPE | run + tri |
+| cross_training | time (min) | RPE | run + tri |
+
+**Rule of thumb for which unit dominates:**
+- Endurance run/swim sessions are canonical in distance (methodology
+  thinks "20 km long run", "3000m endurance swim")
+- Cycling sessions are canonical in time (methodology thinks
+  "3-hour long ride", power/HR drives intensity not pace)
+- Interval sessions of any sport are canonical in time+reps (the
+  structure defines the session)
+- Strength and mobility are canonical in time (workout duration)
+
+**Deriving the non-canonical:**
+- Distance from time: `distance = time × pace × intensityFactor`
+- Time from distance: `time = distance × pace × intensityFactor`
+- Pace anchors: `runThresholdSecPerKm` for run, FTP for bike, CSS for
+  swim. Without these, RPE provides intensity anchor.
+
+**Brick run is the exception** — it's prescribed in time during base
+phase (transition bricks: "10-15 min off the bike to find legs") and
+in distance during build/peak (race-simulation and race-rehearsal:
+"5 km off the bike at race pace"). Both formats are valid; the engine
+picks based on phase.
+
+## Progression mechanism (shared with running methodology)
+
+All long sessions in any plan follow the same progression mechanic:
+
+**Linear ramp within phase, deload reset, capped at peak target.**
+
+For a session in phase P with N total weeks in that phase, week W
+within phase:
+- progressionScaler = phaseStart + (phaseEnd - phaseStart) × ((W-1) / (N-1))
+- baseValue × progressionScaler = current target
+
+Phase ramp ranges (multipliers applied to baseValue):
+
+| Phase | Ramp start | Ramp end |
+|---|---|---|
+| Base | 0.70 | 1.00 |
+| Build | 0.90 | 1.15 |
+| Peak | 1.05 | 1.15 |
+| Taper | 1.00 → 0.40 (varies by race distance) | — |
+
+**Deload reset:**
+- Every 4th week, multiplier is reduced by 30% (×0.70)
+- Week after deload returns to the linear ramp position, NOT to a
+  reduced post-deload value
+- This means deload is a temporary recovery week, not a permanent
+  setback
+
+**Hard caps:**
+- Long run weekly increase capped at 10% (Pfitzinger rule)
+- Total weekly volume increase capped at 10% (general rule)
+- Distance ceilings per race distance (see race-distance tables) are
+  absolute — the ramp doesn't push above them
+
+**Fitness inputs that scale baseValue:**
+- `experienceLevel` / `level`: multiplier 0.85 (true_beginner/novice)
+  to 1.15 (experienced/advanced)
+- `weeklyHours`: multiplier 0.65 (low) to 1.50 (high) of standard
+- `endurancePedigree` (triathlon only): multiplier 0.95 (none) to
+  1.10 (strong)
+- `runThresholdSecPerKm` / `cssSecondsPer100m` / FTP: not direct
+  duration scalers, but determine pace targets which influence
+  distance achievable in given time
+
+These multipliers compound. An experienced 140.6 athlete with strong
+endurance pedigree training at high weekly hours: `1.15 × 1.10 × 1.50
+= 1.90× of standard baseValue` for long sessions. Still capped by
+absolute ceilings (32km long run, 6h long bike).
+
+## Fitness inputs hierarchy (triathlon-specific)
+
+Triathlon requires per-discipline calibration. The engine uses a 
+fallback chain: explicit threshold values > recent test/race results 
+> RPE-only with experience-tier defaults.
+
+**Required:**
+- `tier` — total weekly session count target (`tier4plus | tier3`)
+- `weeklyHours` — canonical total time budget across all disciplines
+- `experienceLevel` — `true_beginner | tri_novice_but_fit | 
+  intermediate | experienced`. Triathlon-specific. Distinct from 
+  run-side `level` (an experienced marathoner doing first triathlon 
+  is `advanced` runner + `tri_novice_but_fit` triathlete).
+- `endurancePedigree` — `none | some | strong`. Captures cardiovascular 
+  base regardless of triathlon history.
+- `triathlonsCompleted` — count of prior triathlons (any distance).
+- `goalRace` — distance and date.
+- `triathlonDistance` — `sprint | olympic | 70_3 | 140_6`.
+
+**Optional fitness inputs (per discipline):**
+
+Swim:
+- `cssSecondsPer100m` — CSS pace in seconds per 100m. Computed from 
+  400m TT + 200m TT: CSS = (400 time − 200 time) / 2 per 100m. Drives 
+  swim zone targets. If absent, falls back to RPE + `experienceLevel` 
+  defaults.
+
+Bike:
+- `hasPowerMeter` (boolean), `ftpWatts` — FTP in watts. Drives bike 
+  zones (% FTP). If absent but `hasPowerMeter` is false, falls back 
+  to `lthr` (lactate threshold heart rate) for HR-based zones. If 
+  both absent, RPE-only.
+- `lthrBpm` — lactate threshold heart rate. Backup or primary anchor 
+  for bike.
+
+Run:
+- `runThresholdSecPerKm` — run threshold pace in seconds per km. 
+  Shared with running methodology. Drives run zones in triathlon 
+  context. If absent, falls back to RPE + `level`-scaled defaults.
+- Optional inheritance: if user has run-side `level` set, run-side 
+  optional inputs (recent race times) feed into triathlon run zones.
+
+**Fallback hierarchy when threshold values missing:**
+- Numeric anchor present → use it directly
+- Recent test/race result → compute anchor (Riegel for run, 20-min 
+  TT × 0.95 for FTP, 400/200 TT for CSS)
+- Neither → RPE-only prescription with `experienceLevel` × 
+  `endurancePedigree` defaults
 
 ## Implementation hooks for plan-template.service.ts (triathlon mode)
 
+- **Fitness inputs wired to session generation**: `experienceLevel`, 
+  `endurancePedigree`, `triathlonsCompleted`, `runThresholdSecPerKm` 
+  must all influence long-session duration in `getWeekSessions()`. 
+  Currently `experienceLevel` is computed but not passed to session 
+  generation — must be wired through.
 - `mode = 'triathlon'` with `subDistance` parameter (`sprint` | `olympic` | `70_3` | `140_6`)
 - `tier` parameter (`tier4plus` | `tier3`); explicit error/redirect for `tier2`
 - `weeklyHours` companion input — engine targets total time budget across disciplines, not fixed session length

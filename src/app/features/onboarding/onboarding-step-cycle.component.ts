@@ -10,17 +10,18 @@ import { CycleStatus, OnboardingData } from './onboarding.models';
       <p class="step-subtitle">Training and nutrition respond differently across your menstrual cycle. We can adapt your plan accordingly.</p>
 
       <div class="choice-list">
-        <button type="button" class="choice-card" [class.selected]="data().cycleEnabled" (click)="setEnabled(true)">
+        <button type="button" class="choice-card" [class.selected]="data().cycleEnabled" (click)="chooseCycleEnabled()">
           <p class="choice-title">Yes, track my cycle</p>
           <p class="choice-subtitle">We'll adjust workout intensity, recovery, and nutrition targets based on your cycle phase</p>
         </button>
-        <button type="button" class="choice-card" [class.selected]="!data().cycleEnabled" (click)="setEnabled(false)">
+        <button type="button" class="choice-card" [class.selected]="!data().cycleEnabled" (click)="chooseSkipForNow()">
           <p class="choice-title">Skip for now</p>
-          <p class="choice-subtitle">You can always enable this later in Settings</p>
+          <p class="choice-subtitle">Decide later. You can turn this on anytime in Settings.</p>
         </button>
       </div>
 
       @if (data().cycleEnabled) {
+        <p class="cycle-info-note">Currently used for session placement (e.g., harder sessions prefer follicular days). Volume adjustments coming in a future update.</p>
         <p class="field-label">Where are you in your cycle?</p>
         <div class="radio-list">
           @for (option of statusOptions; track option.value) {
@@ -78,6 +79,7 @@ import { CycleStatus, OnboardingData } from './onboarding.models';
     .field-label { font-size: 13px; font-weight: 600; color: var(--color-text); }
     .radio-list { display: flex; flex-direction: column; gap: 6px; }
     .radio-item { min-height: 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); text-align: left; padding: 0 10px; cursor: pointer; }
+    .cycle-info-note { font-size: 12px; color: var(--color-text-secondary); background: color-mix(in srgb, var(--color-primary) 6%, var(--color-card)); border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)); border-radius: 8px; padding: 8px 10px; line-height: 1.45; }
     .radio-item.selected { border-color: var(--color-primary); color: var(--color-primary); }
     .input { width: 100%; height: 40px; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 10px; }
     .stepper-inline { display: flex; align-items: center; gap: 14px; }
@@ -103,8 +105,12 @@ export class OnboardingStepCycleComponent {
     { value: 'menopause', label: "I'm in perimenopause or menopause" },
   ];
 
-  protected setEnabled(enabled: boolean): void {
-    this.dataChange.emit({ cycleEnabled: enabled });
+  protected chooseCycleEnabled(): void {
+    this.emitCycleChoice({ cycleEnabled: true, cycleSkipped: false });
+  }
+
+  protected chooseSkipForNow(): void {
+    this.emitCycleChoice({ cycleEnabled: false, cycleSkipped: true });
   }
 
   protected setStatus(status: CycleStatus): void {
@@ -118,5 +124,9 @@ export class OnboardingStepCycleComponent {
   protected adjustLength(delta: number): void {
     const cycleLength = Math.min(40, Math.max(21, this.data().cycleLength + delta));
     this.dataChange.emit({ cycleLength });
+  }
+
+  private emitCycleChoice(choice: { cycleEnabled: boolean; cycleSkipped: boolean }): void {
+    this.dataChange.emit(choice as Partial<OnboardingData>);
   }
 }

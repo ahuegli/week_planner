@@ -32,6 +32,8 @@ export interface CalendarEvent {
   sessionType?: string;
   discipline?: string | null;
   energyRating?: 'easy' | 'moderate' | 'hard';
+  loggedFromOffPlan?: boolean;
+  sourceWorkoutLogId?: string;
 }
 
 export interface Workout {
@@ -62,11 +64,14 @@ export interface SchedulerSettings {
   ftpWatts?: number | null;
   lthrBpm?: number | null;
   cssSecondsPer100m?: number | null;
+  runThresholdSecPerKm?: number | null;
   poolAccess?: '25m' | '50m' | 'open_water' | 'pool_and_open_water' | 'none' | null;
   hasPowerMeter?: boolean;
   triathlonsCompleted?: number | null;
   endurancePedigree?: 'none' | 'runner' | 'cyclist' | 'swimmer' | 'multiple' | null;
   periodisationOverride?: 'traditional' | 'reverse' | null;
+  level?: 'novice' | 'beginner' | 'intermediate' | 'advanced' | null;
+  weeklyHours?: number | null;
 }
 
 export interface MealprepSettings {
@@ -167,6 +172,7 @@ export interface PlannedSession {
   isCarryForward: boolean;
   originalWeekNumber: number | null;
   discipline?: 'swim' | 'bike' | 'run' | 'brick' | 'strength' | 'mobility' | 'rest' | null;
+  bikeIntent?: 'endurance' | 'sweet_spot' | 'ftp' | 'recovery' | 'race_pace' | null;
   prescriptionData?: Record<string, unknown> | null;
 }
 
@@ -246,7 +252,7 @@ export interface ScheduleEntirePlanResult {
   }>;
 }
 
-export type IHaveTimeSuggestionKind = 'pending' | 'tomorrow' | 'mealprep' | 'recovery' | 'no-plan' | 'none';
+export type IHaveTimeSuggestionKind = 'pending' | 'tomorrow' | 'mealprep' | 'recovery' | 'no-plan' | 'task' | 'none';
 
 export interface IHaveTimeSuggestion {
   kind: IHaveTimeSuggestionKind;
@@ -258,6 +264,7 @@ export interface IHaveTimeSuggestion {
   description?: string;
   plannedSessionId?: string;
   eventId?: string;
+  noteId?: string;
 }
 
 export interface RescheduleConflictsResult {
@@ -305,35 +312,55 @@ export interface PlanCreatePayload {
 
 export type PlanUpdatePayload = Partial<PlanCreatePayload>;
 
+export type TaskCategory = 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
+
 export interface Note {
   id: string;
   userId: string;
   title: string;
   body: string | null;
+  description: string | null;
   dueDate: string | null;
   dueTime: string | null;
   isScheduled: boolean;
   estimatedDurationMinutes: number | null;
   wantsScheduling: boolean;
   linkedCalendarEventId: string | null;
+  parentNoteId: string | null;
+  assignedUserId: string | null;
+  subtaskStatus: 'not_started' | 'in_progress' | 'done' | null;
+  noteType: 'task' | 'reminder';
+  taskCategory: TaskCategory;
   completed: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  isOwner?: boolean;
+  sharedBy?: { id: string; email: string };
+  permission?: 'view' | 'collaborate';
 }
 
 export interface CreateNotePayload {
   title: string;
   body?: string;
+  description?: string;
   dueDate?: string;
   dueTime?: string;
   estimatedDurationMinutes?: number;
   wantsScheduling?: boolean;
+  parentNoteId?: string;
+  assignedUserId?: string;
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done';
+  noteType?: 'task' | 'reminder';
+  taskCategory?: TaskCategory;
 }
 
-export type UpdateNotePayload = Partial<CreateNotePayload> & {
+export type UpdateNotePayload = Partial<Omit<CreateNotePayload, 'parentNoteId' | 'assignedUserId' | 'subtaskStatus'>> & {
   completed?: boolean;
   linkedCalendarEventId?: string | null;
+  parentNoteId?: string | null;
+  assignedUserId?: string | null;
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done' | null;
 };
 
 export interface SlotCandidate {
@@ -350,12 +377,13 @@ export type EnergyRating = 'easy' | 'moderate' | 'hard';
 export interface WorkoutLog {
   id: string;
   userId: string;
-  plannedSessionId?: string;
+  plannedSessionId?: string | null;
   calendarEventId?: string;
+  title?: string;
   sessionType: string;
   sportType?: string;
-  energyRating: EnergyRating;
-  plannedDuration: number;
+  energyRating: EnergyRating | null;
+  plannedDuration: number | null;
   actualDuration?: number;
   actualDistance?: number;
   averagePace?: string;
@@ -373,10 +401,11 @@ export interface WorkoutLog {
 export interface CreateWorkoutLogPayload {
   plannedSessionId?: string;
   calendarEventId?: string;
+  title?: string;
   sessionType: string;
   sportType?: string;
-  energyRating: EnergyRating;
-  plannedDuration: number;
+  energyRating?: EnergyRating;
+  plannedDuration?: number;
   actualDuration?: number;
   actualDistance?: number;
   averagePace?: string;
@@ -462,6 +491,10 @@ export interface StatsSummary {
   activeSince: string | null;
   earlyBirdCount: number;
   nightOwlCount: number;
+  tasksCompletedTotal: number;
+  tasksCompletedThisWeek: number;
+  taskStreakDays: number;
+  tasksByCategory: Record<string, number>;
 }
 
 export interface WeeklyStatsWeek {
@@ -555,6 +588,26 @@ export interface UpdateCalendarSharePayload {
 }
 
 export type UpdateEnergyCheckInPayload = Partial<CreateEnergyCheckInPayload>;
+
+// ── Note Sharing ──────────────────────────────────────────────────────
+
+export interface NoteShare {
+  id: string;
+  ownerId: string;
+  ownerEmail: string;
+  recipientId: string;
+  recipientEmail: string;
+  noteId: string;
+  permission: 'view' | 'collaborate';
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreateNoteSharePayload {
+  recipientEmail: string;
+  noteId: string;
+  permission?: 'view' | 'collaborate';
+}
 
 export interface SymptomLog {
   id: string;

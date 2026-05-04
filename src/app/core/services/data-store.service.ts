@@ -6,6 +6,8 @@ import {
   CalendarShare,
   CreateCalendarSharePayload,
   UpdateCalendarSharePayload,
+  NoteShare,
+  CreateNoteSharePayload,
   EventInvitation,
   CreateEventInvitationPayload,
   RespondToInvitationPayload,
@@ -32,14 +34,19 @@ import {
   UpdateNotePayload,
   WeeklyProgress,
   Workout,
+  WorkoutLog,
+  CreateWorkoutLogPayload,
+  UpdateWorkoutLogPayload,
 } from '../models/app-data.models';
 import { CalendarShareApiService } from './calendar-share-api.service';
+import { NoteShareApiService } from './note-share-api.service';
 import { EventInvitationApiService } from './event-invitation-api.service';
 import { CalendarEventApiService } from './calendar-event-api.service';
 import { EnergyCheckInApiService } from './energy-check-in-api.service';
 import { NoteApiService } from './note-api.service';
 import { SymptomLogApiService } from './symptom-log-api.service';
 import { WorkoutApiService } from './workout-api.service';
+import { WorkoutLogApiService } from './workout-log-api.service';
 import { SettingsApiService } from './settings-api.service';
 import { PlanApiService } from './plan-api.service';
 import { CycleApiService } from './cycle-api.service';
@@ -62,6 +69,17 @@ export class DataStoreService {
   readonly cycleProfile = signal<CycleProfile | null>(null);
   readonly currentPhase = signal<CycleCurrentPhase | null>(null);
   readonly notes = signal<Note[]>([]);
+  readonly subtasksByParent = computed<Map<string, Note[]>>(() => {
+    const map = new Map<string, Note[]>();
+    for (const note of this.notes()) {
+      if (note.parentNoteId) {
+        const children = map.get(note.parentNoteId) ?? [];
+        children.push(note);
+        map.set(note.parentNoteId, children);
+      }
+    }
+    return map;
+  });
   readonly energyCheckIns = signal<EnergyCheckIn[]>([]);
   readonly symptomLogs = signal<SymptomLog[]>([]);
   readonly isLoading = signal(false);
@@ -70,10 +88,21 @@ export class DataStoreService {
   readonly recentSkippedKeyCount = signal(0);
   readonly outgoingShares = signal<CalendarShare[]>([]);
   readonly incomingShares = signal<CalendarShare[]>([]);
+  readonly outgoingNoteShares = signal<NoteShare[]>([]);
+  readonly incomingNoteShares = signal<NoteShare[]>([]);
   readonly viewingSharedCalendar = signal<{ ownerId: string; ownerEmail: string } | null>(null);
   readonly sharedCalendarEvents = signal<CalendarEvent[]>([]);
   readonly pendingInvitations = signal<EventInvitation[]>([]);
   readonly outgoingInvitations = signal<EventInvitation[]>([]);
+  readonly workoutLogs = signal<WorkoutLog[]>([]);
+  readonly eventsWithOffPlanLogs = computed<CalendarEvent[]>(() => {
+    const baseEvents = this.calendarEvents();
+    const offPlanLogs = this.workoutLogs()
+      .filter((log) => !log.plannedSessionId)
+      .map((log) => this.toOffPlanCalendarEvent(log));
+
+    return [...baseEvents, ...offPlanLogs];
+  });
 
   readonly cycleStatusForDisplay = computed<CycleStatus | null>(() => {
     const profile = this.cycleProfile();
@@ -105,6 +134,8 @@ export class DataStoreService {
     private readonly uiFeedback: UiFeedbackService,
     private readonly calendarShareApi: CalendarShareApiService,
     private readonly eventInvitationApi: EventInvitationApiService,
+    private readonly noteShareApi: NoteShareApiService,
+    private readonly workoutLogApi: WorkoutLogApiService,
   ) {}
 
   async loadAll(): Promise<void> {
@@ -116,17 +147,19 @@ export class DataStoreService {
     this.error.set(null);
 
     try {
-      const [events, workouts, schedulerSettings, mealprepSettings] = await Promise.all([
+      const [events, workouts, schedulerSettings, mealprepSettings, logs] = await Promise.all([
         firstValueFrom(this.calendarEventApi.getAll()),
         firstValueFrom(this.workoutApi.getAll()),
         firstValueFrom(this.settingsApi.getSchedulerSettings()),
         firstValueFrom(this.settingsApi.getMealprepSettings()),
+        firstValueFrom(this.workoutLogApi.getAll()),
       ]);
 
       this.calendarEvents.set(events.map((event) => this.normalizeCalendarEvent(event)));
       this.workouts.set(workouts);
       this.schedulerSettings.set(schedulerSettings);
       this.mealprepSettings.set(mealprepSettings);
+      this.workoutLogs.set(logs);
       await this.loadPlan();
 
       if (cycleTrackingEnabled()) {
@@ -144,6 +177,27 @@ export class DataStoreService {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async logUnlinkedWorkout(payload: CreateWorkoutLogPayload): Promise<WorkoutLog> {
+    const log = await firstValueFrom(this.workoutLogApi.create(payload));
+    this.workoutLogs.update((logs) => [...logs, log]);
+    return log;
+  }
+
+  async updateWorkoutLog(id: string, payload: UpdateWorkoutLogPayload): Promise<WorkoutLog> {
+    const updated = await firstValueFrom(this.workoutLogApi.update(id, payload));
+    this.workoutLogs.update((logs) => logs.map((log) => (log.id === id ? updated : log)));
+    return updated;
+  }
+
+  async deleteWorkoutLog(id: string): Promise<void> {
+    await firstValueFrom(this.workoutLogApi.delete(id));
+    this.workoutLogs.update((logs) => logs.filter((log) => log.id !== id));
+  }
+
+  getWorkoutLogById(id: string): WorkoutLog | null {
+    return this.workoutLogs().find((log) => log.id === id) ?? null;
   }
 
   async addCalendarEvent(event: Partial<CalendarEvent>): Promise<CalendarEvent | null> {
@@ -289,7 +343,7 @@ export class DataStoreService {
     } catch (error) {
       console.error('[DataStore] Failed to update scheduler settings', error);
       this.schedulerSettings.set(snapshot);
-      this.error.set('Could not save scheduler settings.');
+      this.error.set('Could not save schedule preferences.');
     }
   }
 
@@ -472,6 +526,7 @@ export class DataStoreService {
     } catch (error) {
       console.error('[DataStore] Failed to generate plan template', error);
       this.error.set('Could not generate plan sessions.');
+      throw error;
     }
   }
 
@@ -483,6 +538,14 @@ export class DataStoreService {
       this.markUnloaded();
       await this.loadPlan();
       await this.loadAll();
+      if (result.unplacedSessions.length > 0) {
+        const count = result.unplacedSessions.length;
+        const label = count === 1 ? 'session' : 'sessions';
+        this.uiFeedback.show(
+          `${count} ${label} could not be scheduled — adjust your availability or shift schedule.`,
+          5000,
+        );
+      }
       return result;
     } catch (error) {
       console.error('[DataStore] Failed to schedule full plan', error);
@@ -720,7 +783,7 @@ export class DataStoreService {
 
     if (pendingSessions.length > 0) {
       const session = pendingSessions[0];
-      const description = getWorkoutDescription(session.sessionType, week.phase, week.weekNumber, plan.mode, plan.sportType).whatToDo;
+      const description = getWorkoutDescription(session.sessionType, week.phase, week.weekNumber, plan.mode, plan.sportType, session.duration).whatToDo;
       return {
         kind: 'pending',
         message: `You have a ${this.formatSessionName(session.sessionType)} planned this week that hasn't been scheduled yet. Want to do it now?`,
@@ -761,6 +824,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          session.duration,
         ).whatToDo;
 
         return {
@@ -804,6 +868,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          session.duration,
         ).whatToDo;
 
         return {
@@ -868,6 +933,7 @@ export class DataStoreService {
           week.weekNumber,
           plan.mode,
           plan.sportType,
+          makeUpSession.duration,
         ).whatToDo;
 
         return {
@@ -887,7 +953,7 @@ export class DataStoreService {
 
     const allDone = totalSessions > 0 && completionRate === 1;
     if (allDone) {
-      const recoveryDescription = getWorkoutDescription('mobility', week.phase, week.weekNumber, plan.mode, plan.sportType).whatToDo;
+      const recoveryDescription = getWorkoutDescription('mobility', week.phase, week.weekNumber, plan.mode, plan.sportType, 20).whatToDo;
       return {
         kind: 'recovery',
         message: 'All sessions done! How about 20 min of Yoga & Mobility for recovery?',
@@ -1077,12 +1143,18 @@ export class DataStoreService {
       userId: '',
       title: payload.title,
       body: payload.body ?? null,
+      description: payload.description ?? null,
       dueDate: payload.dueDate ?? null,
       dueTime: payload.dueTime ?? null,
       isScheduled: false,
       estimatedDurationMinutes: payload.estimatedDurationMinutes ?? null,
       wantsScheduling: payload.wantsScheduling ?? false,
       linkedCalendarEventId: null,
+      parentNoteId: payload.parentNoteId ?? null,
+      assignedUserId: payload.assignedUserId ?? null,
+      subtaskStatus: payload.subtaskStatus ?? null,
+      noteType: payload.noteType ?? 'task',
+      taskCategory: payload.taskCategory ?? 'other',
       completed: false,
       completedAt: null,
       createdAt: new Date().toISOString(),
@@ -1211,6 +1283,45 @@ export class DataStoreService {
     }
   }
 
+  async updateSubTaskStatus(
+    noteId: string,
+    status: 'not_started' | 'in_progress' | 'done',
+  ): Promise<void> {
+    const snapshot = this.notes();
+    this.notes.set(snapshot.map((n) => (n.id === noteId ? { ...n, subtaskStatus: status } : n)));
+    try {
+      const updated = await firstValueFrom(this.noteApi.updateSubTaskStatus(noteId, status));
+      this.notes.set(this.notes().map((n) => (n.id === noteId ? updated : n)));
+    } catch (error) {
+      console.error('[DataStore] Failed to update subtask status', error);
+      this.notes.set(snapshot);
+      this.error.set('Could not update sub-task.');
+    }
+  }
+
+  async claimSubTask(noteId: string): Promise<void> {
+    try {
+      const updated = await firstValueFrom(this.noteApi.claimSubTask(noteId));
+      this.notes.set(this.notes().map((n) => (n.id === noteId ? updated : n)));
+    } catch (error) {
+      console.error('[DataStore] Failed to claim sub-task', error);
+      this.error.set('Could not claim sub-task.');
+    }
+  }
+
+  async unassignSubTask(noteId: string): Promise<void> {
+    const snapshot = this.notes();
+    this.notes.set(snapshot.map((n) => (n.id === noteId ? { ...n, assignedUserId: null } : n)));
+    try {
+      const updated = await firstValueFrom(this.noteApi.unassignSubTask(noteId));
+      this.notes.set(this.notes().map((n) => (n.id === noteId ? updated : n)));
+    } catch (error) {
+      console.error('[DataStore] Failed to unassign sub-task', error);
+      this.notes.set(snapshot);
+      this.error.set('Could not unassign sub-task.');
+    }
+  }
+
   async loadEnergyCheckIns(startDate?: string, endDate?: string): Promise<void> {
     try {
       const items = await firstValueFrom(this.energyCheckInApi.list(startDate, endDate));
@@ -1280,6 +1391,33 @@ export class DataStoreService {
       const date = new Date(start);
       date.setDate(start.getDate() + dayOffset);
       weeklyEvents.push(...this.eventsForDay(this.toDateString(date)));
+    }
+
+    return weeklyEvents.sort((a, b) => {
+      const dateCompare = this.resolveEventDate(a).localeCompare(this.resolveEventDate(b));
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      return a.startTime.localeCompare(b.startTime);
+    });
+  }
+
+  eventsWithOffPlanLogsForDay(date: string): CalendarEvent[] {
+    return this.eventsWithOffPlanLogs()
+      .filter((event) => this.eventOccursOnDate(event, date))
+      .map((event) => this.toOccurrenceForDate(event, date))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
+
+  eventsWithOffPlanLogsForWeek(startDate: string): CalendarEvent[] {
+    const start = new Date(`${startDate}T00:00:00`);
+    const weeklyEvents: CalendarEvent[] = [];
+
+    for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + dayOffset);
+      weeklyEvents.push(...this.eventsWithOffPlanLogsForDay(this.toDateString(date)));
     }
 
     return weeklyEvents.sort((a, b) => {
@@ -1365,6 +1503,32 @@ export class DataStoreService {
       distanceTarget: event.distanceTarget ?? event.distanceKm,
       distanceKm: event.distanceKm ?? event.distanceTarget,
     } as CalendarEvent;
+  }
+
+  private toOffPlanCalendarEvent(log: WorkoutLog): CalendarEvent {
+    const completedDate = this.toDateString(new Date(log.completedAt));
+    const duration = log.actualDuration ?? 0;
+
+    return this.normalizeCalendarEvent({
+      id: `offplan-log-${log.id}`,
+      sourceWorkoutLogId: log.id,
+      loggedFromOffPlan: true,
+      title: log.title?.trim() || this.formatSessionName(log.sessionType),
+      type: 'workout',
+      day: this.dayOfWeekIndex(completedDate),
+      date: completedDate,
+      startTime: '23:59',
+      endTime: '23:59',
+      duration,
+      durationMinutes: duration,
+      sessionType: log.sessionType,
+      intensity: log.energyRating ?? undefined,
+      status: 'completed',
+      notes: log.notes,
+      distanceTarget: log.actualDistance,
+      distanceKm: log.actualDistance,
+      isManuallyPlaced: true,
+    } as CalendarEvent);
   }
 
   private toCalendarEventApiPayload(event: Partial<CalendarEvent>): Partial<CalendarEvent> {
@@ -1667,6 +1831,43 @@ export class DataStoreService {
   exitSharedCalendar(): void {
     this.viewingSharedCalendar.set(null);
     this.sharedCalendarEvents.set([]);
+  }
+
+  async loadNoteShares(): Promise<void> {
+    try {
+      const [outgoing, incoming] = await Promise.all([
+        firstValueFrom(this.noteShareApi.listOutgoing()),
+        firstValueFrom(this.noteShareApi.listIncoming()),
+      ]);
+      this.outgoingNoteShares.set(outgoing);
+      this.incomingNoteShares.set(incoming);
+    } catch (error) {
+      console.error('[DataStore] Failed to load note shares', error);
+    }
+  }
+
+  async grantNoteShare(payload: CreateNoteSharePayload): Promise<void> {
+    try {
+      const created = await firstValueFrom(this.noteShareApi.create(payload));
+      this.outgoingNoteShares.set([...this.outgoingNoteShares(), created]);
+    } catch (error) {
+      console.error('[DataStore] Failed to grant note share', error);
+      throw error;
+    }
+  }
+
+  async revokeNoteShare(shareId: string): Promise<void> {
+    const outSnapshot = this.outgoingNoteShares();
+    const inSnapshot = this.incomingNoteShares();
+    this.outgoingNoteShares.set(outSnapshot.filter((s) => s.id !== shareId));
+    this.incomingNoteShares.set(inSnapshot.filter((s) => s.id !== shareId));
+    try {
+      await firstValueFrom(this.noteShareApi.delete(shareId));
+    } catch (error) {
+      console.error('[DataStore] Failed to revoke note share', error);
+      this.outgoingNoteShares.set(outSnapshot);
+      this.incomingNoteShares.set(inSnapshot);
+    }
   }
 
   // ── Event invitations ────────────────────────────────────────────────────

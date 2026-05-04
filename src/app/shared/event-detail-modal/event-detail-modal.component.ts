@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { CalendarEvent } from '../../mock-data';
+import { CalendarEvent as CoreCalendarEvent } from '../../core/models/app-data.models';
 import { DataStoreService } from '../../core/services/data-store.service';
 import { UiFeedbackService } from '../ui-feedback.service';
+import { generateIcsForEvent } from '../utils/ics-generator.util';
 
 type EventFormValue = {
   title: string;
@@ -14,7 +16,20 @@ type EventFormValue = {
   intensity: '' | NonNullable<CalendarEvent['intensity']>;
   priority: '' | NonNullable<CalendarEvent['priority']>;
   sessionType: string;
+  notes: string;
 };
+
+const SESSION_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'running', label: 'Running' },
+  { value: 'cycling', label: 'Cycling' },
+  { value: 'swimming', label: 'Swimming' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'yoga_mobility', label: 'Yoga / Mobility' },
+  { value: 'pilates', label: 'Pilates' },
+  { value: 'hiit', label: 'HIIT / Cross-training' },
+  { value: 'walking_hiking', label: 'Walking / Hiking' },
+  { value: 'other', label: 'Other' },
+];
 
 @Component({
   selector: 'app-event-detail-modal',
@@ -28,9 +43,11 @@ export class EventDetailModalComponent {
   private readonly dataStore = inject(DataStoreService);
   private readonly uiFeedback = inject(UiFeedbackService);
   private readonly weekDayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  private lastStartTime: string | null = null;
 
   readonly open = input(false);
   readonly event = input<CalendarEvent | null>(null);
+  readonly mode = input<'edit' | 'create'>('edit');
   readonly showSuggestedSlotNote = input(false);
   readonly openTo = input<'edit' | 'invite'>('edit');
 
@@ -44,6 +61,8 @@ export class EventDetailModalComponent {
   protected readonly inviteSending = signal(false);
   protected readonly inviteError = signal<string | null>(null);
 
+  protected readonly sessionTypeOptions = SESSION_TYPE_OPTIONS;
+
   protected readonly form = this.formBuilder.nonNullable.group({
     title: '',
     startTime: '',
@@ -54,9 +73,16 @@ export class EventDetailModalComponent {
     intensity: '' as EventFormValue['intensity'],
     priority: '' as EventFormValue['priority'],
     sessionType: '',
+    notes: '',
   });
 
+  protected readonly isCreateMode = computed(() => this.mode() === 'create');
+
   protected readonly canInvite = computed(() => {
+    if (this.isCreateMode()) {
+      return false;
+    }
+
     const t = this.event()?.type;
     return t === 'workout' || t === 'custom-event' || t === 'personal';
   });
@@ -64,9 +90,10 @@ export class EventDetailModalComponent {
   protected readonly inviteOnlyMode = computed(() => this.openTo() === 'invite');
 
   protected readonly isWorkout = computed(() => this.event()?.type === 'workout');
+  protected readonly canExportCalendar = computed(() => !this.isCreateMode() && this.isWorkout());
   protected readonly isShift = computed(() => this.event()?.type === 'shift');
   protected readonly isMealPrep = computed(() => this.event()?.type === 'mealprep');
-  protected readonly isPersonal = computed(() => this.event()?.type === 'personal');
+  protected readonly isPersonal = computed(() => this.event()?.type === 'personal' || this.event()?.type === 'custom-event');
   protected readonly typeLabel = computed(() => {
     switch (this.event()?.type) {
       case 'workout':
@@ -76,6 +103,7 @@ export class EventDetailModalComponent {
       case 'mealprep':
         return 'Meal Prep';
       case 'personal':
+      case 'custom-event':
         return 'Personal Event';
       case 'oncall':
         return 'On-call';
@@ -104,6 +132,32 @@ export class EventDetailModalComponent {
   });
 
   constructor() {
+    this.form.controls.startTime.valueChanges.subscribe((newStartTime) => {
+      const previousStartTime = this.lastStartTime;
+      this.lastStartTime = newStartTime;
+
+      if (!previousStartTime) {
+        return;
+      }
+
+      const currentEndTime = this.form.controls.endTime.value;
+      const previousStartMinutes = this.toMinutes(previousStartTime);
+      const currentEndMinutes = this.toMinutes(currentEndTime);
+      const newStartMinutes = this.toMinutes(newStartTime);
+
+      if (previousStartMinutes == null || currentEndMinutes == null || newStartMinutes == null) {
+        return;
+      }
+
+      const durationMinutes = currentEndMinutes - previousStartMinutes;
+      if (durationMinutes <= 0) {
+        return;
+      }
+
+      const cappedEndMinutes = Math.min(newStartMinutes + durationMinutes, (23 * 60) + 59);
+      this.form.controls.endTime.setValue(this.toTime(cappedEndMinutes), { emitEvent: false });
+    });
+
     effect(() => {
       const activeEvent = this.event();
       if (!this.open() || !activeEvent) {
@@ -111,6 +165,7 @@ export class EventDetailModalComponent {
       }
 
       this.form.reset(this.toFormValue(activeEvent), { emitEvent: false });
+      this.lastStartTime = activeEvent.startTime;
       this.selectedDay.set(this.resolveEventDay(activeEvent));
       this.showInviteDialog.set(this.openTo() === 'invite' && this.canInvite());
     });
@@ -140,6 +195,7 @@ export class EventDetailModalComponent {
       endTime: raw.endTime,
       day: selectedDay,
       date: selectedPill?.date ?? activeEvent.date,
+      notes: raw.notes.trim() || undefined,
     };
 
     if (activeEvent.type === 'shift') {
@@ -229,6 +285,30 @@ export class EventDetailModalComponent {
     }
   }
 
+  protected exportCalendarDownload(): void {
+    const ev = this.event();
+    if (!ev || ev.type !== 'workout') {
+      return;
+    }
+
+    const coreEvent = this.toCoreCalendarEvent(ev);
+    const content = generateIcsForEvent(coreEvent);
+    const filename = this.buildIcsFilename(coreEvent.title, coreEvent.date);
+    this.downloadIcsFile(content, filename);
+    this.uiFeedback.show('Calendar file downloaded');
+  }
+
+  protected async exportCalendarCopy(): Promise<void> {
+    const ev = this.event();
+    if (!ev || ev.type !== 'workout') {
+      return;
+    }
+
+    const content = generateIcsForEvent(this.toCoreCalendarEvent(ev));
+    const copied = await this.copyToClipboard(content);
+    this.uiFeedback.show(copied ? 'Calendar text copied' : 'Could not copy calendar text');
+  }
+
   private toFormValue(event: CalendarEvent): EventFormValue {
     return {
       title: event.title,
@@ -240,6 +320,7 @@ export class EventDetailModalComponent {
       intensity: event.intensity ?? '',
       priority: event.priority ?? '',
       sessionType: event.sessionType ?? '',
+      notes: event.notes ?? '',
     };
   }
 
@@ -260,6 +341,51 @@ export class EventDetailModalComponent {
 
   private toOptionalChoice<T extends string>(value: T | ''): T | undefined {
     return value || undefined;
+  }
+
+  private toCoreCalendarEvent(event: CalendarEvent): CoreCalendarEvent {
+    return {
+      ...event,
+      day: typeof event.day === 'number' ? event.day : this.resolveEventDay(event),
+    };
+  }
+
+  private buildIcsFilename(title: string, date?: string): string {
+    const safeTitle = title
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'workout';
+
+    const safeDate = date ?? this.toDateString(new Date());
+    return `${safeTitle}_${safeDate}.ics`;
+  }
+
+  private downloadIcsFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  private async copyToClipboard(content: string): Promise<boolean> {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
   }
 
   private resolveEventDay(event: CalendarEvent): number {
@@ -314,6 +440,26 @@ export class EventDetailModalComponent {
     const hour12 = ((hours + 11) % 12) + 1;
     const minute = String(minutes).padStart(2, '0');
     return `${hour12}:${minute}${suffix}`;
+  }
+
+  private toMinutes(time: string): number | null {
+    const [hoursText, minutesText] = time.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  }
+
+  private toTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   private diffEvent(original: CalendarEvent, updated: CalendarEvent): Partial<CalendarEvent> {

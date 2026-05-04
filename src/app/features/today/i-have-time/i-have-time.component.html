@@ -37,6 +37,9 @@
             {{ isApplying() ? 'Working...' : item.ctaLabel }}
           </button>
         }
+        @if (item.kind === 'task') {
+          <button class="sheet-skip-text" (click)="skipTask()" type="button">Try a different task</button>
+        }
         <button class="sheet-dismiss-text" (click)="close()" type="button">Not now</button>
       </div>
     } @else {
@@ -45,3 +48,4 @@
     }
   </div>
 }
+

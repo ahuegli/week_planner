@@ -196,7 +196,11 @@ export class QuickPlanSwitchComponent {
         throw new Error('Could not create new plan');
       }
 
-      await this.dataStore.generatePlanTemplate(created.id);
+      // Triathlon plans: generate-plan builds the template internally via buildAndPersistTriathlonTemplate.
+      // Calling generatePlanTemplate first would create a run-based template that gets wiped anyway.
+      if (!payload.triathlonDistance) {
+        await this.dataStore.generatePlanTemplate(created.id);
+      }
 
       await this.dataStore.scheduleEntirePlan(created.id);
 
@@ -213,6 +217,12 @@ export class QuickPlanSwitchComponent {
     }
   }
 
+  private readonly triathlonDistanceMap: Record<string, 'sprint' | 'olympic' | '70_3' | '140_6'> = {
+    'Triathlon (Sprint)': 'sprint',
+    'Triathlon (Olympic)': 'olympic',
+    'Triathlon (Half / 70.3)': '70_3',
+  };
+
   private buildPlanPayload(): PlanCreatePayload {
     const mode = this.selectedGoal();
     const payload: PlanCreatePayload = {
@@ -223,7 +233,13 @@ export class QuickPlanSwitchComponent {
     };
 
     if (mode === 'race') {
-      payload.sportType = this.selectedRace();
+      const triathlonDistance = this.triathlonDistanceMap[this.selectedRace()];
+      if (triathlonDistance) {
+        payload.sportType = 'triathlon';
+        payload.triathlonDistance = triathlonDistance;
+      } else {
+        payload.sportType = this.selectedRace();
+      }
       payload.goalDistance = this.selectedRace();
       payload.goalDate = this.raceDate() || undefined;
       payload.goalTime = this.targetTime() || undefined;

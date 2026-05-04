@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
@@ -7,10 +7,20 @@ import { WorkoutLogApiService } from '../../core/services/workout-log-api.servic
 import { getWorkoutDescription } from '../../core/utils/workout-descriptions';
 import { getWorkoutStructure, WorkoutStep } from '../../core/utils/workout-structure';
 import { EnergyRating } from '../../core/models/app-data.models';
-import { cycleTrackingEnabled } from '../../shared/state/cycle-ui.state';
+import { roundToFriendlyDuration } from '../../shared/utils/round-duration.util';
 
 type WorkoutPageState = 'pre' | 'during' | 'post';
-type StartButtonState = 'start' | 'completed';
+type StartButtonState = 'start' | 'completed' | 'skipped';
+
+const SKIP_REASONS = [
+  'Sick / unwell',
+  'Time constraint',
+  'Travel',
+  'Energy / fatigue',
+  'Injury',
+  'Other',
+] as const;
+type SkipReason = typeof SKIP_REASONS[number];
 
 @Component({
   selector: 'app-workout-page',
@@ -30,6 +40,10 @@ export class WorkoutPageComponent {
 
   protected readonly pageState = signal<WorkoutPageState>('pre');
   protected readonly isWhyExpanded = signal(false);
+  protected readonly cyclePhaseTooltipPinned = signal(false);
+  protected readonly cyclePhaseTooltipHovered = signal(false);
+
+  private cyclePhaseTooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Post-workout form ─────────────────────────────────────────────────────
 
@@ -44,6 +58,12 @@ export class WorkoutPageComponent {
   protected readonly elevationGain = signal<number | null>(null);
   protected readonly notes = signal<string>('');
   protected readonly isSaving = signal(false);
+
+  // ── Skip session state ────────────────────────────────────────────────────
+
+  protected readonly skipOpen = signal(false);
+  protected readonly skipReason = signal<SkipReason | null>(null);
+  protected readonly skipReasons = SKIP_REASONS;
 
   // ── Route → event ─────────────────────────────────────────────────────────
 
@@ -90,11 +110,19 @@ export class WorkoutPageComponent {
   protected readonly durationMinutes = computed(() => {
     const event = this.event();
     if (!event) return 0;
-    if (event.duration) return event.duration;
     const [sh, sm] = event.startTime.split(':').map(Number);
     const [eh, em] = event.endTime.split(':').map(Number);
-    return eh * 60 + em - (sh * 60 + sm);
+    const fromTimes = eh * 60 + em - (sh * 60 + sm);
+    if (fromTimes > 0) {
+      return fromTimes;
+    }
+    if (event.duration) return event.duration;
+    return 0;
   });
+
+  protected readonly displayDurationMinutes = computed(() =>
+    roundToFriendlyDuration(this.durationMinutes()),
+  );
 
   // ── Pre-workout computed ───────────────────────────────────────────────────
 
@@ -160,6 +188,7 @@ export class WorkoutPageComponent {
       ctx?.weekNumber ?? 1,
       plan?.mode ?? 'race',
       plan?.sportType ?? null,
+      this.durationMinutes(),
     );
   });
 
@@ -180,6 +209,7 @@ export class WorkoutPageComponent {
     const event = this.event();
     if (!event) return 'start';
     if (event.status === 'completed') return 'completed';
+    if (event.status === 'skipped') return 'skipped';
     return 'start';
   });
 
@@ -218,7 +248,7 @@ export class WorkoutPageComponent {
   });
 
   protected readonly cyclePhaseInfo = computed<{ phase: string; cycleDay: number } | null>(() => {
-    if (!cycleTrackingEnabled()) return null;
+    if (this.dataStore.schedulerSettings()?.cycleTrackingEnabled !== true) return null;
     const profile = this.dataStore.cycleProfile();
     if (!profile?.lastPeriodStart || profile.mode !== 'natural') return null;
     const dateStr = this.event()?.date;
@@ -253,6 +283,26 @@ export class WorkoutPageComponent {
     return `${names[info.phase] ?? info.phase} Phase · Day ${info.cycleDay}`;
   });
 
+  protected readonly cyclePhaseTooltipOpen = computed(
+    () => this.cyclePhaseTooltipPinned() || this.cyclePhaseTooltipHovered(),
+  );
+
+  protected readonly cyclePhaseTooltipText = computed(() => {
+    const phase = this.cyclePhaseInfo()?.phase;
+    if (!phase) {
+      return null;
+    }
+
+    const descriptions: Record<string, string> = {
+      menstrual: 'Days 1-5 typically. Energy may be lower; rest guilt-free if needed. Light movement is fine.',
+      follicular: 'Days 6-13 typically. Your strongest training window. Push intervals and hard sessions here.',
+      ovulation: 'Days 14-16 typically. Peak power and strength. Great for time trials and key sessions.',
+      luteal: 'Days 17-28 typically. Energy may dip mid-session. Effort over pace today; aerobic work shines.',
+    };
+
+    return descriptions[phase] ?? null;
+  });
+
   protected readonly cycleCoachingNote = computed<string | null>(() => {
     const info = this.cyclePhaseInfo();
     if (!info) return null;
@@ -273,6 +323,19 @@ export class WorkoutPageComponent {
     }
   }
 
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      this.closeCyclePhaseTooltip();
+      return;
+    }
+
+    if (!target.closest('.cycle-phase-tooltip')) {
+      this.closeCyclePhaseTooltip();
+    }
+  }
+
   // ── Pre-workout actions ───────────────────────────────────────────────────
 
   protected goBack(): void {
@@ -287,11 +350,67 @@ export class WorkoutPageComponent {
     this.isWhyExpanded.update((v) => !v);
   }
 
+  protected toggleCyclePhaseTooltip(event: Event): void {
+    event.stopPropagation();
+    const nextValue = !this.cyclePhaseTooltipPinned();
+    this.cyclePhaseTooltipPinned.set(nextValue);
+
+    if (nextValue) {
+      this.startCyclePhaseTooltipTimer();
+      return;
+    }
+
+    this.clearCyclePhaseTooltipTimer();
+  }
+
+  protected showCyclePhaseTooltipOnHover(): void {
+    this.cyclePhaseTooltipHovered.set(true);
+  }
+
+  protected hideCyclePhaseTooltipOnHover(): void {
+    this.cyclePhaseTooltipHovered.set(false);
+  }
+
   protected askCoach(): void {
     const title = this.event()?.title;
     const context = title ? encodeURIComponent(title) : undefined;
     const url = context ? `/coach?workout=${context}` : '/coach';
     void this.router.navigateByUrl(url);
+  }
+
+  protected openSkipPicker(): void {
+    this.skipReason.set(null);
+    this.skipOpen.set(true);
+  }
+
+  protected closeSkipPicker(): void {
+    this.skipOpen.set(false);
+  }
+
+  protected selectSkipReason(reason: SkipReason): void {
+    this.skipReason.set(reason);
+  }
+
+  protected async confirmSkip(): Promise<void> {
+    if (this.isSaving()) return;
+    const event = this.event();
+    if (!event) return;
+
+    this.isSaving.set(true);
+    this.skipOpen.set(false);
+    try {
+      const session = this.linkedSession();
+      if (session) {
+        await this.dataStore.skipSession(session.id);
+      }
+      await this.dataStore.updateCalendarEvent(event.id, { status: 'skipped' });
+    } catch (err) {
+      console.error('[WorkoutPage] Skip failed', err);
+    } finally {
+      this.isSaving.set(false);
+    }
+
+    this.goBack();
   }
 
   protected goToPostWorkout(): void {
@@ -376,5 +495,26 @@ export class WorkoutPageComponent {
     }
 
     this.goBack();
+  }
+
+  private startCyclePhaseTooltipTimer(): void {
+    this.clearCyclePhaseTooltipTimer();
+    this.cyclePhaseTooltipTimer = setTimeout(() => {
+      this.cyclePhaseTooltipPinned.set(false);
+      this.cyclePhaseTooltipTimer = null;
+    }, 5000);
+  }
+
+  private clearCyclePhaseTooltipTimer(): void {
+    if (this.cyclePhaseTooltipTimer) {
+      clearTimeout(this.cyclePhaseTooltipTimer);
+      this.cyclePhaseTooltipTimer = null;
+    }
+  }
+
+  private closeCyclePhaseTooltip(): void {
+    this.cyclePhaseTooltipPinned.set(false);
+    this.cyclePhaseTooltipHovered.set(false);
+    this.clearCyclePhaseTooltipTimer();
   }
 }

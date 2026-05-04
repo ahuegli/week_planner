@@ -107,6 +107,7 @@ export class CurrentWeekCardComponent {
       this.week().weekNumber,
       this.planMode(),
       this.sportType(),
+      session.duration,
     );
   }
 

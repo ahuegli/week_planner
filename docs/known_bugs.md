@@ -130,3 +130,171 @@ Found Tuesday evening. Fix tomorrow:
   /^triathlon/i but distance is null
 
 CC territory — multi-file logic + data migration consideration.
+
+
+## Triathlon plan creation sometimes generates run-only sessions
+Initial creation via quick-switch flow may produce a plan with 
+only run + strength sessions (no swim, no bike) despite sportType 
+being 'triathlon' and triathlonDistance set. Resetting the plan 
+regenerates correctly with all four disciplines.
+
+Hypothesis: race condition or wrong code path in initial generation. 
+"Reset" takes a different route that works.
+
+Diagnose after current CC SQL verification completes.
+
+## Two same-discipline sessions same day not penalized
+Scoring engine allows two runs (or two of any discipline) to land 
+on the same day. Methodology says key sessions shouldn't double 
+up same-day. Need penalty tuning or new constraint rule.
+
+Diagnose alongside Bug A.
+
+
+## Plan view week 1 generates run-only sessions (intermittent)
+Despite triathlonDistance fix shipping Tuesday + Bug A fix shipping
+Wednesday, plan view shows:
+- Week 1: run-only with 2 long runs on Sunday
+- Week 2: empty
+- Week 3+: normal triathlon distribution
+
+Suggests either:
+- Race-condition between plan creation + initial template generation
+- Plan view rendering pulls from a cache that doesn't refresh
+- The initial weeks generate via a different code path than later weeks
+
+Not blocking WP11. Diagnose alongside or after WP11B.
+
+## Plan view doesn't show workout dates
+The "Your Plan" weekly breakdown shows workout names + duration + 
+distance but no specific date. Users can't tell when a workout is 
+scheduled without going to the calendar.
+
+Add concise date stamp per workout (e.g., "Mon, 27 May") in the 
+expanded week view.
+
+Single-component fix, ~15 min Copilot.
+
+## Dark mode toggle in settings
+
+Toggle exists but may not actually apply theme. To verify with 
+Copilot:
+- Confirm the toggle persists state to scheduler settings
+- Confirm theme actually switches on toggle (CSS variables or 
+  class on body)
+- If toggle is decorative (UI only), implement actual theme 
+  switching:
+  - Use existing color palette CSS variables
+  - Define dark equivalents (--color-bg-dark, etc.)
+  - Apply 'dark' class to body when enabled
+  - Persist to localStorage AND backend settings
+- If broken, fix and verify across Today/Plan/Notes/Stats/Settings 
+  pages
+
+Single-day Copilot task once WP11B done.
+
+
+## Generic triathlon "what to do" message on non-brick workouts
+Some triathlon workouts (e.g., "Easy Run") show a generic 
+methodology message: "Triathlon combines swim, bike, and run with 
+phase-based progression. Brick workouts usually appear in build 
+phase to train transitions."
+
+This is meta-explanation about triathlon as a concept, NOT 
+session-specific instructions. Should only show on brick sessions 
+or as onboarding context, not on every individual easy run.
+
+Fix: in workout-descriptions.ts, the triathlon-context-append 
+logic should be conditional. Only append when:
+- Session is a brick (genuinely needs the brick context)
+- OR user is in their first week of triathlon training (general 
+  context useful)
+- Not on every workout in every week
+
+Single-file Copilot fix, ~15 min.
+
+## Workout descriptions audit
+
+Some workout descriptions don't fit their session type or context 
+well. The triathlon-context-on-every-workout was one example (now 
+fixed for non-brick). Likely others.
+
+Audit task: read through all entries in workout-descriptions.ts 
+and verify each (sessionType × phase × duration bucket) message:
+- Actually describes the session
+- Doesn't generic methodology dump
+- Matches the duration bucket (short/medium/long) appropriately
+- Phase awareness is correct (base vs build vs peak vs taper)
+
+Single-day Copilot task once WP11 done. Probably 1-2 hours of 
+content review + edits.
+
+## "I have time now" button not connected to task system
+
+Today page "I have time now" feature (slot suggestion for 
+unscheduled work) currently shows "You're all caught up" 
+regardless of unscheduled tasks. Should:
+- Read user's unscheduled notes (notes with hasn't been auto-placed 
+  via find-time, where dueDate exists OR estimatedDuration is set)
+- Pick a candidate based on: priority, due date proximity, fits 
+  available time slot
+- Suggest scheduling it now in the open time slot
+
+Original WP3C "find time" feature partially does this but the 
+Today-page "I have time now" entry point isn't wired correctly.
+
+~30 min Copilot fix once WP14 ships.
+
+
+## Skip reason not persisted to backend
+
+UI captures the skip reason ("Sick/unwell", "Time constraint", etc.)
+but doesn't send it to the backend. PlannedSession entity has no 
+skipReason field. Add when WP14 hardening ships:
+- Add @Column({ nullable: true }) skipReason: string | null to 
+  planned-session.entity.ts  
+- Update PlannedSessionDto with optional field
+- Update markSkipped() to accept + save reason
+- Frontend already sends the reason in the request body — wire to 
+  controller param
+
+~30 min CC fix.
+
+## Cycle-aware sizing not in plan generator (v1.5)
+
+Audit confirmed (2026-05-04): cycle phase IS used in scoring 
+engine (placement layer) but NOT in sizing engine (generation 
+layer). Methodology says luteal phase should reduce volume 
+10-15%, but current sizing produces full volume regardless.
+
+Effect: athletes with cycle tracking enabled get full-volume long 
+sessions in luteal weeks. Scheduler may place them on better days, 
+but distance/duration aren't reduced.
+
+Fix scope (~2-3h CC):
+- training-plan.service.ts fetches CycleProfile data
+- Forwards to template services as part of generation context
+- computeRunProgressionScaler and triathlon equivalent apply 
+  luteal multiplier (0.85-0.90)
+
+Defer to v1.5 — real beta users will inform the magnitude of 
+adjustment. Document in cycle settings UI: "Cycle-aware volume 
+adjustments coming soon."
+
+## Cycle staleness not guarded
+Phase computed confidently even when last period logged 60+ days 
+ago. Should reduce confidence × 0.5 when staleness >45 days.
+~30 min Copilot fix.
+
+## bikeIntent rendering not wired
+Field generated and persisted but no frontend component consumes 
+it for display. Either wire into workout descriptions or document 
+as future hook for premium AI coaching.
+~30 min Copilot fix once decided.
+
+## Peak performance window UI vs engine
+Today page banner suggests hard sessions guaranteed in follicular 
+phase. Engine offers soft bonus only. UI message should be softened 
+to "Generally a good time for harder sessions" or engine should be 
+upgraded to harder constraint.
+~15 min copy fix OR ~1h engine work.

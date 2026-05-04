@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { CalendarEvent, DaySchedule } from '../../../mock-data';
-import { PlanMode } from '../../../core/models/app-data.models';
+import { PlanMode, WorkoutLog } from '../../../core/models/app-data.models';
 import { workoutDisciplineBorderColor, workoutDisciplineBgColor } from '../../../shared/utils/discipline-colors.util';
 import { DataStoreService } from '../../../core/services/data-store.service';
 import { getWorkoutDescription, WorkoutDescription } from '../../../core/utils/workout-descriptions';
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
+import { QuickLogModalComponent } from '../../workout-log/quick-log-modal.component';
+import { roundToFriendlyDuration } from '../../../shared/utils/round-duration.util';
 
 interface GroupedEvents {
   label: 'AM' | 'PM';
@@ -22,7 +24,7 @@ type BrickEvent = CalendarEvent & {
 
 @Component({
   selector: 'app-day-row',
-  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent],
+  imports: [DeleteWorkoutDialogComponent, EventDetailModalComponent, QuickLogModalComponent],
   templateUrl: './day-row.component.html',
   styleUrl: './day-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,10 +49,28 @@ export class DayRowComponent {
   protected readonly showSuggestedSlotHint = signal(false);
   protected readonly confirmingDeleteEventId = signal<string | null>(null);
   protected readonly workoutDeleteEventId = signal<string | null>(null);
+  protected readonly editingWorkoutLogId = signal<string | null>(null);
+  protected readonly quickLogOpen = signal(false);
   protected readonly findingBestTime = signal(false);
   protected readonly whyExpandedIds = signal<string[]>([]);
 
-  protected readonly visibleEvents = computed(() => this.day().events);
+  protected readonly visibleEvents = computed(() => {
+    const baseEvents = this.day().events;
+    const offPlanEvents = this.dataStore
+      .eventsWithOffPlanLogsForDay(this.day().date)
+      .filter((event) => event.loggedFromOffPlan === true);
+
+    return [...baseEvents, ...offPlanEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  });
+
+  protected readonly editingWorkoutLog = computed<WorkoutLog | null>(() => {
+    const logId = this.editingWorkoutLogId();
+    if (!logId) {
+      return null;
+    }
+
+    return this.dataStore.getWorkoutLogById(logId);
+  });
 
   protected readonly editingEvent = computed(
     () => this.editingEventDraft() ?? this.visibleEvents().find((event) => event.id === this.editingEventId()) ?? null,
@@ -85,6 +105,16 @@ export class DayRowComponent {
 
   protected readonly isFreeDay = computed(() =>
     !this.visibleEvents().some((event) => event.type === 'shift' || event.type === 'busy'),
+  );
+
+  protected readonly taskDerivedEventIds = computed(
+    () =>
+      new Set(
+        this.dataStore
+          .notes()
+          .map((note) => note.linkedCalendarEventId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
   );
 
   protected eventColor(event: CalendarEvent): string {
@@ -163,7 +193,16 @@ export class DayRowComponent {
   }
 
   protected onEventTap(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.eventToggle.emit(event.id);
+  }
+
+  protected isOffPlanLoggedEvent(event: CalendarEvent): boolean {
+    return event.loggedFromOffPlan === true;
   }
 
   protected sessionTypeLabel(event: CalendarEvent): string {
@@ -180,6 +219,38 @@ export class DayRowComponent {
     };
 
     return map[sessionType] ?? event.title;
+  }
+
+  protected eventDisplayTitle(event: CalendarEvent): string {
+    const baseTitle = event.type === 'workout'
+      ? this.sessionTypeLabel(event)
+      : this.baseEventTitle(event);
+
+    if (this.isTaskDerivedEvent(event)) {
+      return `[Task] ${baseTitle}`;
+    }
+
+    return baseTitle;
+  }
+
+  private baseEventTitle(event: CalendarEvent): string {
+    const title = event.title?.trim();
+
+    if (event.type === 'personal' || event.type === 'custom-event') {
+      return title && title.length > 0 ? title : 'Personal';
+    }
+
+    return title && title.length > 0 ? title : 'Event';
+  }
+
+  private isTaskDerivedEvent(event: CalendarEvent): boolean {
+    if (this.taskDerivedEventIds().has(event.id)) {
+      return true;
+    }
+
+    return (event.type === 'personal' || event.type === 'custom-event')
+      && event.isPersonal === true
+      && event.isManuallyPlaced === false;
   }
 
   protected priorityLabel(event: CalendarEvent): string {
@@ -200,12 +271,15 @@ export class DayRowComponent {
     }
 
     const sessionType = event.sessionType ?? event.title;
+    const fromTimes = this.durationFromTimes(event.startTime, event.endTime);
+    const durationMinutes = fromTimes > 0 ? fromTimes : (event.duration ?? 0);
     return getWorkoutDescription(
       sessionType,
       this.phase(),
       this.weekNumber(),
       this.planMode(),
       this.sportType(),
+      durationMinutes,
     );
   }
 
@@ -230,13 +304,30 @@ export class DayRowComponent {
   }
 
   protected durationLabel(event: CalendarEvent): string {
-    const duration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const duration = event.type === 'workout' ? roundToFriendlyDuration(rawDuration) : rawDuration;
     if (duration % 60 === 0) {
       const hours = duration / 60;
       return `${hours} hour${hours === 1 ? '' : 's'}`;
     }
 
     return `${duration} min`;
+  }
+
+  protected timeRangeLabel(event: CalendarEvent): string {
+    if (event.type !== 'workout') {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const startMinutes = this.toMinutes(event.startTime);
+    if (startMinutes === null) {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const roundedDuration = roundToFriendlyDuration(rawDuration);
+    const endMinutes = Math.min(startMinutes + roundedDuration, (23 * 60) + 59);
+    return `${event.startTime} - ${this.toTime(endMinutes)}`;
   }
 
   protected intensityLabel(event: CalendarEvent): string {
@@ -299,6 +390,11 @@ export class DayRowComponent {
   }
 
   protected openEditor(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.confirmingDeleteEventId.set(null);
     this.workoutDeleteEventId.set(null);
     this.editingEventDraft.set(null);
@@ -320,6 +416,11 @@ export class DayRowComponent {
   }
 
   protected requestDelete(event: CalendarEvent): void {
+    if (this.isOffPlanLoggedEvent(event)) {
+      this.openQuickLogEditor(event);
+      return;
+    }
+
     this.editingEventId.set(null);
     if (event.type === 'workout') {
       this.confirmingDeleteEventId.set(null);
@@ -407,6 +508,21 @@ export class DayRowComponent {
     this.uiFeedback.show('Session removed');
   }
 
+  protected closeQuickLogEditor(): void {
+    this.quickLogOpen.set(false);
+    this.editingWorkoutLogId.set(null);
+  }
+
+  private openQuickLogEditor(event: CalendarEvent): void {
+    const logId = event.sourceWorkoutLogId;
+    if (!logId) {
+      return;
+    }
+
+    this.editingWorkoutLogId.set(logId);
+    this.quickLogOpen.set(true);
+  }
+
   protected deletePrompt(event: CalendarEvent): string {
     if (event.type === 'shift' && event.isRepeatingWeekly) {
       return 'Delete all occurrences of this repeating shift?';
@@ -459,6 +575,26 @@ export class DayRowComponent {
     const [startHours, startMinutes] = startTime.split(':').map(Number);
     const [endHours, endMinutes] = endTime.split(':').map(Number);
     return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+  }
+
+  private toMinutes(time: string): number | null {
+    const [hoursText, minutesText] = time.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  }
+
+  private toTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   private finishWorkoutDelete(eventId: string): void {

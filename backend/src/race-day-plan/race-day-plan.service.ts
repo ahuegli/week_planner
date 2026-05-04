@@ -84,6 +84,7 @@ export class RaceDayPlanService {
       ftpWatts: settings.ftpWatts,
       lthrBpm: settings.lthrBpm,
       cssSecondsPer100m: settings.cssSecondsPer100m,
+      runThresholdSecPerKm: settings.runThresholdSecPerKm,
       hasPowerMeter: settings.hasPowerMeter,
     };
 
@@ -125,13 +126,13 @@ export class RaceDayPlanService {
 
   private buildPacingPlan(
     distance: TriathlonDistance,
-    calibration: { ftpWatts: number | null; lthrBpm: number | null; cssSecondsPer100m: number | null; hasPowerMeter: boolean },
+    calibration: { ftpWatts: number | null; lthrBpm: number | null; cssSecondsPer100m: number | null; runThresholdSecPerKm: number | null; hasPowerMeter: boolean },
     experienceLevel: TriExperienceLevel,
     buffer: number,
   ): Record<string, any> & { estimatedRaceMinutes: number } {
     const swim = this.swimTarget(distance, calibration.cssSecondsPer100m, buffer);
     const bike = this.bikeTarget(distance, calibration.ftpWatts, calibration.lthrBpm, calibration.hasPowerMeter, buffer);
-    const run = this.runTarget(distance, null, buffer); // runThreshold not yet a stored field — RPE fallback
+    const run = this.runTarget(distance, calibration.runThresholdSecPerKm, buffer);
 
     // Estimate race duration in minutes for sprint fueling decision
     const swimDistanceM = SWIM_DIST_M[distance];

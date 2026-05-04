@@ -82,6 +82,18 @@ import { OnboardingData } from './onboarding.models';
           (input)="patch('cssSecondsPer100m', +$any($event.target).value || null)" />
       }
 
+      <div class="toggle-row">
+        <span>I know my run threshold pace</span>
+        <button type="button" class="switch" [class.on]="data().knowsRunThreshold"
+          (click)="patch('knowsRunThreshold', !data().knowsRunThreshold)"><span></span></button>
+      </div>
+      @if (data().knowsRunThreshold) {
+        <label class="field-label">Run threshold pace (seconds per km)</label>
+        <input class="input" type="number" min="180" max="600" placeholder="e.g. 300"
+          [value]="data().runThresholdSecPerKm ?? ''"
+          (input)="patch('runThresholdSecPerKm', +$any($event.target).value || null)" />
+      }
+
       <p class="info-text">No zones yet? We'll use perceived effort (RPE) guidelines for now. You can add precise zones later in Settings.</p>
 
       <button type="button" class="btn-primary step-cta" (click)="next.emit()">Next</button>

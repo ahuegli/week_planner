@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Not, IsNull, Repository, Between } from 'typeorm';
 import { CalendarEvent } from './calendar-event.entity';
+import { PlannedSession } from '../planned-session/planned-session.entity';
 import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-event.dto';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class CalendarEventService {
   constructor(
     @InjectRepository(CalendarEvent)
     private readonly eventRepository: Repository<CalendarEvent>,
+    @InjectRepository(PlannedSession)
+    private readonly plannedSessionRepository: Repository<PlannedSession>,
   ) {}
 
   async findAllByUser(userId: string): Promise<CalendarEvent[]> {
@@ -145,7 +148,23 @@ export class CalendarEventService {
   }
 
   async replaceAll(userId: string, dtos: CreateCalendarEventDto[]): Promise<CalendarEvent[]> {
-    await this.removeAllByUser(userId);
+    // Protect calendar events linked to completed planned sessions — hard rule from CLAUDE.md.
+    const completedSessions = await this.plannedSessionRepository.find({
+      where: { userId, status: 'completed', linkedCalendarEventId: Not(IsNull()) },
+      select: ['linkedCalendarEventId'],
+    });
+    const protectedIds = completedSessions.map((s) => s.linkedCalendarEventId!);
+
+    if (protectedIds.length > 0) {
+      await this.eventRepository
+        .createQueryBuilder()
+        .delete()
+        .where('userId = :userId AND id NOT IN (:...protectedIds)', { userId, protectedIds })
+        .execute();
+    } else {
+      await this.eventRepository.delete({ userId });
+    }
+
     return this.createMany(userId, dtos);
   }
 

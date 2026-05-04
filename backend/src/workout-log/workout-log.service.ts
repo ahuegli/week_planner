@@ -43,4 +43,9 @@ export class WorkoutLogService {
     Object.assign(log, dto);
     return this.repo.save(log);
   }
+
+  async remove(id: string, userId: string): Promise<void> {
+    const log = await this.findOne(id, userId);
+    await this.repo.remove(log);
+  }
 }

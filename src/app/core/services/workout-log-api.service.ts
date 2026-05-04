@@ -29,4 +29,8 @@ export class WorkoutLogApiService {
   update(id: string, payload: UpdateWorkoutLogPayload): Observable<WorkoutLog> {
     return this.http.put<WorkoutLog>(`${API_BASE}/workout-logs/${id}`, payload);
   }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE}/workout-logs/${id}`);
+  }
 }

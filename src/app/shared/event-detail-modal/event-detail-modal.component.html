@@ -6,7 +6,7 @@
     class="modal-panel"
     role="dialog"
     aria-modal="true"
-    [attr.aria-label]="'Edit ' + activeEvent.title"
+    [attr.aria-label]="(isCreateMode() ? 'Create ' : 'Edit ') + activeEvent.title"
     (click)="$event.stopPropagation()"
   >
     <div class="modal-handle" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
     <header class="modal-header">
       <div>
         <p class="modal-kicker">{{ typeLabel() }}</p>
-        <h2 class="modal-title">Edit {{ activeEvent.title }}</h2>
+        <h2 class="modal-title">{{ isCreateMode() ? 'Create ' : 'Edit ' }}{{ activeEvent.title }}</h2>
       </div>
 
       <button type="button" class="modal-close" (click)="close()" aria-label="Close event editor">
@@ -101,7 +101,17 @@
 
           <label class="field">
             <span class="field-label">Session type</span>
-            <input class="field-input" type="text" formControlName="sessionType" />
+            <select class="field-input" formControlName="sessionType">
+              <option value="">Not set</option>
+              @for (opt of sessionTypeOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Notes (optional)</span>
+            <textarea class="field-input field-textarea" rows="3" placeholder="Address, prep, anything to remember..." formControlName="notes"></textarea>
           </label>
         </div>
       }
@@ -112,6 +122,11 @@
           <label class="field">
             <span class="field-label">Commute (min)</span>
             <input class="field-input" type="number" min="0" formControlName="commuteMinutes" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Notes (optional)</span>
+            <textarea class="field-input field-textarea" rows="3" placeholder="Address, prep, anything to remember..." formControlName="notes"></textarea>
           </label>
         </div>
       }
@@ -130,6 +145,11 @@
         <div class="type-section">
           <h3 class="section-title">Personal event</h3>
           <p class="section-copy">Adjust the title and time to keep this block aligned with the rest of your week.</p>
+
+          <label class="field">
+            <span class="field-label">Notes (optional)</span>
+            <textarea class="field-input field-textarea" rows="3" placeholder="Address, prep, anything to remember..." formControlName="notes"></textarea>
+          </label>
         </div>
       }
 
@@ -138,9 +158,24 @@
       }
 
       <div class="modal-actions">
-        <button type="button" class="delete-btn" (click)="requestDelete()">Delete</button>
-        <button type="submit" class="save-btn">Save changes</button>
+        @if (!isCreateMode()) {
+          <button type="button" class="delete-btn" (click)="requestDelete()">Delete</button>
+        }
+        <button type="submit" class="save-btn">{{ isCreateMode() ? 'Create event' : 'Save changes' }}</button>
       </div>
+
+      @if (canExportCalendar()) {
+        <div class="export-actions" aria-label="Export workout to calendar">
+          <button type="button" class="export-btn" (click)="exportCalendarDownload()">Export to calendar (.ics)</button>
+          <button type="button" class="export-copy-btn" (click)="exportCalendarCopy()" aria-label="Copy calendar text">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            <span>Copy</span>
+          </button>
+        </div>
+      }
     </form>
   </section>
   }

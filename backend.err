@@ -1,30 +1,26 @@
-(node:37192) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(node:31612) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:37192) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
-[31m[Nest] 37192  - [39m27.04.2026, 20:59:48 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 20:59:48 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:00:16 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:00:16 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:01:02 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:01:21 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:01:40 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:02:00 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
-[31m[Nest] 37192  - [39m27.04.2026, 21:02:19 [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31mread ECONNRESET[39m
-Error: read ECONNRESET
-    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)
+(node:31612) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+[31m[Nest] 31612  - [39m03.05.2026, 10:48:48 [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +1ms[39m
+node:net:1948
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at ExpressAdapter.listen (C:\Users\68023\Downloads\week_planner\backend\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at C:\Users\68023\Downloads\week_planner\backend\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (C:\Users\68023\Downloads\week_planner\backend\node_modules\@nestjs\core\nest-application.js:173:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async bootstrap (C:\Users\68023\Downloads\week_planner\backend\dist\main.js:27:5) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.14.0

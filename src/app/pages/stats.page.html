@@ -16,9 +16,36 @@
     </div>
   </header>
 
+  <div class="content-pad">
+    <div class="period-filter-strip" role="tablist" aria-label="Stats period">
+      <button
+        type="button"
+        class="period-filter-pill"
+        [class.selected]="selectedPeriod() === 'this-week'"
+        [attr.aria-selected]="selectedPeriod() === 'this-week'"
+        (click)="setPeriod('this-week')"
+      >
+        This week
+      </button>
+      <button
+        type="button"
+        class="period-filter-pill"
+        [class.selected]="selectedPeriod() === 'all-time'"
+        [attr.aria-selected]="selectedPeriod() === 'all-time'"
+        (click)="setPeriod('all-time')"
+      >
+        All time
+      </button>
+    </div>
+  </div>
+
   @if (loading()) {
 
     <div class="content-pad">
+      <div class="stats-number-skeletons">
+        <div class="skeleton skeleton-number-lg"></div>
+        <div class="skeleton skeleton-number-sm"></div>
+      </div>
       <div class="skeleton skeleton-streak"></div>
       <div class="skeleton skeleton-card"></div>
       <div class="skeleton skeleton-card"></div>
@@ -51,9 +78,9 @@
     }
 
     <!-- This Week -->
-    @if (summary(); as s) {
+    @if (selectedStats(); as selected) {
       <div class="content-pad">
-        <p class="section-label">This Week</p>
+        <p class="section-label">{{ selected.label }}</p>
         <div class="card this-week-card">
           <div class="ring-wrap">
             <svg viewBox="0 0 96 96" class="ring-svg" aria-hidden="true">
@@ -64,16 +91,16 @@
                       transform="rotate(-90 48 48)"/>
             </svg>
             <div class="ring-label">
-              <span class="ring-pct">{{ s.thisWeek.total > 0 ? (s.thisWeek.completed / s.thisWeek.total * 100 | number:'1.0-0') : 0 }}%</span>
+              <span class="ring-pct">{{ selected.completionRate }}%</span>
               <span class="ring-sub">done</span>
             </div>
           </div>
           <div class="this-week-detail">
-            <p class="tw-sessions">{{ s.thisWeek.completed }}/{{ s.thisWeek.total }} sessions</p>
-            @if (s.thisWeek.keySessionsTotal > 0) {
-              <p class="tw-key">{{ s.thisWeek.keySessionsHit }}/{{ s.thisWeek.keySessionsTotal }} key sessions</p>
+            <p class="tw-sessions">{{ selected.completed }}/{{ selected.total }} sessions</p>
+            @if (selected.keyTotal > 0) {
+              <p class="tw-key">{{ selected.keyCompleted }}/{{ selected.keyTotal }} key sessions</p>
             }
-            @if (s.currentPlan; as plan) {
+            @if (selectedPeriod() === 'this-week' && summary()?.currentPlan; as plan) {
               <p class="tw-plan">Week {{ plan.weekNumber }}/{{ plan.totalWeeks }} · {{ plan.phase | titlecase }}</p>
             }
           </div>
@@ -109,49 +136,53 @@
     }
 
     <!-- Completion Rate -->
-    @if (summary(); as s) {
+    @if (selectedStats(); as selected) {
       <div class="content-pad">
         <p class="section-label">Completion Rate</p>
         <div class="card rate-card">
           <div class="rate-main">
-            <span class="rate-pct" [style.color]="completionRateColor(s.completionRate, s.totalWorkoutsCompleted > 0)">{{ s.completionRate }}%</span>
-            <span class="rate-label">overall</span>
+            <span class="rate-pct" [style.color]="completionRateColor(selected.completionRate, selected.totalWorkoutsCompleted > 0)">{{ selected.completionRate }}%</span>
+            <span class="rate-label">{{ selected.label }}</span>
           </div>
           <div class="rate-rows">
             <div class="rate-row">
               <span class="rate-name">Key</span>
               <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.keyCompletionRate" [style.background]="completionRateColor(s.keyCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+                <div class="rate-bar-fill" [style.width.%]="selected.keyCompletionRate" [style.background]="completionRateColor(selected.keyCompletionRate, selected.totalWorkoutsCompleted > 0)"></div>
               </div>
-              <span class="rate-val">{{ s.keyCompletionRate }}%</span>
+              <span class="rate-val">{{ selected.keyCompletionRate }}%</span>
             </div>
-            <div class="rate-row">
-              <span class="rate-name">Supporting</span>
-              <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.supportingCompletionRate" [style.background]="completionRateColor(s.supportingCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+            @if (selected.supportingCompletionRate !== null) {
+              <div class="rate-row">
+                <span class="rate-name">Supporting</span>
+                <div class="rate-bar-wrap">
+                  <div class="rate-bar-fill" [style.width.%]="selected.supportingCompletionRate" [style.background]="completionRateColor(selected.supportingCompletionRate, selected.totalWorkoutsCompleted > 0)"></div>
+                </div>
+                <span class="rate-val">{{ selected.supportingCompletionRate }}%</span>
               </div>
-              <span class="rate-val">{{ s.supportingCompletionRate }}%</span>
-            </div>
-            <div class="rate-row">
-              <span class="rate-name">Optional</span>
-              <div class="rate-bar-wrap">
-                <div class="rate-bar-fill" [style.width.%]="s.optionalCompletionRate" [style.background]="completionRateColor(s.optionalCompletionRate, s.totalWorkoutsCompleted > 0)"></div>
+            }
+            @if (selected.optionalCompletionRate !== null) {
+              <div class="rate-row">
+                <span class="rate-name">Optional</span>
+                <div class="rate-bar-wrap">
+                  <div class="rate-bar-fill" [style.width.%]="selected.optionalCompletionRate" [style.background]="completionRateColor(selected.optionalCompletionRate, selected.totalWorkoutsCompleted > 0)"></div>
+                </div>
+                <span class="rate-val">{{ selected.optionalCompletionRate }}%</span>
               </div>
-              <span class="rate-val">{{ s.optionalCompletionRate }}%</span>
-            </div>
+            }
           </div>
           <div class="totals-row">
             <div class="total-chip">
-              <span class="total-num">{{ s.totalWorkoutsCompleted }}</span>
+              <span class="total-num">{{ selected.totalWorkoutsCompleted }}</span>
               <span class="total-lbl">workouts</span>
             </div>
             <div class="total-chip">
-              <span class="total-num">{{ formatDuration(s.totalDurationMinutes) }}</span>
+              <span class="total-num">{{ formatDuration(selected.totalDurationMinutes) }}</span>
               <span class="total-lbl">total time</span>
             </div>
-            @if (s.totalDistanceKm > 0) {
+            @if (selected.totalDistanceKm > 0) {
               <div class="total-chip">
-                <span class="total-num">{{ s.totalDistanceKm | number:'1.0-1' }} km</span>
+                <span class="total-num">{{ selected.totalDistanceKm | number:'1.0-1' }} km</span>
                 <span class="total-lbl">distance</span>
               </div>
             }
@@ -249,6 +280,88 @@
         }
       </div>
     </div>
+
+    <!-- Task Achievements -->
+    <div class="content-pad">
+      <p class="section-label">Task Achievements</p>
+      <div class="badges-scroll">
+        @for (badge of taskBadges(); track badge.id) {
+          <div class="badge-card" [class.earned]="badge.earned" (click)="toggleBadge(badge.id)">
+            <div class="badge-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path [attr.d]="badge.iconPath"/>
+              </svg>
+            </div>
+            <p class="badge-name">{{ badge.name }}</p>
+            @if (expandedBadgeId() === badge.id) {
+              <p class="badge-desc">{{ badge.description }}</p>
+              @if (badge.progress && !badge.earned) {
+                <p class="badge-progress">{{ badge.progress }}</p>
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Recently completed -->
+    @if (showRecentlyCompleted()) {
+      <div class="content-pad recent-completed-section">
+        <p class="section-label">Recently completed</p>
+        @if (recentCompletions().length > 0) {
+          <div class="recent-completed-list">
+            @for (item of recentCompletions(); track item.source + '-' + item.id) {
+              <button
+                type="button"
+                class="recent-completed-row"
+                (click)="openRecentCompletion(item)"
+                aria-label="Open {{ item.title }} in week view"
+              >
+                <span class="recent-icon" [attr.data-type]="item.activityType" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="1.6"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path [attr.d]="recentIconPath(item.activityType)"/>
+                  </svg>
+                </span>
+
+                <span class="recent-main">
+                  <span class="recent-title-row">
+                    <span class="recent-title">{{ item.title }}</span>
+                    @if (item.source === 'logged') {
+                      <span class="logged-badge">Logged</span>
+                    }
+                  </span>
+                  <span class="recent-meta-row">
+                    <span>{{ item.completedAtLabel }}</span>
+                    @if (item.durationMinutes) {
+                      <span>&middot; {{ formatDuration(item.durationMinutes) }}</span>
+                    }
+                    @if (item.distanceKm) {
+                      <span>&middot; {{ formatRecentDistance(item.distanceKm) }}</span>
+                    }
+                  </span>
+                </span>
+
+                <span class="recent-chevron" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="1.5"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 6 6 6-6 6"/>
+                  </svg>
+                </span>
+              </button>
+            }
+          </div>
+        } @else if (showRecentEmptyState()) {
+          <div class="card recent-empty-card">
+            <p class="empty-text">Your completed sessions will appear here</p>
+          </div>
+        }
+      </div>
+    }
 
     <!-- Motivational message -->
     @if (motivationalMessage()) {

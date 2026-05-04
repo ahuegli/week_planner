@@ -1,4 +1,15 @@
-import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateNoteDto {
   @IsString()
@@ -8,6 +19,10 @@ export class CreateNoteDto {
   @IsOptional()
   @IsString()
   body?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsOptional()
   @IsDateString()
@@ -25,6 +40,26 @@ export class CreateNoteDto {
   @IsOptional()
   @IsBoolean()
   wantsScheduling?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  parentNoteId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string;
+
+  @IsOptional()
+  @IsEnum(['not_started', 'in_progress', 'done'])
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done';
+
+  @IsOptional()
+  @IsEnum(['task', 'reminder'])
+  noteType?: 'task' | 'reminder';
+
+  @IsOptional()
+  @IsEnum(['quick_admin', 'long_admin', 'errand', 'deep_work', 'personal', 'other'])
+  taskCategory?: 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
 }
 
 export class UpdateNoteDto {
@@ -36,6 +71,10 @@ export class UpdateNoteDto {
   @IsOptional()
   @IsString()
   body?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsOptional()
   @IsDateString()
@@ -61,9 +100,34 @@ export class UpdateNoteDto {
   @IsOptional()
   @IsUUID()
   linkedCalendarEventId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  parentNoteId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string | null;
+
+  @IsOptional()
+  @IsEnum(['not_started', 'in_progress', 'done'])
+  subtaskStatus?: 'not_started' | 'in_progress' | 'done' | null;
+
+  @IsOptional()
+  @IsEnum(['task', 'reminder'])
+  noteType?: 'task' | 'reminder';
+
+  @IsOptional()
+  @IsEnum(['quick_admin', 'long_admin', 'errand', 'deep_work', 'personal', 'other'])
+  taskCategory?: 'quick_admin' | 'long_admin' | 'errand' | 'deep_work' | 'personal' | 'other';
 }
 
 export class ToggleCompleteDto {
   @IsBoolean()
   completed: boolean;
+}
+
+export class UpdateSubtaskStatusDto {
+  @IsEnum(['not_started', 'in_progress', 'done'])
+  status: 'not_started' | 'in_progress' | 'done';
 }

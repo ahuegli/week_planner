@@ -194,6 +194,38 @@
   padding-top: 6px;
 }
 
+.export-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-btn,
+.export-copy-btn {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-card) 92%, var(--color-primary) 8%);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.export-btn {
+  flex: 1;
+  padding: 0 14px;
+}
+
+.export-copy-btn {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .delete-btn,
 .save-btn {
   min-height: 46px;
@@ -238,6 +270,15 @@
   .modal-actions {
     flex-direction: column-reverse;
     align-items: stretch;
+  }
+
+  .export-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-copy-btn {
+    justify-content: center;
   }
 
   .delete-btn,

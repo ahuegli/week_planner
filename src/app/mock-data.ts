@@ -26,6 +26,8 @@ export interface CalendarEvent {
   distanceTarget?: number;
   status?: 'pending' | 'scheduled' | 'completed' | 'skipped' | 'moved';
   energyRating?: 'easy' | 'moderate' | 'hard';
+  loggedFromOffPlan?: boolean;
+  sourceWorkoutLogId?: string;
 }
 
 export const MOCK_SESSION_COACHING_NOTES: Record<string, string> = {

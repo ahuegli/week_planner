@@ -7,6 +7,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const useDatabase = process.env.USE_DATABASE !== 'false';
+  if (useDatabase && !process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
   console.log(`Running in ${useDatabase ? 'DATABASE' : 'MOCK'} mode`);
 
   app.enableCors({

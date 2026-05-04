@@ -70,6 +70,10 @@ export class CreateCalendarEventDto {
   @IsOptional()
   @IsString()
   linkedPriorSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdateCalendarEventDto {
@@ -146,4 +150,8 @@ export class UpdateCalendarEventDto {
   @IsOptional()
   @IsString()
   linkedPriorSessionId?: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

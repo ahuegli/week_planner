@@ -1,0 +1,127 @@
+@if (open()) {
+  <div class="ql-backdrop" (click)="close()"></div>
+
+  <div class="ql-modal" role="dialog" aria-modal="true" [attr.aria-label]="modalTitle()">
+    <div class="ql-header">
+      <h2 class="ql-title">{{ modalTitle() }}</h2>
+      <button type="button" class="ql-close" (click)="close()" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="ql-body">
+
+      <!-- Activity type (required) -->
+      <div class="ql-field">
+        <label class="ql-label" for="ql-activity">Activity</label>
+        <select id="ql-activity" class="ql-select"
+                [value]="activityType()"
+          [disabled]="isEditMode()"
+                (change)="setActivity($any($event.target).value)">
+          @for (type of sessionTypes; track type.value) {
+            <option [value]="type.value">{{ type.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Duration (required) -->
+      <div class="ql-field">
+        <label class="ql-label" for="ql-duration">Duration <span class="ql-unit">(minutes)</span></label>
+        <input id="ql-duration" type="number" class="ql-input" placeholder="e.g. 45"
+               min="1" max="600"
+               [value]="durationStr()"
+               (input)="durationStr.set($any($event.target).value)" />
+      </div>
+
+      <!-- Title (optional) -->
+      <div class="ql-field">
+        <label class="ql-label" for="ql-title">
+          Title <span class="ql-optional">(optional)</span>
+        </label>
+        <input id="ql-title" type="text" class="ql-input"
+               placeholder="Trail run, yoga class, etc."
+               maxlength="100"
+           [disabled]="isEditMode()"
+               [value]="titleStr()"
+               (input)="titleStr.set($any($event.target).value)" />
+      </div>
+
+      <!-- Distance (optional, run/swim/bike only) -->
+      @if (showDistance()) {
+        <div class="ql-field">
+          <label class="ql-label" for="ql-distance">
+            Distance <span class="ql-unit">(km)</span> <span class="ql-optional">(optional)</span>
+          </label>
+          <input id="ql-distance" type="number" class="ql-input" placeholder="e.g. 10.5"
+                 min="0" step="0.1"
+                 [value]="distanceStr()"
+                 (input)="distanceStr.set($any($event.target).value)" />
+        </div>
+      }
+
+      <!-- Energy (optional) -->
+      <div class="ql-field">
+        <span class="ql-label">Energy <span class="ql-optional">(optional)</span></span>
+        <div class="ql-energy-chips" role="group" aria-label="Energy level">
+          <button type="button" class="ql-energy-chip"
+                  [class.ql-energy-chip--easy]="energyRating() === 'easy'"
+                  (click)="setEnergy('easy')">Easy</button>
+          <button type="button" class="ql-energy-chip"
+                  [class.ql-energy-chip--moderate]="energyRating() === 'moderate'"
+                  (click)="setEnergy('moderate')">Moderate</button>
+          <button type="button" class="ql-energy-chip"
+                  [class.ql-energy-chip--hard]="energyRating() === 'hard'"
+                  (click)="setEnergy('hard')">Hard</button>
+        </div>
+      </div>
+
+      <!-- Notes (optional) -->
+      <div class="ql-field">
+        <label class="ql-label" for="ql-notes">Notes <span class="ql-optional">(optional)</span></label>
+        <textarea id="ql-notes" class="ql-textarea" placeholder="How did it feel?" rows="2"
+                  [value]="notesStr()"
+                  (input)="notesStr.set($any($event.target).value)"></textarea>
+      </div>
+
+      <!-- When -->
+      <div class="ql-field">
+        <label class="ql-label" for="ql-when">When</label>
+        <input id="ql-when" type="datetime-local" class="ql-input"
+           [disabled]="isEditMode()"
+               [value]="completedAtStr()"
+               (input)="completedAtStr.set($any($event.target).value)" />
+      </div>
+
+    </div>
+
+    <div class="ql-footer">
+      @if (isEditMode()) {
+        <button type="button" class="ql-btn-delete" [disabled]="isSaving()" (click)="deleteLog()">Delete</button>
+      }
+      <button type="button" class="ql-btn-cancel" (click)="close()">Cancel</button>
+      <button type="button" class="ql-btn-save"
+              [disabled]="!canSubmit()"
+              (click)="save()">
+        {{ isSaving() ? 'Saving…' : saveLabel() }}
+      </button>
+    </div>
+
+    @if (canExport()) {
+      <div class="ql-export-row" aria-label="Export logged workout to calendar">
+        <button type="button" class="ql-btn-export" (click)="exportCalendarDownload()">Export to calendar (.ics)</button>
+        <button type="button" class="ql-btn-export-copy" (click)="exportCalendarCopy()" aria-label="Copy calendar text">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>Copy</span>
+        </button>
+      </div>
+    }
+  </div>
+}

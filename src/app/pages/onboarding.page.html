@@ -47,20 +47,34 @@
         />
       }
       @case (5) {
-        <app-onboarding-step-availability
+        <app-onboarding-step-fitness
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
           (next)="nextStep()"
         />
       }
       @case (6) {
-        <app-onboarding-step-work
+        <app-onboarding-step-hours
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
           (next)="nextStep()"
         />
       }
       @case (7) {
+        <app-onboarding-step-availability
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (8) {
+        <app-onboarding-step-work
+          [data]="onboardingData()"
+          (dataChange)="patchData($event)"
+          (next)="nextStep()"
+        />
+      }
+      @case (9) {
         <app-onboarding-step-cycle
           [data]="onboardingData()"
           (dataChange)="patchData($event)"
@@ -68,7 +82,7 @@
           (next)="nextStep()"
         />
       }
-      @case (8) {
+      @case (10) {
         <app-onboarding-step-summary
           [data]="onboardingData()"
           [loading]="loading()"
@@ -78,4 +92,11 @@
       }
     }
   </main>
+
+  @if (loading()) {
+    <div class="generating-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div class="generating-spinner" aria-hidden="true"></div>
+      <p class="generating-text">Generating your plan...</p>
+    </div>
+  }
 </section>

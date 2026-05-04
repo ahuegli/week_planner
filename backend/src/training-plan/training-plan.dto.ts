@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, Min, ValidateIf } from 'class-validator';
 import { TrainingPlanMode, TrainingPlanStatus, TriathlonDistance } from './training-plan.entity';
 
 export class CreateTrainingPlanDto {
@@ -35,7 +35,7 @@ export class CreateTrainingPlanDto {
   @IsIn(['active', 'paused', 'completed'])
   status?: TrainingPlanStatus;
 
-  @IsOptional()
+  @ValidateIf(o => o.sportType === 'triathlon' || o.triathlonDistance != null)
   @IsIn(['sprint', 'olympic', '70_3', '140_6'])
   triathlonDistance?: TriathlonDistance;
 }
@@ -75,7 +75,7 @@ export class UpdateTrainingPlanDto {
   @IsIn(['active', 'paused', 'completed'])
   status?: TrainingPlanStatus;
 
-  @IsOptional()
+  @ValidateIf(o => o.sportType === 'triathlon' || o.triathlonDistance != null)
   @IsIn(['sprint', 'olympic', '70_3', '140_6'])
   triathlonDistance?: TriathlonDistance;
 }

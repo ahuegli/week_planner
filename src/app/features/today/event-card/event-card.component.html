@@ -4,7 +4,7 @@
   [class.is-brick]="brickLinked()"
   [style.--bar-color]="barColor()"
   role="article"
-  [attr.aria-label]="displayEvent().title"
+  [attr.aria-label]="displayTitle()"
 >
   <button
     type="button"
@@ -14,10 +14,17 @@
     (click)="canExpand() && toggleRequested.emit()"
   >
     <div class="summary-main">
-      <div class="event-time">{{ displayEvent().startTime }} — {{ displayEvent().endTime }}</div>
-
       <div class="event-header">
-        <span class="event-title">{{ displayEvent().title }}</span>
+        <span class="event-title">{{ displayTitle() }}</span>
+        @if (brickLinked()) {
+          <span class="brick-badge">
+            <svg class="brick-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <span>Brick</span>
+          </span>
+        }
         @if (event().linkedInvitationId) {
           <svg class="invite-icon" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="From invitation">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -52,12 +59,15 @@
         }
       </div>
 
+      @if (offBikeRun()) {
+        <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
+      }
+
+      <div class="event-time">{{ timeRangeLabel(displayEvent()) }}</div>
+
       @if (detailsText()) {
         <div class="event-details">
           <span class="details-text">{{ detailsText() }}</span>
-          @if (brickLinked()) {
-            <span class="brick-badge">Brick</span>
-          }
           @if (displayEvent().type === 'workout' && displayEvent().priority === 'key') {
             <span class="key-badge">Key</span>
           }
@@ -80,7 +90,7 @@
         @if (offBikeRun()) {
           <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
         }
-        <p class="detail-row"><span class="detail-label">Duration:</span> {{ displayEvent().duration || (durationHours() * 60) }} min</p>
+        <p class="detail-row"><span class="detail-label">Duration:</span> {{ roundedDisplayDuration(displayEvent()) }} min</p>
         @if (displayEvent().distanceTarget) {
           <p class="detail-row"><span class="detail-label">Distance:</span> {{ displayEvent().distanceTarget }} km</p>
         }

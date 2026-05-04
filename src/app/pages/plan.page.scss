@@ -149,6 +149,46 @@
   gap: 8px;
 }
 
+.plan-loading-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-loading-title {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.plan-loading-week,
+.plan-loading-row {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    color-mix(in srgb, var(--color-border) 50%, transparent) 50%,
+    var(--color-border) 75%
+  );
+  background-size: 220% 100%;
+  animation: plan-shimmer 1.5s ease-in-out infinite;
+}
+
+.plan-loading-week {
+  height: 78px;
+}
+
+.plan-loading-row {
+  height: 12px;
+}
+
+.plan-loading-row.short {
+  width: 68%;
+}
+
 .race-day-section {
   display: flex;
   flex-direction: column;
@@ -179,4 +219,13 @@
 .bottom-spacer {
   height: 100px;
   flex-shrink: 0;
+}
+
+@keyframes plan-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

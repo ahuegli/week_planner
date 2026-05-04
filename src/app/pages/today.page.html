@@ -3,7 +3,7 @@
   <!-- Header -->
   <header class="today-header">
     <div>
-      <h1 class="page-title">{{ selectedDayTitle() }}</h1>
+      <h1 class="page-title">{{ pageGreeting() }}</h1>
       <p class="page-subtitle">{{ formattedDate() }}</p>
     </div>
     <div class="header-actions">
@@ -53,11 +53,81 @@
     </div>
   }
 
+  <!-- Reminders due today -->
+  @if (remindersDueToday().length > 0) {
+    <div class="content-pad">
+      <p class="section-label">Due today</p>
+      <div class="reminders-list">
+        @for (reminder of remindersDueToday(); track reminder.id) {
+          <div class="reminder-card" [class.reminder-card--overdue]="reminder.dueDate! < todayDateString()">
+            <button type="button" class="reminder-card-body" (click)="navigateToNote(reminder)" aria-label="View reminder: {{ reminder.title }}">
+              <span class="reminder-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+              </span>
+              <span class="reminder-content">
+                <span class="reminder-title">{{ reminder.title }}</span>
+                @if (reminder.description) {
+                  <span class="reminder-desc">{{ reminder.description }}</span>
+                }
+                @if (reminder.dueTime) {
+                  <span class="reminder-time">{{ reminder.dueTime }}</span>
+                }
+                @if (reminder.dueDate! < todayDateString()) {
+                  <span class="reminder-overdue-label">Overdue</span>
+                }
+              </span>
+            </button>
+            <button
+              type="button"
+              class="reminder-complete-btn"
+              (click)="completeReminder(reminder)"
+              aria-label="Mark {{ reminder.title }} as complete">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   <!-- Your Day -->
   <div class="content-pad">
-    <p class="section-label">Your Day</p>
+    <div class="your-day-header">
+      <p class="section-label">Your Day</p>
+      <button type="button" class="log-workout-btn" (click)="openQuickLog()" aria-label="Log a workout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6.5 6.5 11 11"/><path d="m21 3-4 4"/><path d="m7 17-4 4"/>
+          <path d="m3 3 4 4"/><path d="m17 17 4 4"/>
+        </svg>
+        Log a workout
+      </button>
+    </div>
 
-    @if (hasAnyEvents()) {
+    @if (isLoading() && !hasLoaded()) {
+      <div class="today-skeleton-list" aria-busy="true" aria-live="polite">
+        <div class="today-skeleton-card">
+          <div class="today-skeleton-line wide"></div>
+          <div class="today-skeleton-line medium"></div>
+          <div class="today-skeleton-line short"></div>
+        </div>
+        <div class="today-skeleton-card">
+          <div class="today-skeleton-line wide"></div>
+          <div class="today-skeleton-line medium"></div>
+          <div class="today-skeleton-line short"></div>
+        </div>
+      </div>
+    } @else if (hasAnyEvents()) {
       @for (event of pastEvents(); track event.id) {
         <app-event-card
           [event]="event"
@@ -88,7 +158,55 @@
         />
       }
     } @else {
-      <p class="page-subtitle">Your day is clear — add a shift or workout to get started</p>
+      <div class="today-empty-state">
+        <p class="page-subtitle">Your day is clear — add a shift or workout to get started</p>
+        <div class="empty-affordance-chips" role="group" aria-label="Quick add actions">
+          <button type="button" class="affordance-chip" (click)="openQuickCreate('workout')" aria-label="Add workout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6.5 6.5 11 11"/>
+              <path d="m21 3-4 4"/>
+              <path d="m7 17-4 4"/>
+              <path d="m3 3 4 4"/>
+              <path d="m17 17 4 4"/>
+            </svg>
+            <span>+ Workout</span>
+          </button>
+
+          <button type="button" class="affordance-chip" (click)="openTaskCreate()" aria-label="Add task">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <path d="m9 11 3 3 5-5"/>
+            </svg>
+            <span>+ Task</span>
+          </button>
+
+          <button type="button" class="affordance-chip" (click)="openQuickCreate('shift')" aria-label="Add shift">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v16"/>
+            </svg>
+            <span>+ Shift</span>
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (todayOffPlanLogs().length > 0) {
+      <div class="logged-today-section">
+        @for (log of todayOffPlanLogs(); track log.id) {
+          <button type="button" class="logged-card" (click)="editLoggedWorkout(log)">
+            <div class="logged-card-main">
+              <div class="logged-card-title-row">
+                <span class="logged-title">{{ log.title || labelForType(log.sessionType) }}</span>
+                <span class="logged-badge">Logged</span>
+              </div>
+              @if (formatLogMeta(log); as meta) {
+                <span class="logged-meta">{{ meta }}</span>
+              }
+            </div>
+          </button>
+        }
+      </div>
     }
   </div>
 
@@ -120,14 +238,86 @@
   </div>
 
   <!-- Daily tip -->
-  <div class="content-pad">
-    <app-daily-tip-card [tip]="tip" />
-  </div>
+  @if (showCycleAwareTip()) {
+    <div class="content-pad">
+      <app-daily-tip-card [tip]="tip" />
+    </div>
+  }
 
   <!-- Did You Know -->
   <div class="content-pad">
     <app-did-you-know [card]="didYouKnow" />
   </div>
+
+  <div class="content-pad">
+    <article class="tomorrow-preview" [class.is-actionable]="!!tomorrowFirstWorkout()">
+      <p class="section-label">Tomorrow</p>
+
+      @if (tomorrowFirstWorkout(); as workout) {
+        <button type="button" class="tomorrow-preview-btn" (click)="openTomorrowInWeekView()">
+          <p class="tomorrow-title">{{ workout.title }}</p>
+          @if (previewMeta(workout); as meta) {
+            <p class="tomorrow-meta">{{ meta }}</p>
+          }
+          <p class="tomorrow-time">{{ workout.startTime }} — {{ workout.endTime }}</p>
+          @if (tomorrowAdditionalCount() > 0) {
+            <p class="tomorrow-more">+ {{ tomorrowAdditionalCount() }} more</p>
+          }
+        </button>
+      } @else {
+        <p class="tomorrow-empty">Free day tomorrow — rest up.</p>
+      }
+    </article>
+  </div>
+
+  @if (recapShouldRender()) {
+    <div class="recap-overlay" [class.is-visible]="recapIsVisible()" [class.is-leaving]="recapIsLeaving()" role="dialog" aria-modal="true" aria-labelledby="day-recap-title">
+      <article class="recap-panel">
+        <h2 id="day-recap-title" class="recap-title">Your day</h2>
+
+        <section class="recap-section">
+          <p class="recap-section-label">Completed today</p>
+          <div class="recap-stat-row">
+            <span class="recap-stat-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6.5 6.5 11 11"/><path d="m21 3-4 4"/><path d="m7 17-4 4"/>
+                <path d="m3 3 4 4"/><path d="m17 17 4 4"/>
+              </svg>
+            </span>
+            <span>{{ recapCompletedWorkoutsCount() }} workout{{ recapCompletedWorkoutsCount() === 1 ? '' : 's' }} completed</span>
+          </div>
+          <div class="recap-stat-row">
+            <span class="recap-stat-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </span>
+            <span>{{ recapCompletedTasksCount() }} task{{ recapCompletedTasksCount() === 1 ? '' : 's' }} completed</span>
+          </div>
+          @if (recapWorkoutDurationMinutes() > 0) {
+            <p class="recap-duration">Workout time: {{ recapDurationLabel() }}</p>
+          }
+        </section>
+
+        <p class="recap-streak">
+          <span class="recap-streak-icon" aria-hidden="true">🔥</span>
+          @if (recapStreakDays() === 1) {
+            <span>Streak started today</span>
+          } @else {
+            <span>Streak: {{ recapStreakDays() }} days</span>
+          }
+        </p>
+
+        <section class="recap-section recap-tomorrow">
+          <p class="recap-section-label">Tomorrow</p>
+          <p class="recap-tomorrow-text">{{ recapTomorrowSummary() }}</p>
+        </section>
+
+        <button type="button" class="recap-cta" (click)="dismissRecap()">Got it</button>
+      </article>
+    </div>
+  }
 
   <!-- Spacer for fixed buttons + tab bar -->
   <div class="bottom-spacer"></div>
@@ -135,3 +325,18 @@
 
 <!-- Fixed bottom actions + sheet -->
 <app-i-have-time [selectedDate]="selectedDateString()" />
+
+<app-event-detail-modal
+  [open]="quickCreateOpen()"
+  [event]="quickCreateDraft()"
+  mode="create"
+  (closeRequested)="closeQuickCreate()"
+  (saveRequested)="saveQuickCreate($event)"
+/>
+
+<app-quick-log-modal
+  [open]="quickLogOpen()"
+  [logToEdit]="editingWorkoutLog()"
+  (closeRequested)="closeQuickLog()"
+  (logSaved)="onLogSaved($event)"
+/>

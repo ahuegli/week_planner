@@ -102,6 +102,12 @@ export class UpdateSchedulerSettingsDto {
   cssSecondsPer100m?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(180)
+  @Max(600)
+  runThresholdSecPerKm?: number;
+
+  @IsOptional()
   @IsIn(['25m', '50m', 'open_water', 'pool_and_open_water', 'none'])
   poolAccess?: string;
 
@@ -122,4 +128,14 @@ export class UpdateSchedulerSettingsDto {
   @IsOptional()
   @IsIn(['traditional', 'reverse'])
   periodisationOverride?: string;
+
+  @IsOptional()
+  @IsIn(['novice', 'beginner', 'intermediate', 'advanced'])
+  level?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(40)
+  weeklyHours?: number;
 }

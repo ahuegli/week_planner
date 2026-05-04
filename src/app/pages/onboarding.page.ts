@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ActivatedRoute, Router } from '@angular/router';
 import { OnboardingStepAvailabilityComponent } from '../features/onboarding/onboarding-step-availability.component';
 import { OnboardingStepCycleComponent } from '../features/onboarding/onboarding-step-cycle.component';
+import { OnboardingStepFitnessComponent } from '../features/onboarding/onboarding-step-fitness.component';
 import { OnboardingStepGoalComponent } from '../features/onboarding/onboarding-step-goal.component';
+import { OnboardingStepHoursComponent } from '../features/onboarding/onboarding-step-hours.component';
 import { OnboardingStepSportComponent } from '../features/onboarding/onboarding-step-sport.component';
 import { OnboardingStepSummaryComponent } from '../features/onboarding/onboarding-step-summary.component';
 import { OnboardingStepTriathlonComponent } from '../features/onboarding/onboarding-step-triathlon.component';
@@ -20,6 +22,8 @@ import { PlanMode } from '../core/models/app-data.models';
     OnboardingStepGoalComponent,
     OnboardingStepSportComponent,
     OnboardingStepTriathlonComponent,
+    OnboardingStepFitnessComponent,
+    OnboardingStepHoursComponent,
     OnboardingStepAvailabilityComponent,
     OnboardingStepWorkComponent,
     OnboardingStepCycleComponent,
@@ -40,8 +44,10 @@ export class OnboardingPageComponent {
   protected readonly onboardingData = signal<OnboardingData>(DEFAULT_ONBOARDING_DATA);
 
   protected readonly isTriathlonPlan = computed(() => this.onboardingData().triathlonDistance !== '');
-  protected readonly totalSteps = computed(() => this.isTriathlonPlan() ? 8 : 7);
-  protected readonly stepDots = computed(() => Array.from({ length: this.totalSteps() }, (_, i) => i + 1));
+  // Step 4 (triathlon) is only shown for triathlon plans; steps 1-10 are the full sequence.
+  // visibleStepCount drives the dot display; navigation caps at step 10 for both paths.
+  private readonly visibleStepCount = computed(() => this.isTriathlonPlan() ? 10 : 9);
+  protected readonly stepDots = computed(() => Array.from({ length: this.visibleStepCount() }, (_, i) => i + 1));
 
   constructor() {
     const goal = this.route.snapshot.queryParamMap.get('goal');
@@ -66,7 +72,7 @@ export class OnboardingPageComponent {
     if (next === 4 && !this.isTriathlonPlan()) {
       this.currentStep.set(5);
     } else {
-      this.currentStep.set(Math.min(this.totalSteps(), next));
+      this.currentStep.set(Math.min(10, next));
     }
   }
 
@@ -80,7 +86,7 @@ export class OnboardingPageComponent {
   }
 
   protected goToStep(step: number): void {
-    this.currentStep.set(Math.min(this.totalSteps(), Math.max(1, step)));
+    this.currentStep.set(Math.min(10, Math.max(1, step)));
   }
 
   protected skipCycleStep(): void {
@@ -97,66 +103,74 @@ export class OnboardingPageComponent {
   protected async generatePlan(): Promise<void> {
     this.loading.set(true);
 
-    const data = this.onboardingData();
-    const isTriathlon = this.isTriathlonPlan();
-    const mode = this.resolvePlanMode(data.goal);
+    try {
+      const data = this.onboardingData();
+      const isTriathlon = this.isTriathlonPlan();
+      const mode = this.resolvePlanMode(data.goal);
 
-    await this.persistOnboardingShifts(data);
+      await this.persistOnboardingShifts(data);
 
-    const createdPlan = await this.dataStore.createPlan({
-      mode,
-      sportType: this.resolveSportType(data),
-      goalDate: (isTriathlon && data.isGeneralTriTraining) ? undefined : (data.raceDate || undefined),
-      goalDistance: data.raceEvent || undefined,
-      goalTime: data.targetTime || undefined,
-      ...(isTriathlon
-        ? { triathlonDistance: data.triathlonDistance as 'sprint' | 'olympic' | '70_3' | '140_6', totalWeeks: 0 }
-        : { totalWeeks: mode === 'race' ? 12 : 8 }),
-      currentWeek: 1,
-      status: 'active',
-    });
+      const createdPlan = await this.dataStore.createPlan({
+        mode,
+        sportType: this.resolveSportType(data),
+        goalDate: (isTriathlon && data.isGeneralTriTraining) ? undefined : (data.raceDate || undefined),
+        goalDistance: data.raceEvent || undefined,
+        goalTime: data.targetTime || undefined,
+        ...(isTriathlon
+          ? { triathlonDistance: data.triathlonDistance as 'sprint' | 'olympic' | '70_3' | '140_6', totalWeeks: 0 }
+          : { totalWeeks: mode === 'race' ? 12 : 8 }),
+        currentWeek: 1,
+        status: 'active',
+      });
 
-    if (!createdPlan) {
-      this.loading.set(false);
-      return;
-    }
+      if (!createdPlan) {
+        return;
+      }
 
-    if (isTriathlon) {
+      if (isTriathlon) {
+        await this.dataStore.updateSchedulerSettings({
+          triathlonsCompleted: data.triathlonsCompleted,
+          endurancePedigree: data.endurancePedigree,
+          poolAccess: data.poolAccess,
+          hasPowerMeter: data.hasPowerMeter,
+          ftpWatts: data.knowsFtp ? data.ftpWatts : null,
+          lthrBpm: data.knowsLthr ? data.lthrBpm : null,
+          cssSecondsPer100m: data.knowsCss ? data.cssSecondsPer100m : null,
+          runThresholdSecPerKm: data.knowsRunThreshold ? data.runThresholdSecPerKm : null,
+        });
+        // generate-plan handles both template generation and scheduling for triathlon
+        await this.dataStore.scheduleEntirePlan(createdPlan.id);
+      } else {
+        await this.dataStore.generatePlanTemplate(createdPlan.id);
+        await this.dataStore.scheduleEntirePlan(createdPlan.id);
+      }
+
       await this.dataStore.updateSchedulerSettings({
-        triathlonsCompleted: data.triathlonsCompleted,
-        endurancePedigree: data.endurancePedigree,
-        poolAccess: data.poolAccess,
-        hasPowerMeter: data.hasPowerMeter,
-        ftpWatts: data.knowsFtp ? data.ftpWatts : null,
-        lthrBpm: data.knowsLthr ? data.lthrBpm : null,
-        cssSecondsPer100m: data.knowsCss ? data.cssSecondsPer100m : null,
+        level: data.fitnessLevel ?? null,
+        weeklyHours: data.weeklyHours ?? null,
       });
-      // generate-plan handles both template generation and scheduling for triathlon
-      await this.dataStore.scheduleEntirePlan(createdPlan.id);
-    } else {
-      await this.dataStore.generatePlanTemplate(createdPlan.id);
-      await this.dataStore.scheduleEntirePlan(createdPlan.id);
+
+      await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
+      if (data.cycleEnabled) {
+        const cycleBackendData = this.mapCycleStatusToBackendMode(data.cycleStatus);
+        await this.dataStore.updateCycleProfile({
+          mode: cycleBackendData.mode,
+          variability: cycleBackendData.variability,
+          averageCycleLength: data.cycleLength,
+          lastPeriodStart: data.lastPeriodDate || null,
+        });
+      }
+
+      this.sharedCycleTrackingEnabled.set(data.cycleEnabled);
+
+      if (!this.dataStore.currentPlan()) {
+        return;
+      }
+
+      await this.router.navigateByUrl('/plan');
+    } finally {
+      this.loading.set(false);
     }
-
-    await this.dataStore.updateSchedulerSettings({ cycleTrackingEnabled: data.cycleEnabled });
-    if (data.cycleEnabled) {
-      const cycleBackendData = this.mapCycleStatusToBackendMode(data.cycleStatus);
-      await this.dataStore.updateCycleProfile({
-        mode: cycleBackendData.mode,
-        variability: cycleBackendData.variability,
-        averageCycleLength: data.cycleLength,
-        lastPeriodStart: data.lastPeriodDate || null,
-      });
-    }
-
-    this.sharedCycleTrackingEnabled.set(data.cycleEnabled);
-    this.loading.set(false);
-
-    if (!this.dataStore.currentPlan()) {
-      return;
-    }
-
-    await this.router.navigateByUrl('/plan');
   }
 
   private mapCycleStatusToBackendMode(status: CycleStatus): {

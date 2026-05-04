@@ -7,10 +7,26 @@ export interface WorkoutDescription {
 
 type DescriptionPhase = PlanPhase | 'any';
 
-type SessionDescriptions = Partial<Record<DescriptionPhase, WorkoutDescription>>;
+type DurationBucket = 'short' | 'medium' | 'long' | 'very_long';
+
+type DurationBuckets = Partial<Record<DurationBucket, WorkoutDescription>>;
+
+type SessionDescriptions = Partial<Record<DescriptionPhase, WorkoutDescription>> & {
+  byDuration?: DurationBuckets;
+};
+
+function getDurationBucket(minutes: number, thresholds: { medium: number; long: number; very_long?: number }): DurationBucket {
+  if (minutes >= (thresholds.very_long ?? Infinity)) return 'very_long';
+  if (minutes >= thresholds.long) return 'long';
+  if (minutes >= thresholds.medium) return 'medium';
+  return 'short';
+}
 
 const WEIGHT_LOSS_NOTE =
   'Weight loss mode: keep this mostly moderate and sustainable for 40+ minutes when possible to maximize fat-burning while preserving recovery.';
+
+const TRIATHLON_CONTEXT_NOTE =
+  'Triathlon context: keep execution controlled and do not add extra intensity outside the prescribed session focus.';
 
 const ENDURANCE_SESSION_KEYS = new Set<string>([
   'easy_run',
@@ -35,209 +51,329 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
   easy_run: {
     base: {
       whatToDo:
-        'Run at a comfortable pace where you can hold a full conversation. No need to push - this is active recovery.',
-      whyItHelps: 'Builds aerobic base and aids recovery between harder sessions.',
+        'Run at easy aerobic effort (RPE 3-4) where full sentences stay comfortable. Keep stride relaxed and cadence smooth.',
+      whyItHelps: 'Builds aerobic capacity and capillary density while keeping recovery cost low.',
     },
     build: {
       whatToDo:
-        "Easy pace, stay relaxed. If you feel good, add 5 minutes but don't increase pace.",
-      whyItHelps: 'Maintains fitness between speed work sessions without adding fatigue.',
+        'Stay easy (RPE 3-4) and clearly below threshold pace. If prescribed, add a little duration but keep effort unchanged.',
+      whyItHelps: 'Supports recovery between quality days and preserves running economy without adding high stress.',
     },
     taper: {
-      whatToDo: 'Short and easy. Keep your legs moving without any effort.',
+      whatToDo: 'Keep this short and easy at RPE 2-3. Finish feeling fresh, not worked.',
       whyItHelps:
-        'Keeps muscles active while your body absorbs the training from previous weeks.',
+        'Maintains neuromuscular rhythm while fatigue drops before race day.',
+    },
+    byDuration: {
+      short: {
+        whatToDo:
+          'Keep it conversational at RPE 2-3. If breathing drifts up, slow down immediately.',
+        whyItHelps:
+          'Short easy runs reduce stiffness and improve blood flow with minimal recovery demand.',
+      },
+      medium: {
+        whatToDo:
+          'Run steady at RPE 3-4, fully conversational throughout. Keep form tall and relaxed in the final third.',
+        whyItHelps:
+          'This duration improves aerobic efficiency while still allowing quality work later in the week.',
+      },
+      long: {
+        whatToDo:
+          'Treat this as an extended aerobic run at RPE 3-4. Fuel and hydrate if duration goes beyond about 60 minutes, and keep pace controlled.',
+        whyItHelps:
+          'Extended easy running improves fat oxidation and durability without the musculoskeletal cost of hard sessions.',
+      },
     },
   },
   long_run: {
     base: {
       whatToDo:
-        'Steady, easy pace for the full duration. Walk breaks are fine. Stay hydrated.',
+        'Run easy and steady (RPE 3-4) for the full duration. Walk breaks are acceptable if they keep effort controlled.',
       whyItHelps:
-        'Teaches your body to burn fat efficiently and builds endurance for race distance.',
+        'Builds aerobic durability and fat-oxidation capacity, which underpin race-distance performance.',
     },
     build: {
       whatToDo:
-        'Start easy, finish at a comfortable rhythm. Practice your race-day nutrition if over 75 minutes.',
+        'Start controlled, then hold steady aerobic effort. If prescribed, finish with a short race-pace segment and practice fueling for runs over about 75 minutes.',
       whyItHelps:
-        'Builds the specific endurance you need on race day. This is your most important session.',
+        'Builds race-specific endurance and fueling execution under fatigue.',
     },
     peak: {
       whatToDo:
-        'Your longest run of the plan. Keep pace easy - distance matters more than speed today.',
-      whyItHelps: 'Confidence builder - after this, your body is ready for race distance.',
+        'This is your key long-run rehearsal. Keep most of it easy, control pacing early, and execute race-day fueling exactly as planned.',
+      whyItHelps: 'Converts fitness into race readiness by rehearsing pacing, fueling, and late-run durability.',
     },
     taper: {
-      whatToDo: 'Shorter than recent weeks. Easy pace, enjoy the run.',
-      whyItHelps: 'Maintains fitness while allowing full recovery before race day.',
+      whatToDo: 'Reduced long run at easy effort with no hard finish unless explicitly prescribed. Keep cadence smooth and stop with reserve.',
+      whyItHelps: 'Maintains endurance signal while reducing fatigue before race week.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Keep this aerobic and controlled (RPE 3-4) with even pacing. Add a brief controlled lift only if the plan calls for it.',
+        whyItHelps:
+          'Builds endurance and pacing discipline without the recovery load of very long runs.',
+      },
+      long: {
+        whatToDo:
+          'Treat this as core endurance work: mostly Z2 or RPE 3-4, with fueling started early and repeated consistently. Keep effort conservative through the first 75%.',
+        whyItHelps:
+          'Improves glycogen management, fat metabolism, and muscular resilience for late-race performance.',
+      },
+      very_long: {
+        whatToDo:
+          'This is peak long-run territory. Keep effort easy early, fuel on schedule, and hold form through the final quarter rather than forcing pace.',
+        whyItHelps:
+          'Builds maximal race-specific durability and confidence under controlled fatigue.',
+      },
     },
   },
   cardio_run: {
     base: {
       whatToDo:
-        'Steady aerobic run at an easy to moderate pace. Keep breathing controlled and effort conversational.',
+        'Run continuously at steady aerobic effort (RPE 4-5), below threshold pace. Breathing should stay controlled in short phrases.',
       whyItHelps:
-        'Builds aerobic capacity and general cardiovascular fitness without overloading recovery.',
+        'Improves aerobic throughput and movement economy without high lactate accumulation.',
     },
     build: {
       whatToDo:
-        'Sustain a smooth moderate effort from start to finish. Keep form tall and relaxed.',
+        'Hold smooth moderate effort near LT1 (roughly RPE 5-6), with stable cadence and posture throughout.',
       whyItHelps:
-        'Improves cardio endurance and movement economy for longer sessions in later weeks.',
+        'Raises aerobic threshold so you can hold faster paces before fatigue rises sharply.',
     },
     any: {
       whatToDo:
-        'Run continuously at a sustainable effort where you can still speak in short sentences.',
+        'Sustain a controlled aerobic effort where short phrases are possible but casual chatting is limited.',
       whyItHelps:
-        'Consistent aerobic work improves heart, lung, and muscular endurance over time.',
+        'Develops heart, lung, and muscular endurance needed for longer steady sessions.',
     },
   },
   tempo_run: {
     build: {
       whatToDo:
-        'Warm up 10 min easy, then run at a pace you could sustain for 40 minutes - comfortably hard, about 7/10 effort. Cool down 5 min.',
+        'Warm up easy, then run at threshold-tempo effort: around run-threshold pace minus a small margin, or RPE 7-8 if no pace anchor. Cool down easy.',
       whyItHelps:
-        'Improves your lactate threshold - the fastest pace you can sustain without burning out.',
+        'Raises lactate threshold so race pace feels more sustainable for longer.',
     },
     peak: {
       whatToDo:
-        'Same structure as build phase but at a slightly faster pace. Focus on maintaining form when tired.',
-      whyItHelps: 'Sharpens race-pace fitness in the final push before taper.',
+        'Use race-specific tempo blocks near threshold pace (or RPE 7-8) with strict form control in the final reps. Keep recovery jogs short and purposeful.',
+      whyItHelps: 'Sharpens race-pace durability and tolerance to sustained discomfort before taper.',
     },
   },
   intervals_run: {
     build: {
       whatToDo:
-        'Warm up 10 min, then alternate fast efforts (2-4 min at 8/10 effort) with equal recovery jogs. Repeat 4-6 times. Cool down 10 min.',
-      whyItHelps: "Boosts VO2max - your body's ability to use oxygen at high intensity.",
+        'Warm up thoroughly, then run 2-5 minute reps at 5K to 3K effort (RPE 8-9) with equal jog recovery. Keep pace consistent across reps.',
+      whyItHelps: 'Improves VO2max and high-end aerobic power needed for faster race pace.',
     },
     peak: {
       whatToDo:
-        'Slightly faster and longer intervals than build phase. Focus on controlled breathing and strong form.',
-      whyItHelps: 'Peak speed work before taper - this is where race-day sharpness comes from.',
+        'Use fewer high-quality reps at slightly faster pace than build phase, with full control of mechanics. Stop before pace falls off.',
+      whyItHelps: 'Maintains top-end speed and neuromuscular sharpness with manageable fatigue.',
     },
   },
   hill_reps_run: {
     build: {
       whatToDo:
-        'Warm up easy, then run hard uphill for 60-120 seconds, jog down to recover, and repeat 6-10 times.',
+        'Warm up well, then run 60-120 second uphill reps at hard controlled effort (RPE 8) with easy jog-down recovery. Drive arms and keep posture tall.',
       whyItHelps: 'Builds running power, economy, and form under fatigue for rolling courses.',
     },
     peak: {
       whatToDo:
-        'Fewer reps at high quality. Stay smooth and controlled, especially in the final reps.',
+        'Reduce rep count and keep quality high. Hit each climb with strong mechanics, then recover fully before the next rep.',
       whyItHelps: 'Keeps speed and strength sharp without adding too much fatigue before taper.',
     },
   },
   easy_ride: {
     base: {
       whatToDo:
-        'Spin at a comfortable cadence (80-90 rpm). Zone 2 effort - you can chat easily. Flat terrain or gentle hills.',
-      whyItHelps: 'Builds aerobic engine and pedaling efficiency without fatigue.',
+        'Ride steady in Z2 at comfortable cadence (about 80-95 rpm). If using power, stay around 56-75% FTP; otherwise use easy conversational effort.',
+      whyItHelps: 'Builds aerobic base and pedaling economy with low orthopedic load.',
     },
     build: {
-      whatToDo: 'Easy spin, focus on smooth pedal stroke. Keep heart rate low.',
-      whyItHelps: 'Active recovery between harder sessions.',
+      whatToDo: 'Keep this an easy aerobic spin in low Z2 with relaxed cadence and no hard surges.',
+      whyItHelps: 'Supports recovery between hard sessions while maintaining bike-specific aerobic volume.',
+    },
+    byDuration: {
+      short: {
+        whatToDo:
+          'Short recovery spin in low Z2, smooth cadence, and no hard efforts. Keep breathing easy throughout.',
+        whyItHelps:
+          'Improves circulation and helps clear residual fatigue without compromising tomorrow sessions.',
+      },
+      medium: {
+        whatToDo:
+          'Steady aerobic ride in Z2 with smooth cadence and controlled power. Hydrate consistently and add light fuel if nearing an hour.',
+        whyItHelps:
+          'Consistent Z2 riding improves mitochondrial function and aerobic durability on the bike.',
+      },
+      long: {
+        whatToDo:
+          'Extended Z2 ride with strict pacing discipline and regular fueling and hydration. Keep effort capped so power and heart rate stay aerobic.',
+        whyItHelps:
+          'Builds endurance metabolism and fueling habits critical for longer triathlon and cycling sessions.',
+      },
     },
   },
   long_ride: {
     base: {
       whatToDo:
-        'Steady endurance ride. Pack nutrition for rides over 90 min. Stay in zone 2, practice eating and drinking on the bike.',
+        'Ride mostly Z2 (about 56-75% FTP or easy-moderate HR) with even output and no spikes. Practice drinking and eating on schedule once rides get longer.',
       whyItHelps:
-        'Builds the time-in-saddle endurance that cycling demands. Your body learns to fuel while riding.',
+        'Builds time-in-saddle endurance and trains gut tolerance for race fueling.',
     },
     build: {
       whatToDo:
-        'Include some rolling hills but keep overall effort moderate. Practice race nutrition strategy.',
+        'Keep most of the ride aerobic, adding controlled race-pace segments where prescribed (often upper Z2 to low Z3). Execute nutrition exactly as planned.',
       whyItHelps:
-        'Builds race-specific endurance and teaches your body to handle varied terrain.',
+        'Builds race-specific bike durability while rehearsing pacing and fueling under fatigue.',
     },
     peak: {
       whatToDo:
-        'Longest ride of the plan. Moderate effort, focus on nutrition and hydration. Simulate race conditions if possible.',
-      whyItHelps: 'Confidence builder - proves your body can handle the distance.',
+        'Key race-rehearsal ride: control early pacing, hold target race zones, and practice full hydration and fueling strategy. Keep intensity disciplined.',
+      whyItHelps: 'Confirms race execution strategy and extends fatigue resistance at event-specific demands.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Steady endurance ride in Z2 with brief low-Z3 blocks only if prescribed. Hold smooth cadence and avoid surges over target.',
+        whyItHelps:
+          'Builds aerobic bike durability and prepares you for longer weekend sessions.',
+      },
+      long: {
+        whatToDo:
+          'Long endurance ride with consistent Z2 pacing, structured fueling, and controlled climbs. Add race-pace blocks only where planned.',
+        whyItHelps:
+          'Develops cycling-specific endurance, fatigue resistance, and race-day fueling reliability.',
+      },
+      very_long: {
+        whatToDo:
+          'Very long ride with strict pacing and full race fueling rehearsal. Practice gear setup, position comfort, and intake timing exactly as you plan to race.',
+        whyItHelps:
+          'Builds maximal bike endurance and execution confidence for long-course events.',
+      },
     },
   },
   tempo_ride: {
     build: {
       whatToDo:
-        'Warm up 15 min easy, then ride at a sustained hard effort (sweet spot, zone 3-4) for 20-30 min. Cool down 10 min.',
+        'Warm up, then ride sustained tempo and sweet-spot work around 76-90% FTP (or RPE 6-7 without power) with smooth cadence. Cool down easy.',
       whyItHelps:
-        'Builds your functional threshold power - the effort you can sustain for an hour.',
+        'Raises functional threshold and muscular endurance with lower recovery cost than all-out interval work.',
     },
   },
   intervals_ride: {
     build: {
       whatToDo:
-        'Warm up 15 min. Do 4-6 intervals of 3-5 min at zone 4-5 with 3 min easy spinning between. Cool down 10 min.',
+        'Warm up fully, then complete 3-5 minute reps at about 91-120% FTP (or RPE 8-9) with easy spin recoveries. Keep power and cadence steady rep to rep.',
       whyItHelps:
-        'Increases VO2max on the bike - your ceiling for sustained hard efforts.',
+        'Improves VO2max and high-power repeatability for climbs, surges, and race efforts.',
     },
   },
   hill_reps_ride: {
     build: {
       whatToDo:
-        'Find a steep hill (6-10% gradient). Ride hard up for 2-3 minutes, coast down to recover. Repeat 5-8 times.',
-      whyItHelps: 'Builds climbing power and mental toughness for hilly events.',
+        'Use a moderate-to-steep climb and ride 2-4 minute uphill reps at hard controlled effort, recovering fully on the descent. Stay seated for most reps unless terrain requires standing.',
+      whyItHelps: 'Builds climbing-specific force and aerobic power while improving pacing under gradient changes.',
     },
   },
   easy_swim: {
     base: {
       whatToDo:
-        'Continuous swimming at a comfortable pace. Focus on technique: long strokes, relaxed breathing, streamlined body position.',
+        'Swim easy continuous aerobic pace with relaxed breathing and long strokes. Keep effort around CSS +10 to +15 sec/100m, or easy RPE if untested.',
       whyItHelps:
-        'Swimming efficiency matters more than fitness. Good technique at easy pace transfers to faster swimming.',
+        'Builds aerobic swim capacity while reinforcing efficient mechanics at low fatigue cost.',
     },
     build: {
       whatToDo:
-        'Easy continuous swim. Mix in 100m of backstroke or drill work every 400m to stay loose.',
-      whyItHelps: 'Maintains feel for the water between harder sessions.',
+        'Keep this recovery-aerobic and smooth. Add short drill segments to maintain catch and body-line quality.',
+      whyItHelps: 'Maintains feel for the water and technique consistency between harder sets.',
+    },
+    byDuration: {
+      short: {
+        whatToDo:
+          'Short recovery swim focused on rhythm, relaxed exhale, and clean catch. Keep effort very easy and avoid speed work.',
+        whyItHelps:
+          'Restores shoulder range and water feel with minimal systemic fatigue.',
+      },
+      medium: {
+        whatToDo:
+          'Steady aerobic swim near CSS +8 to +12 sec/100m, with one short drill block to reset form quality. Hold consistent stroke count.',
+        whyItHelps:
+          'Builds swim endurance while preserving technical efficiency under moderate volume.',
+      },
+      long: {
+        whatToDo:
+          'Long aerobic swim in controlled blocks with short rests to protect form. Focus on body line, bilateral breathing, and consistent pacing.',
+        whyItHelps:
+          'Extends aerobic swim capacity and reinforces mechanics when fatigue would normally degrade technique.',
+      },
     },
   },
   long_swim: {
     base: {
       whatToDo:
-        'Steady continuous swim. Break into sets if needed (for example 4x500m with 30s rest). Focus on maintaining consistent stroke rate.',
-      whyItHelps: 'Builds swim-specific endurance and teaches pacing over longer distances.',
+        'Swim sustained aerobic sets at roughly CSS +5 to +10 sec/100m, with short rests to keep stroke quality high. Keep pacing even from first set to last.',
+      whyItHelps: 'Builds swim-specific endurance and pacing control for longer race swims.',
     },
     build: {
       whatToDo:
-        'Continuous swim with some pace variation. Include 200m at tempo effort every 600m.',
+        'Use endurance sets with planned pace changes: mostly aerobic with periodic tempo segments near CSS pace. Keep turns and breakouts efficient.',
       whyItHelps:
-        'Simulates race conditions where you need to change pace around buoys and other swimmers.',
+        'Improves your ability to change pace around race dynamics while staying technically efficient.',
+    },
+    byDuration: {
+      medium: {
+        whatToDo:
+          'Steady aerobic swim with one controlled tempo segment near CSS pace. Keep recoveries short and technique stable.',
+        whyItHelps:
+          'Builds endurance and controlled pace-change ability useful in open-water packs and buoy turns.',
+      },
+      long: {
+        whatToDo:
+          'Long endurance swim with repeated aerobic blocks and planned tempo inserts near CSS. Track stroke count to prevent form drift as fatigue rises.',
+        whyItHelps:
+          'Develops long-course swim durability and pace discipline that transfers directly to race execution.',
+      },
+      very_long: {
+        whatToDo:
+          'Very long endurance swim using structured repeats with short rests and strict pacing control. Prioritize stroke quality and bilateral breathing all the way through.',
+        whyItHelps:
+          'Extends aerobic swim ceiling and prepares you to hold efficient form late in long races.',
+      },
     },
   },
   intervals_swim: {
     build: {
       whatToDo:
-        'Warm up 400m easy. Main set: 8-10x100m at 85-90% effort with 20s rest between. Cool down 200m easy.',
+        'Warm up thoroughly, then complete short repeats near CSS to CSS-3 sec/100m with controlled rest. Keep strokes crisp and pace repeatable.',
       whyItHelps:
-        'Builds speed and the ability to hold pace when fatigued - critical for open water racing.',
+        'Improves swim speed endurance and your ability to hold pace under rising fatigue.',
     },
   },
   swim_drills: {
     any: {
       whatToDo:
-        'Catch-up drill, fingertip drag, single-arm freestyle, kick sets. 30 min of focused technique work.',
+        'Use focused drill blocks (for example catch-up, fingertip drag, single-arm) with easy swim between reps. Prioritize body line, catch timing, and relaxed breathing.',
       whyItHelps:
-        'Small improvements in technique produce bigger speed gains than fitness alone in swimming.',
+        'Technique improvements reduce drag and improve propulsion, giving free speed at every effort level.',
     },
   },
   brick_workout: {
     build: {
       whatToDo:
-        'Ride for 45-60 min at moderate effort, then immediately transition to a 15-20 min run. Focus on finding your running legs quickly.',
+        'Ride at planned race effort, then transition quickly into a controlled run without extra standing or delay. Expect heavy legs for the first minutes and settle cadence before pacing up.',
       whyItHelps:
-        'Trains your body for the bike-to-run transition - the hardest part of triathlon. Your legs will feel heavy at first, but they adapt.',
+        'Trains bike-to-run neuromuscular transfer and pacing discipline under transition fatigue.',
     },
   },
   open_water_swim: {
     build: {
       whatToDo:
-        'Practice sighting every 6-8 strokes. Swim in a group if possible. Practice race-start surges.',
+        'Practice sighting every 6-10 strokes, bilateral breathing, and maintaining straight lines between landmarks. Include short race-start surges and drafting if safe.',
       whyItHelps:
-        "Pool swimming does not prepare you for currents, sighting, and physical contact. Open water practice builds confidence.",
+        'Builds open-water skills that pool sessions do not fully cover: navigation, contact tolerance, and pace control in variable conditions.',
     },
   },
   strength: {
@@ -251,15 +387,15 @@ const DESCRIPTIONS: Record<string, SessionDescriptions> = {
   hiit: {
     build: {
       whatToDo:
-        'Alternate short hard intervals with equal or slightly longer recovery. Keep quality high and form crisp.',
+        'Use short high-quality work intervals with controlled recoveries. Keep technique sharp and stop the set when output drops materially.',
       whyItHelps:
-        'Raises VO2max and improves your ability to tolerate and recover from high-intensity work.',
+        'Raises VO2max and improves repeatability of high-intensity efforts.',
     },
     any: {
       whatToDo:
-        'Use work/rest intervals at high effort, but stop before technique breaks down.',
+        'Use structured hard/easy intervals at high effort while preserving movement quality throughout.',
       whyItHelps:
-        'Efficiently improves conditioning and power output in limited training time.',
+        'Delivers strong aerobic and anaerobic stimulus when time is limited.',
     },
   },
   mobility: {
@@ -315,8 +451,13 @@ function inferSessionKey(rawSessionType: string, sportType?: string | null): str
   const sport = normalizeSport(sportType);
 
   const exactMap: Record<string, string> = {
+    run: 'easy_run',
+    running: 'easy_run',
     easy_run: 'easy_run',
     long_run: 'long_run',
+    ride: 'easy_ride',
+    bike: 'easy_ride',
+    cycling: 'easy_ride',
     tempo: 'tempo_run',
     tempo_run: 'tempo_run',
     intervals: 'intervals_run',
@@ -333,6 +474,8 @@ function inferSessionKey(rawSessionType: string, sportType?: string | null): str
     tempo_ride: 'tempo_ride',
     intervals_ride: 'intervals_ride',
     hill_reps_ride: 'hill_reps_ride',
+    swim: 'easy_swim',
+    swimming: 'easy_swim',
     easy_swim: 'easy_swim',
     long_swim: 'long_swim',
     intervals_swim: 'intervals_swim',
@@ -431,8 +574,9 @@ function fallbackForSport(sportType?: string | null): WorkoutDescription {
   if (sport === 'triathlon') {
     return {
       whatToDo:
-        'Triathlon combines swim, bike, and run with phase-based progression. Brick workouts usually appear in build phase to train transitions.',
-      whyItHelps: 'Balanced training across disciplines builds race-specific durability and transition confidence.',
+        'Follow the planned session focus at controlled effort, and avoid stacking hard intensity on consecutive days unless specifically prescribed.',
+      whyItHelps:
+        'Consistent, well-balanced training across swim, bike, and run builds fitness while keeping fatigue manageable.',
     };
   }
 
@@ -443,16 +587,50 @@ function fallbackForSport(sportType?: string | null): WorkoutDescription {
   };
 }
 
+function shouldIncludeTriathlonContext(sportType: string | null | undefined, sessionKey: string): boolean {
+  return normalizeSport(sportType) === 'triathlon' && (sessionKey === 'brick_workout' || sessionKey === 'open_water_swim');
+}
+
+const DURATION_THRESHOLDS: Partial<Record<string, { medium: number; long: number; very_long?: number }>> = {
+  easy_run:   { medium: 45, long: 75 },
+  long_run:   { medium: 60, long: 90, very_long: 120 },
+  easy_ride:  { medium: 45, long: 75 },
+  long_ride:  { medium: 60, long: 90, very_long: 150 },
+  easy_swim:  { medium: 25, long: 45 },
+  long_swim:  { medium: 35, long: 55, very_long: 75 },
+};
+
 export function getWorkoutDescription(
   sessionType: string,
   phase: string,
   weekNumber: number,
   mode: PlanMode,
   sportType?: string | null,
+  durationMinutes?: number,
 ): WorkoutDescription {
   const key = inferSessionKey(sessionType, sportType);
   const normalizedPhase = normalizePhase(phase);
   const bySession = DESCRIPTIONS[key];
+
+  // Duration-bucket resolution (optional — only for supported session types)
+  if (durationMinutes != null && bySession?.byDuration) {
+    const thresholds = DURATION_THRESHOLDS[key];
+    if (thresholds) {
+      const bucket = getDurationBucket(durationMinutes, thresholds);
+      const bucketDesc = bySession.byDuration[bucket];
+      if (bucketDesc) {
+        // Apply weight-loss and triathlon suffixes on the bucket result too
+        let result = bucketDesc;
+        if (mode === 'weight_loss' && ENDURANCE_SESSION_KEYS.has(key)) {
+          result = { whatToDo: result.whatToDo, whyItHelps: `${result.whyItHelps} ${WEIGHT_LOSS_NOTE}` };
+        }
+        if (shouldIncludeTriathlonContext(sportType, key)) {
+          result = { whatToDo: `${result.whatToDo} ${TRIATHLON_CONTEXT_NOTE}`, whyItHelps: result.whyItHelps };
+        }
+        return result;
+      }
+    }
+  }
 
   const selected = bySession?.[normalizedPhase] ?? bySession?.any ?? bySession?.base;
   const fallback = selected ?? fallbackForSport(sportType);
@@ -464,11 +642,10 @@ export function getWorkoutDescription(
     };
   }
 
-  const sport = normalizeSport(sportType);
-  if (sport === 'triathlon' && key !== 'brick_workout' && key !== 'open_water_swim') {
+  if (shouldIncludeTriathlonContext(sportType, key)) {
     return {
-      whatToDo: fallback.whatToDo,
-      whyItHelps: `${fallback.whyItHelps} In triathlon plans, this works best when balanced against the other two disciplines in the same week.`,
+      whatToDo: `${fallback.whatToDo} ${TRIATHLON_CONTEXT_NOTE}`,
+      whyItHelps: fallback.whyItHelps,
     };
   }
 

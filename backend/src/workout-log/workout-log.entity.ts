@@ -17,17 +17,20 @@ export class WorkoutLog {
   @Column({ nullable: true })
   calendarEventId?: string;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  title?: string;
+
   @Column()
   sessionType: string;
 
   @Column({ nullable: true })
   sportType?: string;
 
-  @Column({ type: 'varchar', length: 20 })
-  energyRating: EnergyRating;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  energyRating: EnergyRating | null;
 
-  @Column()
-  plannedDuration: number;
+  @Column({ type: 'int', nullable: true })
+  plannedDuration: number | null;
 
   @Column({ nullable: true })
   actualDuration?: number;
