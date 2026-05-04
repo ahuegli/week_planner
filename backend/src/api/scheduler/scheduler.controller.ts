@@ -9,6 +9,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, DataSource, EntityManager, In, Repository } from 'typeorm';
 import { ScheduleGeneratorService, GenerationInput } from '../../domain/schedule-generator.service';
@@ -130,6 +131,7 @@ export class SchedulerController {
 
   @Post('generate-plan')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ plan_gen: { ttl: 60_000, limit: 2 } })
   async generatePlan(
     @Request() req,
     @Body() dto: GeneratePlanDto,

@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { UserThrottlerGuard } from './throttler/user-throttler.guard';
+import { JwtAuthExceptionFilter } from './auth/jwt-auth-exception.filter';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { WorkoutModule } from './workout/workout.module';
@@ -61,7 +65,44 @@ const databaseImports = USE_DATABASE
     ]
   : [MockDataModule];
 
+// Identifies which named throttlers are explicitly declared on a route via @Throttle.
+// Metadata key is the internal format used by @nestjs/throttler's Throttle decorator.
+function hasThrottleMetadata(name: string, ctx: import('@nestjs/common').ExecutionContext): boolean {
+  const key = `THROTTLER:LIMIT${name}`;
+  const onHandler = Reflect.getMetadata(key, ctx.getHandler());
+  const onClass = Reflect.getMetadata(key, ctx.getClass());
+  return onHandler !== undefined || onClass !== undefined;
+}
+
 @Module({
-  imports: [...databaseImports, SchedulerModule],
+  imports: [
+    ...databaseImports,
+    SchedulerModule,
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 10 },
+      {
+        name: 'ai_hourly',
+        ttl: 3_600_000,
+        limit: 20,
+        skipIf: (ctx) => !hasThrottleMetadata('ai_hourly', ctx),
+      },
+      {
+        name: 'ai_daily',
+        ttl: 86_400_000,
+        limit: 100,
+        skipIf: (ctx) => !hasThrottleMetadata('ai_daily', ctx),
+      },
+      {
+        name: 'plan_gen',
+        ttl: 60_000,
+        limit: 2,
+        skipIf: (ctx) => !hasThrottleMetadata('plan_gen', ctx),
+      },
+    ]),
+  ],
+  providers: [
+    { provide: APP_FILTER, useClass: JwtAuthExceptionFilter },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
+  ],
 })
 export class AppModule {}

@@ -97,6 +97,26 @@ export class NoteService {
     return note;
   }
 
+  // Like findOne but also grants access to collaborators (permission='collaborate') on the
+  // parent project. Used by sub-task mutation endpoints so shared recipients can participate.
+  // Always returns 404 if neither ownership nor active collaborate share exists.
+  private async findOneWithAccess(noteId: string, userId: string): Promise<Note> {
+    const ownedNote = await this.noteRepository.findOne({ where: { id: noteId, userId } });
+    if (ownedNote) return ownedNote;
+
+    const note = await this.noteRepository.findOne({ where: { id: noteId } });
+    if (note) {
+      // For sub-tasks, the share is on the parent note; for top-level notes, use the note id itself.
+      const parentId = note.parentNoteId ?? note.id;
+      const share = await this.noteShareRepository.findOne({
+        where: { noteId: parentId, recipientId: userId, active: true, permission: 'collaborate' },
+      });
+      if (share) return note;
+    }
+
+    throw new NotFoundException('Note not found');
+  }
+
   create(userId: string, dto: CreateNoteDto): Promise<Note> {
     const note = this.noteRepository.create({ ...dto, userId });
     return this.noteRepository.save(note);
@@ -129,7 +149,7 @@ export class NoteService {
   }
 
   async claimSubTask(noteId: string, userId: string): Promise<Note> {
-    const note = await this.findOne(noteId, userId);
+    const note = await this.findOneWithAccess(noteId, userId);
     if (!note.parentNoteId) {
       throw new BadRequestException('Note is not a sub-task');
     }
@@ -141,7 +161,7 @@ export class NoteService {
   }
 
   async unassignSubTask(noteId: string, userId: string): Promise<Note> {
-    const note = await this.findOne(noteId, userId);
+    const note = await this.findOneWithAccess(noteId, userId);
     if (!note.parentNoteId) {
       throw new BadRequestException('Note is not a sub-task');
     }
@@ -154,7 +174,7 @@ export class NoteService {
     userId: string,
     status: 'not_started' | 'in_progress' | 'done',
   ): Promise<Note> {
-    const note = await this.findOne(noteId, userId);
+    const note = await this.findOneWithAccess(noteId, userId);
     if (!note.parentNoteId) {
       throw new BadRequestException('Note is not a sub-task');
     }

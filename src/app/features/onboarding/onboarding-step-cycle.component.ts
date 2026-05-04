@@ -21,6 +21,7 @@ import { CycleStatus, OnboardingData } from './onboarding.models';
       </div>
 
       @if (data().cycleEnabled) {
+        <p class="cycle-info-note">Currently used for session placement (e.g., harder sessions prefer follicular days). Volume adjustments coming in a future update.</p>
         <p class="field-label">Where are you in your cycle?</p>
         <div class="radio-list">
           @for (option of statusOptions; track option.value) {
@@ -78,6 +79,7 @@ import { CycleStatus, OnboardingData } from './onboarding.models';
     .field-label { font-size: 13px; font-weight: 600; color: var(--color-text); }
     .radio-list { display: flex; flex-direction: column; gap: 6px; }
     .radio-item { min-height: 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); text-align: left; padding: 0 10px; cursor: pointer; }
+    .cycle-info-note { font-size: 12px; color: var(--color-text-secondary); background: color-mix(in srgb, var(--color-primary) 6%, var(--color-card)); border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)); border-radius: 8px; padding: 8px 10px; line-height: 1.45; }
     .radio-item.selected { border-color: var(--color-primary); color: var(--color-primary); }
     .input { width: 100%; height: 40px; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 10px; }
     .stepper-inline { display: flex; align-items: center; gap: 14px; }

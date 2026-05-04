@@ -63,7 +63,7 @@
         <p class="off-bike-inline"><span class="off-bike-icon" aria-hidden="true">&rarr;</span><span>Off the bike</span></p>
       }
 
-      <div class="event-time">{{ displayEvent().startTime }} — {{ displayEvent().endTime }}</div>
+      <div class="event-time">{{ timeRangeLabel(displayEvent()) }}</div>
 
       @if (detailsText()) {
         <div class="event-details">
@@ -90,7 +90,7 @@
         @if (offBikeRun()) {
           <p class="detail-row off-bike-row"><span class="detail-label">Off the bike</span></p>
         }
-        <p class="detail-row"><span class="detail-label">Duration:</span> {{ displayEvent().duration || (durationHours() * 60) }} min</p>
+        <p class="detail-row"><span class="detail-label">Duration:</span> {{ roundedDisplayDuration(displayEvent()) }} min</p>
         @if (displayEvent().distanceTarget) {
           <p class="detail-row"><span class="detail-label">Distance:</span> {{ displayEvent().distanceTarget }} km</p>
         }

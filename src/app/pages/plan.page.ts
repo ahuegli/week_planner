@@ -8,6 +8,7 @@ import { QuickPlanSwitchComponent } from '../features/plan/quick-plan-switch/qui
 import { RaceDayPlanComponent } from '../features/race-day-plan/race-day-plan.component';
 import { DataStoreService } from '../core/services/data-store.service';
 import { PlannedSession, PlanWeekSummary, ScheduleEntirePlanResult } from '../core/models/app-data.models';
+import { roundToFriendlyDuration } from '../shared/utils/round-duration.util';
 
 @Component({
   selector: 'app-plan-page',
@@ -284,7 +285,7 @@ export class PlanPageComponent {
       id: session.id,
       sessionType: session.sessionType,
       priority: session.priority,
-      duration: session.duration,
+      duration: roundToFriendlyDuration(session.duration),
       intensity: session.intensity,
       distanceTarget: session.distanceTarget ?? undefined,
       status: session.status,

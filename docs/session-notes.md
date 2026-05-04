@@ -1,5 +1,62 @@
 # Session notes
 
+## 2026-05-04 — WP14 Production Hardening (Parts 1, 2, 3)
+
+### Part 1 — Rate limiting (complete, verified)
+
+**Files modified (3):**
+- `backend/package.json` — added `@nestjs/throttler` dependency
+- `backend/src/app.module.ts` — added `ThrottlerModule.forRoot` with 3 named throttlers; `APP_GUARD` registration
+- `backend/src/ai/coach.controller.ts` — `@Throttle` on chat method (5/min, 20/hr, 100/day)
+
+**Files created (1):**
+- `backend/src/throttler/user-throttler.guard.ts` — decodes JWT payload (base64url, no verification) to key throttling by user ID rather than IP; `throwThrottlingException` sets `Retry-After` header + structured 429 body with `retryAfterSeconds`
+
+**Key insight:** APP_GUARD runs before `@UseGuards(JwtAuthGuard)`, so `req.user` is never populated at throttle time. JWT payload must be decoded directly from `Authorization` header. Falls back to `req.ip` for unauthenticated requests.
+
+**Key insight:** `ai_hourly` and `ai_daily` throttlers use `skipIf: (ctx) => !hasThrottleMetadata(name, ctx)` so they only activate on routes decorated with `@Throttle({ ai_hourly: ... })`. `THROTTLER_LIMIT` keys are accessed via `Reflect.getMetadata('THROTTLER:LIMIT' + name, handler)` (not exported from public index).
+
+### Part 2 — 401 instead of 500 for auth errors (complete, live verification blocked by Supabase DNS)
+
+**Files created (2):**
+- `backend/src/auth/jwt-auth-exception.filter.ts` — `@Catch(UnauthorizedException)` filter; routes tagged (code field present) exceptions to clean 401 JSON; preserves original body for untagged ones (login failures)
+- `backend/src/user/user.entity.ts` — added `isActive: boolean` column (default true)
+
+**Files modified (3):**
+- `backend/src/app.module.ts` — added `APP_FILTER` registration for `JwtAuthExceptionFilter`
+- `backend/src/auth/jwt-auth.guard.ts` — `handleRequest` now checks `info?.name === 'TokenExpiredError'` (passport-jwt routes JWT errors through `info`, not `err`) + `err` for `validate()` exceptions + `!user` fallback
+- `backend/src/auth/jwt.strategy.ts` — `validate()` does DB lookup; throws `USER_NOT_FOUND` if user deleted, `USER_DISABLED` if `!user.isActive`
+- `src/app/core/interceptors/auth-token.interceptor.ts` — `catchError` on 401s: calls `logout()` + `uiFeedback.show()` + `router.navigate(['/login'])`; message differentiated by code
+
+**Pending live verification (requires Supabase reachable from Node.js):**
+- S3: expired JWT → `{ code: 'TOKEN_EXPIRED' }`
+- S4: valid JWT for deleted user → `{ code: 'USER_NOT_FOUND' }`
+- S5: valid JWT for `isActive=false` user → `{ code: 'USER_DISABLED' }`
+- Supabase hostname is IPv6-only; Node.js libuv `getaddrinfo` returns `ENOTFOUND` while PowerShell resolves it fine
+
+### Part 3 — Migration system (complete; migration generation requires live DB)
+
+**Files created (1):**
+- `backend/data-source.ts` — TypeORM `DataSource` for CLI; loads `.env` via `import 'dotenv/config'`; entities `src/**/*.entity.ts`; migrations `src/migrations/*.ts`; `synchronize: false` always
+
+**Files modified (2):**
+- `backend/package.json` — added `migration:generate`, `migration:run`, `migration:revert`, `migration:show` scripts using `typeorm-ts-node-commonjs`
+- `backend/README.md` — deploy workflow section added (generate → review → run → start)
+
+**Migration generation:** attempted `npm run migration:generate -- src/migrations/InitialSchema`; failed with same `ENOTFOUND` error (TypeORM CLI also uses Node.js libuv). Scripts are correct and will work once Supabase resolves in Node.js.
+
+**Production safety:** `synchronize: process.env.NODE_ENV !== 'production'` already in `app.module.ts`. Migration runner is a manual deploy step, never auto-runs.
+
+### Build
+- Backend: clean (`nest build` after `Remove-Item -Recurse -Force dist`)
+- Frontend: no changes
+
+### Pending
+- Live verification of Part 2 S3/S4/S5 when Supabase DNS resolves in Node.js
+- Actual initial migration file once DB is reachable: `npm run migration:generate -- src/migrations/InitialSchema`
+
+---
+
 ## 2026-05-03 — WP11B Parts 2B + 3B: shared notes in API + frontend share UI
 
 ### Part 2B — findAllByUser includes shared notes (backend)

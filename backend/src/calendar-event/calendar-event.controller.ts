@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   ForbiddenException,
   Get,
@@ -102,11 +103,17 @@ export class CalendarEventController {
 
   @Post('batch')
   async createMany(@Request() req, @Body() dtos: CreateCalendarEventDto[]) {
+    if (!Array.isArray(dtos) || dtos.length > 100) {
+      throw new BadRequestException('Batch size must not exceed 100 events');
+    }
     return this.calendarEventService.createMany(req.user.userId, dtos);
   }
 
   @Put('replace-all')
   async replaceAll(@Request() req, @Body() dtos: CreateCalendarEventDto[]) {
+    if (!Array.isArray(dtos) || dtos.length > 500) {
+      throw new BadRequestException('Batch size must not exceed 500 events');
+    }
     return this.calendarEventService.replaceAll(req.user.userId, dtos);
   }
 

@@ -8,6 +8,7 @@ import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dia
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
 import { QuickLogModalComponent } from '../../workout-log/quick-log-modal.component';
+import { roundToFriendlyDuration } from '../../../shared/utils/round-duration.util';
 
 interface GroupedEvents {
   label: 'AM' | 'PM';
@@ -303,13 +304,30 @@ export class DayRowComponent {
   }
 
   protected durationLabel(event: CalendarEvent): string {
-    const duration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const duration = event.type === 'workout' ? roundToFriendlyDuration(rawDuration) : rawDuration;
     if (duration % 60 === 0) {
       const hours = duration / 60;
       return `${hours} hour${hours === 1 ? '' : 's'}`;
     }
 
     return `${duration} min`;
+  }
+
+  protected timeRangeLabel(event: CalendarEvent): string {
+    if (event.type !== 'workout') {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const startMinutes = this.toMinutes(event.startTime);
+    if (startMinutes === null) {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const roundedDuration = roundToFriendlyDuration(rawDuration);
+    const endMinutes = Math.min(startMinutes + roundedDuration, (23 * 60) + 59);
+    return `${event.startTime} - ${this.toTime(endMinutes)}`;
   }
 
   protected intensityLabel(event: CalendarEvent): string {
@@ -557,6 +575,26 @@ export class DayRowComponent {
     const [startHours, startMinutes] = startTime.split(':').map(Number);
     const [endHours, endMinutes] = endTime.split(':').map(Number);
     return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+  }
+
+  private toMinutes(time: string): number | null {
+    const [hoursText, minutesText] = time.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  }
+
+  private toTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   private finishWorkoutDelete(eventId: string): void {

@@ -306,6 +306,63 @@
       </div>
     </div>
 
+    <!-- Recently completed -->
+    @if (showRecentlyCompleted()) {
+      <div class="content-pad recent-completed-section">
+        <p class="section-label">Recently completed</p>
+        @if (recentCompletions().length > 0) {
+          <div class="recent-completed-list">
+            @for (item of recentCompletions(); track item.source + '-' + item.id) {
+              <button
+                type="button"
+                class="recent-completed-row"
+                (click)="openRecentCompletion(item)"
+                aria-label="Open {{ item.title }} in week view"
+              >
+                <span class="recent-icon" [attr.data-type]="item.activityType" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="1.6"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path [attr.d]="recentIconPath(item.activityType)"/>
+                  </svg>
+                </span>
+
+                <span class="recent-main">
+                  <span class="recent-title-row">
+                    <span class="recent-title">{{ item.title }}</span>
+                    @if (item.source === 'logged') {
+                      <span class="logged-badge">Logged</span>
+                    }
+                  </span>
+                  <span class="recent-meta-row">
+                    <span>{{ item.completedAtLabel }}</span>
+                    @if (item.durationMinutes) {
+                      <span>&middot; {{ formatDuration(item.durationMinutes) }}</span>
+                    }
+                    @if (item.distanceKm) {
+                      <span>&middot; {{ formatRecentDistance(item.distanceKm) }}</span>
+                    }
+                  </span>
+                </span>
+
+                <span class="recent-chevron" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="1.5"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 6 6 6-6 6"/>
+                  </svg>
+                </span>
+              </button>
+            }
+          </div>
+        } @else if (showRecentEmptyState()) {
+          <div class="card recent-empty-card">
+            <p class="empty-text">Your completed sessions will appear here</p>
+          </div>
+        }
+      </div>
+    }
+
     <!-- Motivational message -->
     @if (motivationalMessage()) {
       <div class="content-pad">

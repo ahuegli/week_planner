@@ -7,6 +7,7 @@ import { WorkoutLogApiService } from '../../core/services/workout-log-api.servic
 import { getWorkoutDescription } from '../../core/utils/workout-descriptions';
 import { getWorkoutStructure, WorkoutStep } from '../../core/utils/workout-structure';
 import { EnergyRating } from '../../core/models/app-data.models';
+import { roundToFriendlyDuration } from '../../shared/utils/round-duration.util';
 
 type WorkoutPageState = 'pre' | 'during' | 'post';
 type StartButtonState = 'start' | 'completed' | 'skipped';
@@ -118,6 +119,10 @@ export class WorkoutPageComponent {
     if (event.duration) return event.duration;
     return 0;
   });
+
+  protected readonly displayDurationMinutes = computed(() =>
+    roundToFriendlyDuration(this.durationMinutes()),
+  );
 
   // ── Pre-workout computed ───────────────────────────────────────────────────
 

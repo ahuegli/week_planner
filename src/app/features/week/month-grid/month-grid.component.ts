@@ -8,6 +8,7 @@ import { getWorkoutDescription, WorkoutDescription } from '../../../core/utils/w
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
 import { QuickLogModalComponent } from '../../workout-log/quick-log-modal.component';
 import { WorkoutLog } from '../../../core/models/app-data.models';
+import { roundToFriendlyDuration } from '../../../shared/utils/round-duration.util';
 
 type MonthEventType = 'workout' | 'mealprep' | 'personal';
 
@@ -565,13 +566,30 @@ export class MonthGridComponent {
   }
 
   protected durationLabel(event: CalendarEvent): string {
-    const duration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const duration = event.type === 'workout' ? roundToFriendlyDuration(rawDuration) : rawDuration;
     if (duration % 60 === 0) {
       const hours = duration / 60;
       return `${hours}h`;
     }
 
     return `${duration} min`;
+  }
+
+  protected timeRangeLabel(event: CalendarEvent): string {
+    if (event.type !== 'workout') {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const startMinutes = this.timeToMinutes(event.startTime);
+    if (startMinutes === null) {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+
+    const rawDuration = event.duration ?? this.durationFromTimes(event.startTime, event.endTime);
+    const roundedDuration = roundToFriendlyDuration(rawDuration);
+    const endMinutes = Math.min(startMinutes + roundedDuration, (23 * 60) + 59);
+    return `${event.startTime} - ${this.minutesToTime(endMinutes)}`;
   }
 
   protected hasExpandedDetails(event: CalendarEvent): boolean {
@@ -898,6 +916,13 @@ export class MonthGridComponent {
     }
 
     return hours * 60 + minutes;
+  }
+
+  private minutesToTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   private finishWorkoutDelete(eventId: string): void {

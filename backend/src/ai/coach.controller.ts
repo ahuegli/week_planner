@@ -6,6 +6,7 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AiService } from './ai.service';
 import { CoachPromptBuilder } from './coach-prompt.builder';
@@ -23,6 +24,7 @@ export class CoachController {
     private readonly coachPromptBuilder: CoachPromptBuilder,
   ) {}
 
+  @Throttle({ default: { limit: 5 }, ai_hourly: { ttl: 3_600_000, limit: 20 }, ai_daily: { ttl: 86_400_000, limit: 100 } })
   @Post('chat')
   async chat(
     @Body() dto: CoachChatRequestDto,

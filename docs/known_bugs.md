@@ -260,3 +260,41 @@ skipReason field. Add when WP14 hardening ships:
 
 ~30 min CC fix.
 
+## Cycle-aware sizing not in plan generator (v1.5)
+
+Audit confirmed (2026-05-04): cycle phase IS used in scoring 
+engine (placement layer) but NOT in sizing engine (generation 
+layer). Methodology says luteal phase should reduce volume 
+10-15%, but current sizing produces full volume regardless.
+
+Effect: athletes with cycle tracking enabled get full-volume long 
+sessions in luteal weeks. Scheduler may place them on better days, 
+but distance/duration aren't reduced.
+
+Fix scope (~2-3h CC):
+- training-plan.service.ts fetches CycleProfile data
+- Forwards to template services as part of generation context
+- computeRunProgressionScaler and triathlon equivalent apply 
+  luteal multiplier (0.85-0.90)
+
+Defer to v1.5 — real beta users will inform the magnitude of 
+adjustment. Document in cycle settings UI: "Cycle-aware volume 
+adjustments coming soon."
+
+## Cycle staleness not guarded
+Phase computed confidently even when last period logged 60+ days 
+ago. Should reduce confidence × 0.5 when staleness >45 days.
+~30 min Copilot fix.
+
+## bikeIntent rendering not wired
+Field generated and persisted but no frontend component consumes 
+it for display. Either wire into workout descriptions or document 
+as future hook for premium AI coaching.
+~30 min Copilot fix once decided.
+
+## Peak performance window UI vs engine
+Today page banner suggests hard sessions guaranteed in follicular 
+phase. Engine offers soft bonus only. UI message should be softened 
+to "Generally a good time for harder sessions" or engine should be 
+upgraded to harder constraint.
+~15 min copy fix OR ~1h engine work.

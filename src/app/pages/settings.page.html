@@ -409,6 +409,7 @@
             </div>
             <button type="button" class="switch" [class.on]="cycleTrackingEnabled()" (click)="cycleTrackingEnabled.set(!cycleTrackingEnabled())"><span></span></button>
           </div>
+          <p class="info-text" style="margin-top: 8px">Currently used for session placement (e.g., harder sessions prefer follicular days). Volume adjustments coming in a future update.</p>
         </div>
 
         @if (cycleTrackingEnabled()) {

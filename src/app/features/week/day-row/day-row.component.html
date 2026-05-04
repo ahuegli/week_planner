@@ -87,7 +87,7 @@
                   @if (isOffPlanLoggedEvent(event)) {
                     <p class="event-time">Logged workout</p>
                   } @else {
-                    <p class="event-time">{{ event.startTime }} - {{ event.endTime }}</p>
+                    <p class="event-time">{{ timeRangeLabel(event) }}</p>
                   }
                 </div>
                 @if (event.type !== 'busy') {

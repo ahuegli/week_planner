@@ -8,6 +8,7 @@ import { getWorkoutDescription } from '../../../core/utils/workout-descriptions'
 import { DeleteWorkoutDialogComponent } from '../../../shared/delete-workout-dialog/delete-workout-dialog.component';
 import { EventDetailModalComponent } from '../../../shared/event-detail-modal/event-detail-modal.component';
 import { UiFeedbackService } from '../../../shared/ui-feedback.service';
+import { roundToFriendlyDuration } from '../../../shared/utils/round-duration.util';
 
 type BrickEvent = CalendarEvent & {
   discipline?: string | null;
@@ -119,6 +120,21 @@ export class EventCardComponent {
     return (eh * 60 + em - (sh * 60 + sm)) / 60;
   });
 
+  protected timeRangeLabel(event: CalendarEvent): string {
+    if (event.type !== 'workout') {
+      return `${event.startTime} — ${event.endTime}`;
+    }
+
+    const startMinutes = this.toMinutes(event.startTime);
+    if (startMinutes === null) {
+      return `${event.startTime} — ${event.endTime}`;
+    }
+
+    const roundedDuration = this.roundedDisplayDuration(event);
+    const endMinutes = Math.min(startMinutes + roundedDuration, (23 * 60) + 59);
+    return `${event.startTime} — ${this.toTime(endMinutes)}`;
+  }
+
   protected readonly detailsText = computed(() => {
     const e = this.displayEvent();
     switch (e.type) {
@@ -130,7 +146,9 @@ export class EventCardComponent {
       }
       case 'workout': {
         const parts: string[] = [];
-        if (e.duration) parts.push(`${e.duration} min`);
+        if (e.duration) {
+          parts.push(`${this.roundedDisplayDuration(e)} min`);
+        }
         if (e.distanceTarget) parts.push(`${e.distanceTarget} km`);
         if (e.intensity) {
           parts.push(e.intensity.charAt(0).toUpperCase() + e.intensity.slice(1));
@@ -369,6 +387,30 @@ export class EventCardComponent {
       return event.duration;
     }
     return 0;
+  }
+
+  protected roundedDisplayDuration(event: CalendarEvent): number {
+    return roundToFriendlyDuration(this.durationForDescription(event));
+  }
+
+  private toMinutes(time: string): number | null {
+    const [hoursText, minutesText] = time.split(':');
+    const hours = Number(hoursText);
+    const minutes = Number(minutesText);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) {
+      return null;
+    }
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return (hours * 60) + minutes;
+  }
+
+  private toTime(totalMinutes: number): string {
+    const safeMinutes = Math.max(0, Math.min(totalMinutes, (23 * 60) + 59));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   protected navigateToWorkout(): void {
