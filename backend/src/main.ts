@@ -13,12 +13,9 @@ async function bootstrap() {
   console.log(`Running in ${useDatabase ? 'DATABASE' : 'MOCK'} mode`);
 
   app.enableCors({
-    origin: [
-      'http://localhost:4200',
-      'http://localhost:4300',
-      'http://localhost:4301',
-      'http://localhost:3000',
-    ],
+    origin: process.env.NODE_ENV === 'production'
+      ? [process.env.FRONTEND_URL || 'https://week-planner.vercel.app']
+      : ['http://localhost:4200', 'http://localhost:4300', 'http://localhost:4301', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });

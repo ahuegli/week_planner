@@ -1,3 +1,3 @@
 export const environment = {
-  apiBaseUrl: 'https://PLACEHOLDER.railway.app/api/v1',
+  apiBaseUrl: 'https://weekplanner-production.up.railway.app/api/v1',
 };
