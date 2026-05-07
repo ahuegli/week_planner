@@ -62,6 +62,7 @@ const databaseImports = USE_DATABASE
       NoteShareModule,
       EventInvitationModule,
       RaceDayPlanModule,
+      SchedulerModule,
     ]
   : [MockDataModule];
 
@@ -77,7 +78,6 @@ function hasThrottleMetadata(name: string, ctx: import('@nestjs/common').Executi
 @Module({
   imports: [
     ...databaseImports,
-    SchedulerModule,
     ThrottlerModule.forRoot([
       { name: 'default', ttl: 60_000, limit: 10 },
       {
